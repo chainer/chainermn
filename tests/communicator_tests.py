@@ -1,6 +1,7 @@
 import chainer
 import chainer.links
 import chainer.testing
+import chainer.testing.attr
 import mpi4py.MPI
 import numpy as np
 import unittest
@@ -34,8 +35,7 @@ class TestCommunicator(unittest.TestCase):
         self.assertEqual(self.communicator.get_size(),
                          self.mpi_comm.Get_size())
 
-    def test_broadcast_data(self):
-        model = ExampleModel()
+    def _test_broadcast_data(self, model):
         model.a.W.data[:] = self.communicator.get_rank()
         model.b.W.data[:] = self.communicator.get_rank() + 1
         model.c.b.data[:] = self.communicator.get_rank() + 2
@@ -44,8 +44,7 @@ class TestCommunicator(unittest.TestCase):
         chainer.testing.assert_allclose(model.b.W.data, 1 * np.ones((4, 3)))
         chainer.testing.assert_allclose(model.c.b.data, 2 * np.ones((5, )))
 
-    def test_allreduce_data(self):
-        model = ExampleModel()
+    def _test_allreduce_grad(self, model):
         model.a.W.grad[:] = self.communicator.get_rank()
         model.b.W.grad[:] = self.communicator.get_rank() + 1
         model.c.b.grad[:] = self.communicator.get_rank() + 2
@@ -58,3 +57,23 @@ class TestCommunicator(unittest.TestCase):
                                         (base + 1) * np.ones((4, 3)))
         chainer.testing.assert_allclose(model.c.b.grad,
                                         (base + 2) * np.ones((5, )))
+
+    def test_broadcast_data_cpu(self):
+        model = ExampleModel()
+        self._test_broadcast_data(model)
+
+    @chainer.testing.attr.gpu
+    def test_broadcast_data_gpu(self):
+        model = ExampleModel()
+        model.to_gpu()
+        self._test_broadcast_data(model)
+
+    def test_allreduce_grad_cpu(self):
+        model = ExampleModel()
+        self._test_allreduce_grad(model)
+
+    @chainer.testing.attr.gpu
+    def test_allreduce_grad_gpu(self):
+        model = ExampleModel()
+        model.to_gpu()
+        self._test_allreduce_grad(model)
