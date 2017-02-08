@@ -28,4 +28,4 @@ class NaiveCommunicator(mpi_based_communicator.MPIBasedCommunicator):
         for _, param in sorted(model.namedparams()):
             self.mpi_comm.Allreduce(
                 mpi4py.MPI.IN_PLACE, _to_buffer(param.grad))
-            param.grad /= self.get_size()
+            param.grad /= self.size

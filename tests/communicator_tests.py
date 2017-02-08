@@ -28,29 +28,29 @@ class TestCommunicator(unittest.TestCase):
         self.communicator = self.communicator_class(self.mpi_comm)
 
     def test_rank(self):
-        self.assertEqual(self.communicator.get_rank(),
+        self.assertEqual(self.communicator.rank,
                          self.mpi_comm.Get_rank())
 
     def test_size(self):
-        self.assertEqual(self.communicator.get_size(),
+        self.assertEqual(self.communicator.size,
                          self.mpi_comm.Get_size())
 
     def _test_broadcast_data(self, model):
-        model.a.W.data[:] = self.communicator.get_rank()
-        model.b.W.data[:] = self.communicator.get_rank() + 1
-        model.c.b.data[:] = self.communicator.get_rank() + 2
+        model.a.W.data[:] = self.communicator.rank
+        model.b.W.data[:] = self.communicator.rank + 1
+        model.c.b.data[:] = self.communicator.rank + 2
         self.communicator.broadcast_data(model)
         chainer.testing.assert_allclose(model.a.W.data, 0 * np.ones((3, 2)))
         chainer.testing.assert_allclose(model.b.W.data, 1 * np.ones((4, 3)))
         chainer.testing.assert_allclose(model.c.b.data, 2 * np.ones((5, )))
 
     def _test_allreduce_grad(self, model):
-        model.a.W.grad[:] = self.communicator.get_rank()
-        model.b.W.grad[:] = self.communicator.get_rank() + 1
-        model.c.b.grad[:] = self.communicator.get_rank() + 2
+        model.a.W.grad[:] = self.communicator.rank
+        model.b.W.grad[:] = self.communicator.rank + 1
+        model.c.b.grad[:] = self.communicator.rank + 2
         self.communicator.allreduce_grad(model)
 
-        base = (self.communicator.get_size() - 1) / 2
+        base = (self.communicator.size - 1) / 2
         chainer.testing.assert_allclose(model.a.W.grad,
                                         (base + 0) * np.ones((3, 2)))
         chainer.testing.assert_allclose(model.b.W.grad,

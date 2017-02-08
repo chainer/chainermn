@@ -9,8 +9,10 @@ class MPIBasedCommunicator(object):
     def allreduce_grad(self, model):
         raise NotImplementedError()
 
-    def get_rank(self):
-        return self.mpi_comm.Get_rank()
+    @property
+    def rank(self):
+        return self.mpi_comm.rank
 
-    def get_size(self):
-        return self.mpi_comm.Get_size()
+    @property
+    def size(self):
+        return self.mpi_comm.size
