@@ -2,6 +2,7 @@ import collections
 import mpi4py.MPI
 
 from chainermn.communicators import mpi_based_communicator
+from chainermn import nccl
 
 
 class NodeAwareCommunicator(mpi_based_communicator.MPIBasedCommunicator):
@@ -9,6 +10,7 @@ class NodeAwareCommunicator(mpi_based_communicator.MPIBasedCommunicator):
     def __init__(self, mpi_comm=mpi4py.MPI.COMM_WORLD):
         super(NodeAwareCommunicator, self).__init__(mpi_comm)
         self._init_ranks()
+        self._init_comms()
 
     def _init_ranks(self):
         global_names = self.mpi_comm.gather(mpi4py.MPI.Get_processor_name())
@@ -47,3 +49,18 @@ class NodeAwareCommunicator(mpi_based_communicator.MPIBasedCommunicator):
         self.intra_size = my_ranks[2]
         self.inter_rank = my_ranks[3]
         self.inter_size = my_ranks[4]
+
+    def _init_comms(self):
+        self.intra_mpi_comm = self.mpi_comm.Split(self.inter_rank, self.intra_rank)
+
+        if self.intra_rank == 0:
+            inter_ranks = self.mpi_comm.allreduce([self.rank])
+        else:
+            inter_ranks = self.mpi_comm.allreduce([])
+
+        world_group = self.mpi_comm.Get_group()
+        inter_group = world_group.Incl(inter_ranks)
+        self.inter_mpi_comm = self.mpi_comm.Create(inter_group)
+
+        nccl_comm_id = self.intra_mpi_comm.bcast(nccl.NcclCommunicatorId())
+        self.intra_nccl_comm = nccl.NcclCommunicator(self.intra_size, nccl_comm_id, self.intra_rank)
