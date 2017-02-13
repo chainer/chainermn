@@ -29,7 +29,7 @@ class MPIBasedCommunicator(object):
             for i in range(self.size):
                 b = n_samples * i // self.size
                 e = n_samples * (i + 1) // self.size
-                subds = chainer.datasets.SubDataset(dataset=dataset, start=b, finish=e)
+                subds = chainer.datasets.SubDataset(dataset, b, e)
                 if i == 0:
                     mine = subds
                 else:

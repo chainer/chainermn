@@ -12,6 +12,7 @@ from chainermn import communicators
 
 
 class ExampleModel(chainer.Chain):
+
     def __init__(self):
         super(ExampleModel, self).__init__(
             a=chainer.links.Linear(2, 3),
@@ -48,7 +49,7 @@ class TestCommunicator(unittest.TestCase):
         self.assertEqual(self.communicator.size,
                          self.mpi_comm.Get_size())
 
-    def _test_broadcast_data(self, model):
+    def check_broadcast_data(self, model):
         model.a.W.data[:] = self.communicator.rank
         model.b.W.data[:] = self.communicator.rank + 1
         model.c.b.data[:] = self.communicator.rank + 2
@@ -57,7 +58,7 @@ class TestCommunicator(unittest.TestCase):
         chainer.testing.assert_allclose(model.b.W.data, 1 * np.ones((4, 3)))
         chainer.testing.assert_allclose(model.c.b.data, 2 * np.ones((5, )))
 
-    def _test_allreduce_grad(self, model):
+    def check_allreduce_grad(self, model):
         model.a.W.grad[:] = self.communicator.rank
         model.b.W.grad[:] = self.communicator.rank + 1
         model.c.b.grad[:] = self.communicator.rank + 2
@@ -75,7 +76,7 @@ class TestCommunicator(unittest.TestCase):
         if not self.test_cpu:
             raise nose.plugins.skip.SkipTest()
         model = ExampleModel()
-        self._test_broadcast_data(model)
+        self.check_broadcast_data(model)
 
     @chainer.testing.attr.gpu
     def test_broadcast_data_gpu(self):
@@ -83,13 +84,13 @@ class TestCommunicator(unittest.TestCase):
             raise nose.plugins.skip.SkipTest()
         model = ExampleModel()
         model.to_gpu()
-        self._test_broadcast_data(model)
+        self.check_broadcast_data(model)
 
     def test_allreduce_grad_cpu(self):
         if not self.test_cpu:
             raise nose.plugins.skip.SkipTest()
         model = ExampleModel()
-        self._test_allreduce_grad(model)
+        self.check_allreduce_grad(model)
 
     @chainer.testing.attr.gpu
     def test_allreduce_grad_gpu(self):
@@ -97,9 +98,9 @@ class TestCommunicator(unittest.TestCase):
             raise nose.plugins.skip.SkipTest()
         model = ExampleModel()
         model.to_gpu()
-        self._test_allreduce_grad(model)
+        self.check_allreduce_grad(model)
 
-    def _test_scatter_dataset(self, original_dataset):
+    def check_scatter_dataset(self, original_dataset):
         sub_dataset = self.communicator.scatter_dataset(original_dataset)
         all_datasets = self.mpi_comm.gather(sub_dataset)
 
@@ -109,22 +110,28 @@ class TestCommunicator(unittest.TestCase):
             self.assertEqual(len(original_dataset), total_size)
 
             # Test the length of each sub dataset
-            expected_sub_dataset_size = len(original_dataset) // self.communicator.size
+            expected_sub_dataset_size = len(
+                original_dataset) // self.communicator.size
             for sub_dataset in all_datasets:
-                self.assertGreaterEqual(len(sub_dataset), expected_sub_dataset_size)
-                self.assertLessEqual(len(sub_dataset), expected_sub_dataset_size + 1)
+                self.assertGreaterEqual(
+                    len(sub_dataset), expected_sub_dataset_size)
+                self.assertLessEqual(
+                    len(sub_dataset), expected_sub_dataset_size + 1)
 
             # Test the content of scattered datasets
-            joined_dataset = sum((sub_dataset[:] for sub_dataset in all_datasets), [])
+            joined_dataset = sum((sub_dataset[:]
+                                  for sub_dataset in all_datasets), [])
             self.assertEqual(joined_dataset, list(original_dataset[:]))
 
     def test_scatter_dataset(self):
-        self._test_scatter_dataset([])
-        self._test_scatter_dataset([0])
-        self._test_scatter_dataset(list(range(self.communicator.size)))
-        self._test_scatter_dataset(list(range(self.communicator.size * 5 + 1)))
+        n = self.communicator.size
 
-        self._test_scatter_dataset(np.array([]))
-        self._test_scatter_dataset(np.array([0]))
-        self._test_scatter_dataset(np.arange(self.communicator.size))
-        self._test_scatter_dataset(np.arange(self.communicator.size * 5 + 1))
+        self.check_scatter_dataset([])
+        self.check_scatter_dataset([0])
+        self.check_scatter_dataset(list(range(n)))
+        self.check_scatter_dataset(list(range(n * 5 - 1)))
+
+        self.check_scatter_dataset(np.array([]))
+        self.check_scatter_dataset(np.array([0]))
+        self.check_scatter_dataset(np.arange(n))
+        self.check_scatter_dataset(np.arange(n * 5 - 1))

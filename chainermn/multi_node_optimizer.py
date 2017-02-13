@@ -1,7 +1,5 @@
 import chainer.optimizer
 
-from chainermn import communicators
-
 
 class MultiNodeOptimizer(chainer.optimizer.Optimizer):
 
