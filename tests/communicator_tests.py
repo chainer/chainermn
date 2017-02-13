@@ -99,39 +99,3 @@ class TestCommunicator(unittest.TestCase):
         model = ExampleModel()
         model.to_gpu()
         self.check_allreduce_grad(model)
-
-    def check_scatter_dataset(self, original_dataset):
-        sub_dataset = self.communicator.scatter_dataset(original_dataset)
-        all_datasets = self.mpi_comm.gather(sub_dataset)
-
-        if self.mpi_comm.rank == 0:
-            # Test the total length
-            total_size = sum(len(sub_dataset) for sub_dataset in all_datasets)
-            self.assertEqual(len(original_dataset), total_size)
-
-            # Test the length of each sub dataset
-            expected_sub_dataset_size = len(
-                original_dataset) // self.communicator.size
-            for sub_dataset in all_datasets:
-                self.assertGreaterEqual(
-                    len(sub_dataset), expected_sub_dataset_size)
-                self.assertLessEqual(
-                    len(sub_dataset), expected_sub_dataset_size + 1)
-
-            # Test the content of scattered datasets
-            joined_dataset = sum((sub_dataset[:]
-                                  for sub_dataset in all_datasets), [])
-            self.assertEqual(joined_dataset, list(original_dataset[:]))
-
-    def test_scatter_dataset(self):
-        n = self.communicator.size
-
-        self.check_scatter_dataset([])
-        self.check_scatter_dataset([0])
-        self.check_scatter_dataset(list(range(n)))
-        self.check_scatter_dataset(list(range(n * 5 - 1)))
-
-        self.check_scatter_dataset(np.array([]))
-        self.check_scatter_dataset(np.array([0]))
-        self.check_scatter_dataset(np.arange(n))
-        self.check_scatter_dataset(np.arange(n * 5 - 1))
