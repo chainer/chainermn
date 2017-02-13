@@ -7,7 +7,7 @@ class MultiNodeOptimizer(chainer.optimizer.Optimizer):
 
     # TODO(akiba): write why this class inherits Optimizer
 
-    def __init__(self, actual_optimizer, communicator=communicators.NodeAwareCommunicator()):
+    def __init__(self, actual_optimizer, communicator):
         self.communicator = communicator
         self.actual_optimizer = actual_optimizer
 
