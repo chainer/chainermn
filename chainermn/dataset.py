@@ -23,3 +23,21 @@ def scatter_dataset(dataset, comm):
         return mine
     else:
         return comm.recv(source=0)
+
+
+def get_n_iterations_for_one_epoch(dataset, local_batch_size, comm):
+    if hasattr(comm, 'mpi_comm'):
+        comm = comm.mpi_comm
+    assert hasattr(comm, 'bcast')
+
+    n_iterations = None
+    if comm.rank == 0:
+        n_iterations = (len(dataset) + local_batch_size -
+                        1) // local_batch_size
+    return comm.bcast(n_iterations)
+
+
+def get_epoch_trigger(n_epochs, dataset, local_batch_size, comm):
+    n_iterations = n_epochs * get_n_iterations_for_one_epoch(
+        dataset, local_batch_size, comm)
+    return n_iterations, 'iteration'
