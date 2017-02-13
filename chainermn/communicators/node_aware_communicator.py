@@ -7,7 +7,7 @@ import math
 import mpi4py.MPI
 import numpy as np
 
-from chainermn.communicators import mpi_based_communicator
+from chainermn.communicators import naive_communicator
 from chainermn import nccl
 
 
@@ -67,7 +67,7 @@ class _DeviceMemory(object):
         return cp.ndarray(shape, memptr=self.memory + offset, dtype=cp.float32)
 
 
-class NodeAwareCommunicator(mpi_based_communicator.MPIBasedCommunicator):
+class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
 
     def __init__(
             self, mpi_comm=mpi4py.MPI.COMM_WORLD, use_cuda_aware_mpi=True):
