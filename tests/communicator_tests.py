@@ -1,8 +1,10 @@
 import chainer
+import chainer.cuda
 import chainer.links
 import chainer.testing
 import chainer.testing.attr
 import mpi4py.MPI
+import nose.plugins.skip
 import numpy as np
 import unittest
 
@@ -18,14 +20,25 @@ class ExampleModel(chainer.Chain):
         )
 
 
-@chainer.testing.parameterize(*chainer.testing.product({
-    'communicator_class': [communicators.NaiveCommunicator]
-}))
+@chainer.testing.parameterize(
+    {
+        'communicator_class': communicators.NaiveCommunicator,
+        'test_cpu': True,
+        'test_gpu': True,
+    }, {
+        'communicator_class': communicators.NodeAwareCommunicator,
+        'test_cpu': False,
+        'test_gpu': True,
+    }
+)
 class TestCommunicator(unittest.TestCase):
 
     def setUp(self):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
         self.communicator = self.communicator_class(self.mpi_comm)
+
+        if hasattr(self.communicator, 'intra_rank'):
+            chainer.cuda.get_device(self.communicator.intra_rank).use()
 
     def test_rank(self):
         self.assertEqual(self.communicator.rank,
@@ -59,21 +72,29 @@ class TestCommunicator(unittest.TestCase):
                                         (base + 2) * np.ones((5, )))
 
     def test_broadcast_data_cpu(self):
+        if not self.test_cpu:
+            raise nose.plugins.skip.SkipTest()
         model = ExampleModel()
         self._test_broadcast_data(model)
 
     @chainer.testing.attr.gpu
     def test_broadcast_data_gpu(self):
+        if not self.test_gpu:
+            raise nose.plugins.skip.SkipTest()
         model = ExampleModel()
         model.to_gpu()
         self._test_broadcast_data(model)
 
     def test_allreduce_grad_cpu(self):
+        if not self.test_cpu:
+            raise nose.plugins.skip.SkipTest()
         model = ExampleModel()
         self._test_allreduce_grad(model)
 
     @chainer.testing.attr.gpu
     def test_allreduce_grad_gpu(self):
+        if not self.test_gpu:
+            raise nose.plugins.skip.SkipTest()
         model = ExampleModel()
         model.to_gpu()
         self._test_allreduce_grad(model)
