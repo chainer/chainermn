@@ -88,7 +88,6 @@ def main():
     # TODO(akiba): write a comment about master-only extensions
     if comm.rank == 0:
         trainer.extend(extensions.dump_graph('main/loss'))
-        trainer.extend(extensions.snapshot(), trigger=(args.epoch, 'epoch'))
         trainer.extend(extensions.LogReport())
         trainer.extend(
             extensions.PlotReport(['main/loss', 'validation/main/loss'],
