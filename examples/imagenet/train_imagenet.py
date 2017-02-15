@@ -65,7 +65,9 @@ class TestModeEvaluator(chainermn.MultiNodeEvaluator):
     def evaluate(self):
         model = self.get_target('main')
         model.train = False
+        print('GO', flush=True)
         ret = super(TestModeEvaluator, self).evaluate()
+        print('DONE', flush=True)
         model.train = True
         return ret
 
@@ -141,10 +143,11 @@ def main():
 
     # These iterators load the images with subprocesses running in parallel to
     # the training/validation.
-    train_iter = chainer.iterators.MultiprocessIterator(
-        train, args.batchsize, n_processes=args.loaderjob)
-    val_iter = chainer.iterators.MultiprocessIterator(
-        val, args.val_batchsize, repeat=False, n_processes=args.loaderjob)
+    # TODO(akiba): serial iterator?
+    train_iter = chainer.iterators.SerialIterator(
+        train, args.batchsize)  # , n_processes=args.loaderjob)
+    val_iter = chainer.iterators.SerialIterator(
+        val, args.val_batchsize, repeat=False)  #, n_processes=args.loaderjob)
 
     # Set up an optimizer
     # TODO(akiba): write comments
@@ -169,9 +172,6 @@ def main():
 
     if comm.rank == 0:
         trainer.extend(extensions.dump_graph('main/loss'))
-        trainer.extend(extensions.snapshot(), trigger=val_interval)
-        trainer.extend(extensions.snapshot_object(
-            model, 'model_iter_{.updater.iteration}'), trigger=val_interval)
         trainer.extend(extensions.LogReport(trigger=log_interval))
         trainer.extend(extensions.observe_lr(), trigger=log_interval)
         trainer.extend(extensions.PrintReport([
