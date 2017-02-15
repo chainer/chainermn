@@ -65,9 +65,7 @@ class TestModeEvaluator(chainermn.MultiNodeEvaluator):
     def evaluate(self):
         model = self.get_target('main')
         model.train = False
-        print('GO', flush=True)
         ret = super(TestModeEvaluator, self).evaluate()
-        print('DONE', flush=True)
         model.train = True
         return ret
 
