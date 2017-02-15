@@ -75,7 +75,11 @@ class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
         self.use_cuda_aware_mpi = use_cuda_aware_mpi
 
         self._init_ranks()
-        self._init_comms()
+
+        # TODO(akiba): write why we delay initializing comms
+        self.inter_mpi_comm = None
+        self.intra_mpi_comm = None
+        self.intra_nccl_comm = None
 
         self.cpu_buffer_a = _HostPinnedMemory()
         self.cpu_buffer_b = _HostPinnedMemory()
@@ -121,6 +125,11 @@ class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
         self.inter_size = my_ranks[4]
 
     def _init_comms(self):
+        if self.inter_mpi_comm is not None:
+            assert self.intra_mpi_comm is not None
+            assert self.intra_nccl_comm is not None
+            return
+
         self.intra_mpi_comm = self.mpi_comm.Split(
             self.inter_rank, self.intra_rank)
 
@@ -138,6 +147,8 @@ class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
             self.intra_size, nccl_comm_id, self.intra_rank)
 
     def broadcast_data(self, model):
+        self._init_comms()
+
         # TODO(akiba): use NCCL if necessary
         params = [param for _, param in sorted(model.namedparams())]
         itemsize = 4
@@ -151,6 +162,8 @@ class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
         self._unpack_params(params, itemsize, 'data', self.gpu_buffer_a)
 
     def allreduce_grad(self, model, stream=chainer.cuda.Stream.null):
+        self._init_comms()
+
         params = [param for _, param in sorted(model.namedparams())]
         itemsize = 4
         n_elems_total = sum(param.grad.size for param in params)
