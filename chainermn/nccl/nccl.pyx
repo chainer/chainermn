@@ -38,14 +38,14 @@ cdef extern from "nccl.h":
 
     ncclResult_t ncclAllReduce(const void* sendbuff, void* recvbuff, int count,
                                ncclDataType_t datatype, ncclRedOp_t op,
-                               ncclComm_t comm, Stream stream)
+                               ncclComm_t comm, Stream stream) nogil
 
     ncclResult_t ncclReduce(const void* sendbuff, void* recvbuff, int count,
                             ncclDataType_t datatype, ncclRedOp_t op, int root,
-                            ncclComm_t comm, Stream stream)
+                            ncclComm_t comm, Stream stream) nogil
 
     ncclResult_t ncclBcast(void* buff, int count, ncclDataType_t datatype,
-                           int root, ncclComm_t comm, Stream stream)
+                           int root, ncclComm_t comm, Stream stream) nogil
 
 
 cdef dict STATUS = {
@@ -144,22 +144,28 @@ class NcclCommunicator(object):
     def allreduce(self, size_t sendbuf, size_t recvbuf,
                   int count, int datatype, int op, size_t stream):
         cdef comm_info _ci = self.ci
-        status = ncclAllReduce(<void*>sendbuf, <void*>recvbuf, count,
-                               <ncclDataType_t>datatype, <ncclRedOp_t>op,
-                               <ncclComm_t>_ci.ptr, <Stream>stream)
+        with nogil:
+            status = ncclAllReduce(
+                <void*>sendbuf, <void*>recvbuf, count,
+                <ncclDataType_t>datatype, <ncclRedOp_t>op,
+                <ncclComm_t>_ci.ptr, <Stream>stream)
         check_status(status)
 
     def reduce(self, size_t sendbuf, size_t recvbuf,
                int count, int datatype, int op, int root, size_t stream):
         cdef comm_info _ci = self.ci
-        status = ncclReduce(<void*>sendbuf, <void*>recvbuf, count,
-                            <ncclDataType_t>datatype, <ncclRedOp_t>op, root,
-                            <ncclComm_t>_ci.ptr, <Stream>stream)
+        with nogil:
+            status = ncclReduce(
+                <void*>sendbuf, <void*>recvbuf, count,
+                <ncclDataType_t>datatype, <ncclRedOp_t>op, root,
+                <ncclComm_t>_ci.ptr, <Stream>stream)
         check_status(status)
 
     def bcast(self, size_t buf, int count, int datatype, int root,
               size_t stream):
         cdef comm_info _ci = self.ci
-        status = ncclBcast(<void*>buf, count, <ncclDataType_t>datatype, root,
-                           <ncclComm_t>_ci.ptr, <Stream>stream)
+        with nogil:
+            status = ncclBcast(
+                <void*>buf, count, <ncclDataType_t>datatype, root,
+                <ncclComm_t>_ci.ptr, <Stream>stream)
         check_status(status)
