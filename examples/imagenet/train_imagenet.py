@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 import argparse
+import multiprocessing
 import random
 
 import numpy as np
@@ -141,11 +142,11 @@ def main():
 
     # These iterators load the images with subprocesses running in parallel to
     # the training/validation.
-    # TODO(akiba): serial iterator?
-    train_iter = chainer.iterators.SerialIterator(
-        train, args.batchsize)  # , n_processes=args.loaderjob)
-    val_iter = chainer.iterators.SerialIterator(
-        val, args.val_batchsize, repeat=False)  #, n_processes=args.loaderjob)
+    multiprocessing.set_start_method('forkserver')
+    train_iter = chainer.iterators.MultiprocessIterator(
+        train, args.batchsize, n_processes=args.loaderjob)
+    val_iter = chainer.iterators.MultiprocessIterator(
+        val, args.val_batchsize, repeat=False, n_processes=args.loaderjob)
 
     # Set up an optimizer
     # TODO(akiba): write comments
