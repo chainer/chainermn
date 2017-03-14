@@ -3,8 +3,7 @@ from chainermn.communicators import _communication_utility
 
 class NodeAwareCommunicator(object):
 
-    def __init__(
-            self, mpi_comm, use_nccl):
+    def __init__(self, mpi_comm, use_nccl):
         self.mpi_comm = mpi_comm
         self.use_nccl = use_nccl
 
@@ -15,6 +14,14 @@ class NodeAwareCommunicator(object):
         self.intra_mpi_comm = None
         if self.use_nccl:
             self.intra_nccl_comm = None
+
+    @property
+    def rank(self):
+        return self.mpi_comm.rank
+
+    @property
+    def size(self):
+        return self.mpi_comm.size
 
     def _init_ranks(self):
         my_ranks = _communication_utility.init_ranks(self.mpi_comm)
