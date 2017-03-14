@@ -44,3 +44,9 @@ class NodeAwareCommunicator(object):
         self.inter_mpi_comm = comms[1]
         if self.use_nccl:
             self.intra_nccl_comm = comms[2]
+
+    def broadcast_data(self, model):
+        raise NotImplementedError()
+
+    def allreduce_grad(self, model):
+        raise NotImplementedError()
