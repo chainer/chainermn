@@ -4,14 +4,15 @@ import nose.plugins.skip
 import os
 import unittest
 
-from chainermn import communicators
+from chainermn.communicators.hierarchical_communicator \
+    import HierarchicalCommunicator
 
 
 class TestNodeAwareCommunicator(unittest.TestCase):
 
     def setUp(self):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
-        self.communicator = communicators.NodeAwareCommunicator(self.mpi_comm)
+        self.communicator = HierarchicalCommunicator(self.mpi_comm)
 
     def test_intra_rank_with_env(self):
         if 'MV2_COMM_WORLD_LOCAL_RANK' in os.environ:  # MVAPICH

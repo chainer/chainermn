@@ -3,13 +3,14 @@ import numpy as np
 import unittest
 
 import chainermn
+from chainermn.communicators.naive_communicator import NaiveCommunicator
 
 
 class TestDataset(unittest.TestCase):
 
     def setUp(self):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
-        self.communicator = chainermn.NaiveCommunicator(self.mpi_comm)
+        self.communicator = NaiveCommunicator(self.mpi_comm)
 
     def check_scatter_dataset(self, original_dataset):
         sub_dataset = chainermn.scatter_dataset(

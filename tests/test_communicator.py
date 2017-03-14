@@ -8,7 +8,9 @@ import nose.plugins.skip
 import numpy as np
 import unittest
 
-from chainermn import communicators
+from chainermn.communicators.hierarchical_communicator \
+    import HierarchicalCommunicator
+from chainermn.communicators.naive_communicator import NaiveCommunicator
 
 
 class ExampleModel(chainer.Chain):
@@ -23,11 +25,11 @@ class ExampleModel(chainer.Chain):
 
 @chainer.testing.parameterize(
     {
-        'communicator_class': communicators.NaiveCommunicator,
+        'communicator_class': NaiveCommunicator,
         'test_cpu': True,
         'test_gpu': True,
     }, {
-        'communicator_class': communicators.NodeAwareCommunicator,
+        'communicator_class': HierarchicalCommunicator,
         'test_cpu': False,
         'test_gpu': True,
     }
