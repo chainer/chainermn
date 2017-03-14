@@ -1,70 +1,12 @@
-import cffi
-import chainer.cuda
-import collections
-import ctypes
-import cupy as cp
 import math
-import mpi4py.MPI
-import numpy as np
 
+import chainer.cuda
+import mpi4py.MPI
+
+from chainermn.communicators import _communication_utility
+from chainermn.communicators import _memory_utility
 from chainermn.communicators import naive_communicator
 from chainermn import nccl
-
-
-class _HostPinnedMemory(object):
-
-    def __init__(self):
-        self.size = 0
-        self.memory = None
-        self.cptr = None
-        self.ffi = cffi.FFI()
-
-    def assign(self, size):
-        if size > self.size:
-            self.size = size
-            self.memory = cp.cuda.alloc_pinned_memory(size)
-            self.cptr = self.ffi.cast('void *', self.memory.ptr)
-
-    def ptr(self, offset=0):
-        return ctypes.c_void_p(self.memory.ptr + offset)
-
-    def buffer(self, size):
-        return self.ffi.buffer(self.cptr, size)
-
-    def array(self, count, offset=0):
-        return np.frombuffer(
-            self.memory, count=count, offset=offset, dtype=cp.float32)
-
-
-class _DeviceMemory(object):
-
-    def __init__(self):
-        self.size = 0
-        self.memory = None
-        self.cptr = None
-        self.ffi = cffi.FFI()
-
-    def assign(self, size):
-        if size > self.size:
-            self.size = size
-            self.memory = cp.cuda.alloc(size)
-
-    def from_device(self, src, size, offset=0):
-        dst = self.memory + offset
-        dst.copy_from_device(src.data, size)
-
-    def to_device(self, dst, size, offset=0):
-        src = self.memory + offset
-        dst.data.copy_from_device(src, size)
-
-    def ptr(self):
-        return self.memory.ptr
-
-    def buffer(self, size):
-        return self.ffi.buffer(self.ffi.cast('void *', self.memory.ptr), size)
-
-    def array(self, shape, offset=0):
-        return cp.ndarray(shape, memptr=self.memory + offset, dtype=cp.float32)
 
 
 class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
@@ -81,43 +23,13 @@ class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
         self.intra_mpi_comm = None
         self.intra_nccl_comm = None
 
-        self.cpu_buffer_a = _HostPinnedMemory()
-        self.cpu_buffer_b = _HostPinnedMemory()
-        self.gpu_buffer_a = _DeviceMemory()
-        self.gpu_buffer_b = _DeviceMemory()
+        self.cpu_buffer_a = _memory_utility.HostPinnedMemory()
+        self.cpu_buffer_b = _memory_utility.HostPinnedMemory()
+        self.gpu_buffer_a = _memory_utility.DeviceMemory()
+        self.gpu_buffer_b = _memory_utility.DeviceMemory()
 
     def _init_ranks(self):
-        global_names = self.mpi_comm.gather(mpi4py.MPI.Get_processor_name())
-
-        if self.mpi_comm.rank == 0:
-            name_to_global_ranks = collections.defaultdict(list)
-            for global_rank, name in enumerate(global_names):
-                name_to_global_ranks[name].append(global_rank)
-
-            for global_ranks in name_to_global_ranks.values():
-                global_ranks.sort()
-
-            inter_names = sorted(
-                set(global_names), key=lambda name: name_to_global_ranks[name])
-            name_to_inter_rank = {
-                name: inter_rank
-                for inter_rank, name in enumerate(inter_names)
-            }
-            inter_size = len(inter_names)
-
-            all_ranks = []
-            for global_rank, name in enumerate(global_names):
-                ranks = name_to_global_ranks[name]
-                intra_rank = ranks.index(global_rank)
-                intra_size = len(ranks)
-                inter_rank = name_to_inter_rank[name]
-                all_ranks.append((
-                    global_rank, intra_rank, intra_size,
-                    inter_rank, inter_size))
-            my_ranks = self.mpi_comm.scatter(all_ranks)
-        else:
-            my_ranks = self.mpi_comm.scatter(None)
-
+        my_ranks = _communication_utility.init_ranks(self.mpi_comm)
         assert my_ranks[0] == self.mpi_comm.rank
         self.intra_rank = my_ranks[1]
         self.intra_size = my_ranks[2]
@@ -130,21 +42,12 @@ class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
             assert self.intra_nccl_comm is not None
             return
 
-        self.intra_mpi_comm = self.mpi_comm.Split(
-            self.inter_rank, self.intra_rank)
-
-        if self.intra_rank == 0:
-            inter_ranks = self.mpi_comm.allreduce([self.rank])
-        else:
-            inter_ranks = self.mpi_comm.allreduce([])
-
-        world_group = self.mpi_comm.Get_group()
-        inter_group = world_group.Incl(inter_ranks)
-        self.inter_mpi_comm = self.mpi_comm.Create(inter_group)
-
-        nccl_comm_id = self.intra_mpi_comm.bcast(nccl.NcclCommunicatorId())
-        self.intra_nccl_comm = nccl.NcclCommunicator(
-            self.intra_size, nccl_comm_id, self.intra_rank)
+        comms = _communication_utility.init_comms(
+            self.mpi_comm, self.intra_rank, self.intra_size, self.inter_rank,
+            use_nccl=True)
+        self.intra_mpi_comm = comms[0]
+        self.inter_mpi_comm = comms[1]
+        self.intra_nccl_comm = comms[2]
 
     def broadcast_data(self, model):
         self._init_comms()
@@ -156,10 +59,12 @@ class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
         n_bytes_total = n_elems_total * itemsize
 
         self.gpu_buffer_a.assign(n_bytes_total)
-        self._pack_params(params, itemsize, 'data', self.gpu_buffer_a)
+        _memory_utility.pack_params(
+            params, itemsize, 'data', self.gpu_buffer_a)
         self.mpi_comm.Bcast(
             [self.gpu_buffer_a.buffer(n_bytes_total), mpi4py.MPI.FLOAT])
-        self._unpack_params(params, itemsize, 'data', self.gpu_buffer_a)
+        _memory_utility.unpack_params(
+            params, itemsize, 'data', self.gpu_buffer_a)
 
     def allreduce_grad(self, model, stream=chainer.cuda.Stream.null):
         self._init_comms()
@@ -172,7 +77,8 @@ class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
         n_bytes_buffer = n_bytes_per_node * self.inter_size
         self._assign_buffers(n_bytes_buffer)
 
-        self._pack_params(params, itemsize, 'grad', self.gpu_buffer_a)
+        _memory_utility.pack_params(
+            params, itemsize, 'grad', self.gpu_buffer_a)
 
         # Intra-node reduce
         self.intra_nccl_comm.reduce(
@@ -194,21 +100,14 @@ class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
             self.gpu_buffer_b.ptr(), n_elems_total, nccl.NCCL_FLOAT, 0,
             stream.ptr)
 
-        self._unpack_params(params, itemsize, 'grad', self.gpu_buffer_b)
+        _memory_utility.unpack_params(
+            params, itemsize, 'grad', self.gpu_buffer_b)
 
     def _assign_buffers(self, n_bytes_buffer):
         self.gpu_buffer_a.assign(n_bytes_buffer)
         self.gpu_buffer_b.assign(n_bytes_buffer)
         self.cpu_buffer_a.assign(n_bytes_buffer)
         self.cpu_buffer_b.assign(n_bytes_buffer)
-
-    def _pack_params(self, params, itemsize, attr_name, buffer):
-        offset = 0
-        for param in params:
-            grad = getattr(param, attr_name)
-            size = grad.size * itemsize
-            buffer.from_device(grad, size, offset)
-            offset += size
 
     def _allreduce_gradients_inter(
             self, n_bytes_buffer, n_elems_per_node, n_bytes_per_node):
@@ -231,11 +130,3 @@ class NodeAwareCommunicator(naive_communicator.NaiveCommunicator):
         self.inter_mpi_comm.Alltoall(
             [self.gpu_buffer_a.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT],
             [self.gpu_buffer_b.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT])
-
-    def _unpack_params(self, params, itemsize, attr_name, buffer):
-        offset = 0
-        for param in params:
-            grad = getattr(param, attr_name)
-            size = grad.size * itemsize
-            buffer.to_device(grad, size, offset)
-            offset += size
