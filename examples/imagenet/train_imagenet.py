@@ -61,7 +61,7 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
 
 
 # TODO(akiba): write comments about evaluators
-class TestModeEvaluator(chainermn.MultiNodeEvaluator):
+class TestModeEvaluator(extensions.Evaluator):
 
     def evaluate(self):
         model = self.get_target('main')
@@ -166,8 +166,10 @@ def main():
     log_interval = (10, 'iteration') if args.test else \
         chainermn.get_epoch_trigger(1, train, args.batchsize, comm)
 
-    trainer.extend(TestModeEvaluator(comm, val_iter, model, device=device),
-                   trigger=val_interval)
+    # TODO(akiba): write comments
+    evaluator = TestModeEvaluator(val_iter, model, device=device)
+    evaluator = chainermn.MultiNodeEvaluator(evaluator, comm)
+    trainer.extend(evaluator, trigger=val_interval)
 
     if comm.rank == 0:
         trainer.extend(extensions.dump_graph('main/loss'))

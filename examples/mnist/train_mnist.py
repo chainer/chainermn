@@ -88,8 +88,9 @@ def main():
         args.epoch, train, args.batchsize, comm), out=args.out)
 
     # TODO(akiba): write a comment about evaluators
+    evaluator = extensions.Evaluator(test_iter, model, device=device)
     trainer.extend(
-        chainermn.MultiNodeEvaluator(comm, test_iter, model, device=device),
+        chainermn.MultiNodeEvaluator(evaluator, comm),
         trigger=chainermn.get_epoch_trigger(1, train, args.batchsize, comm))
 
     # TODO(akiba): write a comment about master-only extensions
