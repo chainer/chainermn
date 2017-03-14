@@ -51,7 +51,7 @@ def main():
 
     # TODO(akiba): write a comment about devices
     if args.gpu:
-        comm = chainermn.get_communicator('node_aware')
+        comm = chainermn.get_communicator('hierarchical')
         device = comm.intra_rank
     else:
         comm = chainermn.get_communicator('naive')

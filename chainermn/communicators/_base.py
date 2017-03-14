@@ -1,7 +1,7 @@
 from chainermn.communicators import _communication_utility
 
 
-class NodeAwareCommunicator(object):
+class NodeAwareCommunicatorBase(object):
 
     def __init__(self, mpi_comm, use_nccl):
         self.mpi_comm = mpi_comm

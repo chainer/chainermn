@@ -8,10 +8,10 @@ from chainermn.communicators import _memory_utility
 from chainermn import nccl
 
 
-class NodeAwareCommunicator(_base.NodeAwareCommunicator):
+class HierarchicalCommunicator(_base.NodeAwareCommunicatorBase):
 
     def __init__(self, mpi_comm=mpi4py.MPI.COMM_WORLD):
-        super(NodeAwareCommunicator, self).__init__(mpi_comm, use_nccl=True)
+        super(HierarchicalCommunicator, self).__init__(mpi_comm, use_nccl=True)
         self.gpu_buffer_a = _memory_utility.DeviceMemory()
         self.gpu_buffer_b = _memory_utility.DeviceMemory()
 
