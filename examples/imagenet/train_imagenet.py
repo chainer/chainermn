@@ -111,7 +111,7 @@ def main():
     parser.set_defaults(test=False)
     args = parser.parse_args()
 
-    comm = chainermn.NodeAwareCommunicator()
+    comm = chainermn.get_communicator('node_aware')
     if args.gpu:
         device = comm.intra_rank
     else:

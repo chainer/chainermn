@@ -51,10 +51,10 @@ def main():
 
     # TODO(akiba): write a comment about devices
     if args.gpu:
-        comm = chainermn.NodeAwareCommunicator()
+        comm = chainermn.get_communicator('node_aware')
         device = comm.intra_rank
     else:
-        comm = chainermn.NaiveCommunicator()
+        comm = chainermn.get_communicator('naive')
         device = -1
 
     print('GPU: {}'.format(device))
