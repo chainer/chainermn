@@ -4,7 +4,7 @@ def get_communicator(communicator_name='node_aware', *args, **kwargs):
             import NaiveCommunicator
         return NaiveCommunicator(*args, **kwargs)
     elif communicator_name == 'hierarchical':
-        from chainermn.communicators.node_aware_communicator \
+        from chainermn.communicators.hierarchical_communicator \
             import HierarchicalCommunicator
         return HierarchicalCommunicator(*args, **kwargs)
     else:
