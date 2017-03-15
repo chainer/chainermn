@@ -7,6 +7,10 @@ def get_communicator(communicator_name='node_aware', *args, **kwargs):
         from chainermn.communicators.hierarchical_communicator \
             import HierarchicalCommunicator
         return HierarchicalCommunicator(*args, **kwargs)
+    elif communicator_name == 'single_node':
+        from chainermn.communicators.single_node_communicator \
+            import SingleNodeCommunicator
+        return SingleNodeCommunicator(*args, **kwargs)
     else:
         raise ValueError(
             'Unrecognized communicator: "{}"'.format(communicator_name))
