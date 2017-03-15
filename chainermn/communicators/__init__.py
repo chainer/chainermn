@@ -14,6 +14,11 @@ def get_communicator(communicator_name='node_aware', *args, **kwargs):
             import HierarchicalCommunicator
         return HierarchicalCommunicator(*args, **kwargs)
 
+    elif communicator_name == 'two_dimensional':
+        from chainermn.communicators.two_dimensional_communicator \
+            import TwoDimensionalCommunicator
+        return TwoDimensionalCommunicator(*args, **kwargs)
+
     elif communicator_name == 'single_node':
         from chainermn.communicators.single_node_communicator \
             import SingleNodeCommunicator
