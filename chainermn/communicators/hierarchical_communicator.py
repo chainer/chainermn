@@ -3,6 +3,7 @@ import math
 import mpi4py.MPI
 
 from chainermn.communicators import _base
+from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
 from chainermn import nccl
 
@@ -55,23 +56,9 @@ class HierarchicalCommunicator(_base.NodeAwareCommunicatorBase):
 
         # Inter-node allreduce
         if self.intra_rank == 0:
-            # Exchange all data to get own region data (bufferB -> bufferA)
-            self.inter_mpi_comm.Alltoall(
-                [self.gpu_buffer_b.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT],
-                [self.gpu_buffer_a.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT])
-
-            # Reduce own region data (inplace bufferA) and averaging
-            ret = self.gpu_buffer_a.array(self.inter_size * n_elems_per_node) \
-                      .reshape(self.inter_size, n_elems_per_node) \
-                      .sum(axis=0) * (1.0 / self.size)
-
-            # Gather others' region data (bufferA -> bufferB)
-            for i in range(0, self.inter_size):
-                self.gpu_buffer_a.from_device(
-                    ret, n_bytes_per_node, i * n_bytes_per_node)
-            self.inter_mpi_comm.Alltoall(
-                [self.gpu_buffer_a.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT],
-                [self.gpu_buffer_b.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT])
+            _communication_utility.inter_allreduce_gpu(
+                self.inter_mpi_comm, self.size, self.gpu_buffer_a, self.gpu_buffer_b,
+                n_bytes_buffer, n_elems_per_node, n_bytes_per_node)
 
         # Intra-node bcast
         self.intra_nccl_comm.bcast(

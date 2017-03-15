@@ -40,15 +40,7 @@ def init_ranks(mpi_comm):
 
 def init_comms(mpi_comm, intra_rank, intra_size, inter_rank, use_nccl=True):
     intra_mpi_comm = mpi_comm.Split(inter_rank, intra_rank)
-
-    if intra_rank == 0:
-        inter_ranks = mpi_comm.allreduce([mpi_comm.rank])
-    else:
-        inter_ranks = mpi_comm.allreduce([])
-
-    world_group = mpi_comm.Get_group()
-    inter_group = world_group.Incl(inter_ranks)
-    inter_mpi_comm = mpi_comm.Create(inter_group)
+    inter_mpi_comm = mpi_comm.Split(intra_rank, inter_rank)
 
     if use_nccl:
         from chainermn import nccl
@@ -58,3 +50,26 @@ def init_comms(mpi_comm, intra_rank, intra_size, inter_rank, use_nccl=True):
         return intra_mpi_comm, inter_mpi_comm, intra_nccl_comm
     else:
         return intra_mpi_comm, inter_mpi_comm
+
+
+def inter_allreduce_gpu(inter_mpi_comm, size, gpu_buffer_a, gpu_buffer_b,
+                        n_bytes_buffer, n_elems_per_node, n_bytes_per_node):
+    inter_size = inter_mpi_comm.size
+
+    # Exchange all data to get own region data (bufferB -> bufferA)
+    inter_mpi_comm.Alltoall(
+        [gpu_buffer_b.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT],
+        [gpu_buffer_a.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT])
+
+    # Reduce own region data (inplace bufferA) and averaging
+    ret = gpu_buffer_a.array(inter_size * n_elems_per_node) \
+              .reshape(inter_size, n_elems_per_node) \
+              .sum(axis=0) * (1.0 / size)
+
+    # Gather others' region data (bufferA -> bufferB)
+    for i in range(0, inter_size):
+        gpu_buffer_a.from_device(
+            ret, n_bytes_per_node, i * n_bytes_per_node)
+    inter_mpi_comm.Alltoall(
+        [gpu_buffer_a.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT],
+        [gpu_buffer_b.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT])
