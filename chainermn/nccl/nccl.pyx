@@ -47,6 +47,13 @@ cdef extern from "nccl.h":
     ncclResult_t ncclBcast(void* buff, int count, ncclDataType_t datatype,
                            int root, ncclComm_t comm, Stream stream) nogil
 
+    ncclResult_t ncclReduceScatter(const void* sendbuff, void* recvbuff, int recvcount,
+                                   ncclDataType_t datatype, ncclRedOp_t op,
+                                   ncclComm_t comm, Stream stream) nogil
+
+    ncclResult_t ncclAllGather(const void* sendbuff, int count, ncclDataType_t datatype,
+                               void* recvbuff, ncclComm_t comm, Stream stream) nogil
+
 
 cdef dict STATUS = {
     0: 'NCCL_STATUS_SUCCESS',
@@ -169,3 +176,24 @@ class NcclCommunicator(object):
                 <void*>buf, count, <ncclDataType_t>datatype, root,
                 <ncclComm_t>_ci.ptr, <Stream>stream)
         check_status(status)
+
+    def reduce_scatter(self, size_t sendbuf, size_t recvbuf,
+                       int recvcount, int datatype, int op, size_t stream):
+        cdef comm_info _ci = self.ci
+        with nogil:
+            status = ncclReduceScatter(
+                <void*>sendbuf, <void*>recvbuf, recvcount,
+                <ncclDataType_t>datatype, <ncclRedOp_t>op,
+                <ncclComm_t>_ci.ptr, <Stream>stream)
+        check_status(status)
+
+    def allgather(self, size_t sendbuf, int count, int datatype,
+                  size_t recvbuf, size_t stream):
+        cdef comm_info _ci = self.ci
+        with nogil:
+            status = ncclAllGather(
+                <void*>sendbuf, count, <ncclDataType_t>datatype, <void*>recvbuf,
+                <ncclComm_t>_ci.ptr, <Stream>stream)
+        check_status(status)
+
+
