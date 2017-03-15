@@ -17,6 +17,8 @@ from chainermn.communicators.flat_communicator \
     import FlatCommunicator
 from chainermn.communicators.single_node_communicator \
     import SingleNodeCommunicator
+from chainermn.communicators.two_dimensional_communicator \
+    import TwoDimensionalCommunicator
 
 
 class ExampleModel(chainer.Chain):
@@ -42,6 +44,11 @@ class ExampleModel(chainer.Chain):
         'multi_node': True,
     }, {
         'communicator_class': HierarchicalCommunicator,
+        'test_cpu': False,
+        'test_gpu': True,
+        'multi_node': True,
+    }, {
+        'communicator_class': TwoDimensionalCommunicator,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
