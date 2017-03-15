@@ -8,6 +8,7 @@ import nose.plugins.skip
 import numpy as np
 import unittest
 
+from chainermn.communicators import _communication_utility
 from chainermn.communicators.hierarchical_communicator \
     import HierarchicalCommunicator
 from chainermn.communicators.naive_communicator \
@@ -33,24 +34,35 @@ class ExampleModel(chainer.Chain):
         'communicator_class': NaiveCommunicator,
         'test_cpu': True,
         'test_gpu': True,
+        'multi_node': True,
     }, {
         'communicator_class': FlatCommunicator,
         'test_cpu': False,
         'test_gpu': True,
+        'multi_node': True,
     }, {
         'communicator_class': HierarchicalCommunicator,
         'test_cpu': False,
         'test_gpu': True,
+        'multi_node': True,
     }, {
         'communicator_class': SingleNodeCommunicator,
         'test_cpu': False,
         'test_gpu': True,
+        'multi_node': False,
     }
 )
 class TestCommunicator(unittest.TestCase):
 
     def setUp(self):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
+
+        if not self.multi_node:
+            ranks = _communication_utility.init_ranks(self.mpi_comm)
+            inter_size = ranks[4]
+            if inter_size > 1:
+                raise nose.plugins.skip.SkipTest()
+
         self.communicator = self.communicator_class(self.mpi_comm)
 
         if hasattr(self.communicator, 'intra_rank'):
