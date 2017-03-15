@@ -10,7 +10,10 @@ import unittest
 
 from chainermn.communicators.hierarchical_communicator \
     import HierarchicalCommunicator
-from chainermn.communicators.naive_communicator import NaiveCommunicator
+from chainermn.communicators.naive_communicator \
+    import NaiveCommunicator
+from chainermn.communicators.flat_communicator \
+    import FlatCommunicator
 from chainermn.communicators.single_node_communicator \
     import SingleNodeCommunicator
 
@@ -29,6 +32,10 @@ class ExampleModel(chainer.Chain):
     {
         'communicator_class': NaiveCommunicator,
         'test_cpu': True,
+        'test_gpu': True,
+    }, {
+        'communicator_class': FlatCommunicator,
+        'test_cpu': False,
         'test_gpu': True,
     }, {
         'communicator_class': HierarchicalCommunicator,
