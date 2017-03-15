@@ -11,7 +11,8 @@ from chainermn import nccl
 class TwoDimensionalCommunicator(_base.NodeAwareCommunicatorBase):
 
     def __init__(self, mpi_comm=mpi4py.MPI.COMM_WORLD):
-        super(TwoDimensionalCommunicator, self).__init__(mpi_comm, use_nccl=True)
+        super(TwoDimensionalCommunicator, self).__init__(
+            mpi_comm, use_nccl=True)
         self.gpu_buffer_a = _memory_utility.DeviceMemory()
         self.gpu_buffer_b = _memory_utility.DeviceMemory()
 
@@ -50,12 +51,13 @@ class TwoDimensionalCommunicator(_base.NodeAwareCommunicatorBase):
 
         # Intra-node reduce-scatter (1st dimension)
         self.intra_nccl_comm.reduce_scatter(
-            self.gpu_buffer_a.ptr(), self.gpu_buffer_b.ptr(), n_elems_per_node_1d,
-            nccl.NCCL_FLOAT, nccl.NCCL_SUM, stream.ptr)
+            self.gpu_buffer_a.ptr(), self.gpu_buffer_b.ptr(),
+            n_elems_per_node_1d, nccl.NCCL_FLOAT, nccl.NCCL_SUM, stream.ptr)
 
         # Inter-node allreduce (2nd dimension)
         _communication_utility.inter_allreduce_gpu(
-            self.inter_mpi_comm, self.size, self.gpu_buffer_a, self.gpu_buffer_b,
+            self.inter_mpi_comm, self.size,
+            self.gpu_buffer_a, self.gpu_buffer_b,
             n_bytes_per_node_1d, n_elems_per_node_2d, n_bytes_per_node_2d)
 
         # Intra-node allgather (1st dimension)

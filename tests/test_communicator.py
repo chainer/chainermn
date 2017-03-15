@@ -9,12 +9,12 @@ import numpy as np
 import unittest
 
 from chainermn.communicators import _communication_utility
+from chainermn.communicators.flat_communicator \
+    import FlatCommunicator
 from chainermn.communicators.hierarchical_communicator \
     import HierarchicalCommunicator
 from chainermn.communicators.naive_communicator \
     import NaiveCommunicator
-from chainermn.communicators.flat_communicator \
-    import FlatCommunicator
 from chainermn.communicators.single_node_communicator \
     import SingleNodeCommunicator
 from chainermn.communicators.two_dimensional_communicator \

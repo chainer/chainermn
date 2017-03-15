@@ -18,7 +18,7 @@ def init_ranks(mpi_comm):
         name_to_inter_rank = {
             name: inter_rank
             for inter_rank, name in enumerate(inter_names)
-            }
+        }
         inter_size = len(inter_names)
 
         all_ranks = []
@@ -63,8 +63,8 @@ def inter_allreduce_gpu(inter_mpi_comm, size, gpu_buffer_a, gpu_buffer_b,
 
     # Reduce own region data (inplace bufferA) and averaging
     ret = gpu_buffer_a.array(inter_size * n_elems_per_node) \
-              .reshape(inter_size, n_elems_per_node) \
-              .sum(axis=0) * (1.0 / size)
+        .reshape(inter_size, n_elems_per_node) \
+        .sum(axis=0) * (1.0 / size)
 
     # Gather others' region data (bufferA -> bufferB)
     for i in range(0, inter_size):

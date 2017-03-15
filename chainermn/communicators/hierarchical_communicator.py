@@ -57,7 +57,8 @@ class HierarchicalCommunicator(_base.NodeAwareCommunicatorBase):
         # Inter-node allreduce
         if self.intra_rank == 0:
             _communication_utility.inter_allreduce_gpu(
-                self.inter_mpi_comm, self.size, self.gpu_buffer_a, self.gpu_buffer_b,
+                self.inter_mpi_comm, self.size,
+                self.gpu_buffer_a, self.gpu_buffer_b,
                 n_bytes_buffer, n_elems_per_node, n_bytes_per_node)
 
         # Intra-node bcast
