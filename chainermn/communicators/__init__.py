@@ -24,6 +24,11 @@ def get_communicator(communicator_name='node_aware', *args, **kwargs):
             import SingleNodeCommunicator
         return SingleNodeCommunicator(*args, **kwargs)
 
+    elif communicator_name == 'dummy':
+        from chainermn.communicators.dummy_communicator \
+            import DummyCommunicator
+        return DummyCommunicator(*args, **kwargs)
+
     else:
         raise ValueError(
             'Unrecognized communicator: "{}"'.format(communicator_name))
