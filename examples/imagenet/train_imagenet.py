@@ -110,10 +110,11 @@ def main():
     parser.add_argument('--val_batchsize', '-b', type=int, default=250,
                         help='Validation minibatch size')
     parser.add_argument('--test', action='store_true')
+    parser.add_argument('--communicator', default='hierarchical')
     parser.set_defaults(test=False)
     args = parser.parse_args()
 
-    comm = chainermn.get_communicator('hierarchical')
+    comm = chainermn.get_communicator(args.communicator)
     if args.gpu:
         device = comm.intra_rank
     else:
