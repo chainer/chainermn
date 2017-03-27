@@ -1,12 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
-try:
-    import matplotlib
-    matplotlib.use('Agg')
-except ImportError:
-    pass
-
 import argparse
 import chainer
 import chainer.functions as F
@@ -97,14 +91,6 @@ def main():
     if comm.rank == 0:
         trainer.extend(extensions.dump_graph('main/loss'))
         trainer.extend(extensions.LogReport())
-        if extensions.PlotReport.available():
-            trainer.extend(
-                extensions.PlotReport(['main/loss', 'validation/main/loss'],
-                                      'epoch', file_name='loss.png'))
-            trainer.extend(
-                extensions.PlotReport(['main/accuracy',
-                                       'validation/main/accuracy'],
-                                      'epoch', file_name='accuracy.png'))
         trainer.extend(extensions.PrintReport(
             ['epoch', 'main/loss', 'validation/main/loss',
              'main/accuracy', 'validation/main/accuracy', 'elapsed_time']))
