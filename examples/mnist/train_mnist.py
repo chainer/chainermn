@@ -43,7 +43,7 @@ def main():
                         help='Number of units')
     args = parser.parse_args()
 
-    # TODO(akiba): write a comment about devices
+    # Prepare ChainerMN communicator.
     if args.gpu:
         comm = chainermn.get_communicator('hierarchical')
         device = comm.intra_rank
@@ -58,14 +58,15 @@ def main():
 
     model = L.Classifier(MLP(args.unit, 10))
     if device >= 0:
-        chainer.cuda.get_device(device).use()  # Make a specified GPU current
-        model.to_gpu()  # Copy the model to the GPU
+        chainer.cuda.get_device(device).use()
+        model.to_gpu()
 
-    # TODO(akiba): write a comment about optimizers
+    # Wrap standard Chainer optimizers by MultiNodeOptimizer.
     optimizer = chainermn.MultiNodeOptimizer(chainer.optimizers.Adam(), comm)
     optimizer.setup(model)
 
-    # TODO(akiba): write a comment about datasets
+    # Split and distribute the dataset. Only worker 0 loads the whole dataset.
+    # Datasets of worker 0 are evenly split and distributed to all workers.
     if comm.rank == 0:
         train, test = chainer.datasets.get_mnist()
     else:
@@ -81,13 +82,14 @@ def main():
     trainer = training.Trainer(updater, chainermn.get_epoch_trigger(
         args.epoch, train, args.batchsize, comm), out=args.out)
 
-    # TODO(akiba): write a comment about evaluators
+    # Wrap standard Chainer evaluators by MultiNodeEvaluator.
     evaluator = extensions.Evaluator(test_iter, model, device=device)
     trainer.extend(
         chainermn.MultiNodeEvaluator(evaluator, comm),
         trigger=chainermn.get_epoch_trigger(1, train, args.batchsize, comm))
 
-    # TODO(akiba): write a comment about master-only extensions
+    # Some display and output extensions are necessary only for one worker.
+    # (Otherwise, there would just be repeated outputs.)
     if comm.rank == 0:
         trainer.extend(extensions.dump_graph('main/loss'))
         trainer.extend(extensions.LogReport())
