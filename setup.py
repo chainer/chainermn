@@ -2,14 +2,19 @@ from Cython.Distutils import build_ext
 from setuptools import Extension
 from setuptools import find_packages
 from setuptools import setup
+import sys
 
 
-ext_modules = [
-    Extension(
-        name='chainermn.nccl.nccl',
-        sources=['chainermn/nccl/nccl.pyx'],
-        libraries=['nccl'])
-]
+if '--no-nccl' in sys.argv:
+    sys.argv.remove('--no-nccl')
+    ext_modules = []
+else:
+    ext_modules = [
+        Extension(
+            name='chainermn.nccl.nccl',
+            sources=['chainermn/nccl/nccl.pyx'],
+            libraries=['nccl'])
+    ]
 
 setup(
     name='chainermn',
