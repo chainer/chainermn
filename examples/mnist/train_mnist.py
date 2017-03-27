@@ -62,7 +62,7 @@ def main():
         model.to_gpu()
 
     # Wrap standard Chainer optimizers by MultiNodeOptimizer.
-    optimizer = chainermn.MultiNodeOptimizer(chainer.optimizers.Adam(), comm)
+    optimizer = chainermn.create_multi_node_optimizer(chainer.optimizers.Adam(), comm)
     optimizer.setup(model)
 
     # Split and distribute the dataset. Only worker 0 loads the whole dataset.
@@ -85,7 +85,7 @@ def main():
     # Wrap standard Chainer evaluators by MultiNodeEvaluator.
     evaluator = extensions.Evaluator(test_iter, model, device=device)
     trainer.extend(
-        chainermn.MultiNodeEvaluator(evaluator, comm),
+        chainermn.create_multi_node_evaluator(evaluator, comm),
         trigger=chainermn.get_epoch_trigger(1, train, args.batchsize, comm))
 
     # Some display and output extensions are necessary only for one worker.
