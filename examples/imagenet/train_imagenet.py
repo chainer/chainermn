@@ -153,7 +153,7 @@ def main():
 
     # Set up an optimizer
     # TODO(akiba): write comments
-    optimizer = chainermn.MultiNodeOptimizer(
+    optimizer = chainermn.create_multi_node_optimizer(
         chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9), comm)
     optimizer.setup(model)
 
@@ -171,7 +171,7 @@ def main():
 
     # TODO(akiba): write comments
     evaluator = TestModeEvaluator(val_iter, model, device=device)
-    evaluator = chainermn.MultiNodeEvaluator(evaluator, comm)
+    evaluator = chainermn.create_multi_node_evaluator(evaluator, comm)
     trainer.extend(evaluator, trigger=val_interval)
 
     if comm.rank == 0:
