@@ -62,7 +62,8 @@ def main():
         model.to_gpu()
 
     # Wrap standard Chainer optimizers by MultiNodeOptimizer.
-    optimizer = chainermn.create_multi_node_optimizer(chainer.optimizers.Adam(), comm)
+    optimizer = chainermn.create_multi_node_optimizer(
+        chainer.optimizers.Adam(), comm)
     optimizer.setup(model)
 
     # Split and distribute the dataset. Only worker 0 loads the whole dataset.

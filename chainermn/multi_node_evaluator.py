@@ -20,7 +20,8 @@ def create_multi_node_evaluator(actual_evaluator, communicator):
         def evaluate(self):
             local_mean_dict = self.actual_evaluator.evaluate()
             global_mean_dict = {
-                name: self.communicator.allreduce(value) / self.communicator.size
+                name:
+                    self.communicator.allreduce(value) / self.communicator.size
                 for name, value in sorted(local_mean_dict.items())
             }
             return global_mean_dict
