@@ -61,10 +61,11 @@ def broadcast_naive(mpi_comm, model):
 
 
 def inter_allreduce_gpu(inter_mpi_comm, size, gpu_buffer_a, gpu_buffer_b,
-                        n_bytes_buffer, n_elems_per_node, n_bytes_per_node):
+                        n_bytes_buffer, n_elems_per_node, n_bytes_per_node, cuda_stream):
     inter_size = inter_mpi_comm.size
 
     # Exchange all data to get own region data (bufferB -> bufferA)
+    cuda_stream.synchronize()
     inter_mpi_comm.Alltoall(
         [gpu_buffer_b.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT],
         [gpu_buffer_a.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT])
@@ -78,6 +79,8 @@ def inter_allreduce_gpu(inter_mpi_comm, size, gpu_buffer_a, gpu_buffer_b,
     for i in range(0, inter_size):
         gpu_buffer_a.from_device(
             ret, n_bytes_per_node, i * n_bytes_per_node)
+
+    cuda_stream.synchronize()
     inter_mpi_comm.Alltoall(
         [gpu_buffer_a.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT],
         [gpu_buffer_b.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT])

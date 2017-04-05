@@ -45,7 +45,7 @@ class HierarchicalCommunicator(_base.NodeAwareCommunicatorBase):
             _communication_utility.inter_allreduce_gpu(
                 self.inter_mpi_comm, self.size,
                 self.gpu_buffer_a, self.gpu_buffer_b,
-                n_bytes_buffer, n_elems_per_node, n_bytes_per_node)
+                n_bytes_buffer, n_elems_per_node, n_bytes_per_node, stream)
 
         # Intra-node bcast
         self.intra_nccl_comm.bcast(
