@@ -1,6 +1,8 @@
 import collections
 import mpi4py.MPI
 
+from chainermn.communicators import _memory_utility
+
 
 def init_ranks(mpi_comm):
     global_names = mpi_comm.gather(mpi4py.MPI.Get_processor_name())
@@ -50,6 +52,12 @@ def init_comms(mpi_comm, intra_rank, intra_size, inter_rank, use_nccl=True):
         return intra_mpi_comm, inter_mpi_comm, intra_nccl_comm
     else:
         return intra_mpi_comm, inter_mpi_comm
+
+
+def broadcast_naive(mpi_comm, model):
+    for _, param in sorted(model.namedparams()):
+        buf = _memory_utility.array_to_buffer_object(param.data)
+        mpi_comm.Bcast(buf)
 
 
 def inter_allreduce_gpu(inter_mpi_comm, size, gpu_buffer_a, gpu_buffer_b,

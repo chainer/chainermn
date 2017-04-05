@@ -1,5 +1,6 @@
 import mpi4py.MPI
 
+from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
 
 
@@ -17,9 +18,7 @@ class NaiveCommunicator(object):
         return self.mpi_comm.size
 
     def broadcast_data(self, model):
-        for _, param in sorted(model.namedparams()):
-            buf = _memory_utility.array_to_buffer_object(param.data)
-            self.mpi_comm.Bcast(buf)
+        _communication_utility.broadcast_naive(self.mpi_comm, model)
 
     def allreduce_grad(self, model):
         for _, param in sorted(model.namedparams()):
