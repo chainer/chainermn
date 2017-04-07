@@ -41,6 +41,7 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
+    'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
 ]
 
