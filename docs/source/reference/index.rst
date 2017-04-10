@@ -7,7 +7,7 @@ API Reference
 Communicators
 ~~~~~~~~~~~~~
 
-.. autofunction:: get_communicator
+.. autofunction:: create_communicator
 
 
 Optimizers and Evaluators
