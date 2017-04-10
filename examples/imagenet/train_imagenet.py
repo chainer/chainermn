@@ -114,7 +114,7 @@ def main():
     parser.set_defaults(test=False)
     args = parser.parse_args()
 
-    comm = chainermn.get_communicator(args.communicator)
+    comm = chainermn.create_communicator(args.communicator)
     if args.gpu:
         device = comm.intra_rank
     else:

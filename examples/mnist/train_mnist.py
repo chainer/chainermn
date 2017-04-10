@@ -45,10 +45,10 @@ def main():
 
     # Prepare ChainerMN communicator.
     if args.gpu:
-        comm = chainermn.get_communicator('hierarchical')
+        comm = chainermn.create_communicator('hierarchical')
         device = comm.intra_rank
     else:
-        comm = chainermn.get_communicator('naive')
+        comm = chainermn.create_communicator('naive')
         device = -1
 
     print('GPU: {}'.format(device))
