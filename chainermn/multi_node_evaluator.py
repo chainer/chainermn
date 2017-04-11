@@ -1,5 +1,16 @@
 def create_multi_node_evaluator(actual_evaluator, communicator):
 
+    """Create a multi node evaluator from a normal evaluator.
+
+    Args:
+        actual_evaluator: evaluator (e.g., ``chainer.training.extensions.Evaluator``)
+        communicator: ChainerMN communicator
+
+    Returns:
+        The multi node evaluator based on ``actual_evaluator``.
+
+    """
+
     class MultiNodeEvaluator(type(actual_evaluator)):
 
         def __init__(self, actual_evaluator_, communicator_):
