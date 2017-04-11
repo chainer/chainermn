@@ -1,4 +1,4 @@
-def create_communicator(communicator_name='node_aware', *args, **kwargs):
+def create_communicator(communicator_name='hierarchical', *args, **kwargs):
     if communicator_name == 'naive':
         from chainermn.communicators.naive_communicator \
             import NaiveCommunicator
