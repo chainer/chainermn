@@ -7,7 +7,7 @@ from chainermn.communicators import _memory_utility
 
 class FlatCommunicator(_base.NodeAwareCommunicatorBase):
 
-    def __init__(self, mpi_comm=mpi4py.MPI.COMM_WORLD):
+    def __init__(self, mpi_comm):
         super(FlatCommunicator, self).__init__(mpi_comm, use_nccl=True)
 
         self.gpu_buffer_a = _memory_utility.DeviceMemory()

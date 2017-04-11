@@ -8,7 +8,7 @@ from chainermn import nccl
 
 class SingleNodeCommunicator(_base.NodeAwareCommunicatorBase):
 
-    def __init__(self, mpi_comm=mpi4py.MPI.COMM_WORLD):
+    def __init__(self, mpi_comm):
         super(SingleNodeCommunicator, self).__init__(mpi_comm, use_nccl=True)
 
         if self.inter_size != 1:

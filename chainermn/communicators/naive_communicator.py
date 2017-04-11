@@ -6,7 +6,7 @@ from chainermn.communicators import _memory_utility
 
 class NaiveCommunicator(object):
 
-    def __init__(self, mpi_comm=mpi4py.MPI.COMM_WORLD):
+    def __init__(self, mpi_comm):
         self.mpi_comm = mpi_comm
 
     @property

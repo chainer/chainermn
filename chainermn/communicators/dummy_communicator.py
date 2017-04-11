@@ -13,7 +13,7 @@ class DummyCommunicator(_base.NodeAwareCommunicatorBase):
     This class does not pass the tests.
     """
 
-    def __init__(self, mpi_comm=mpi4py.MPI.COMM_WORLD):
+    def __init__(self, mpi_comm):
         super(DummyCommunicator, self).__init__(mpi_comm, use_nccl=True)
 
         self.gpu_buffer_a = _memory_utility.DeviceMemory()
