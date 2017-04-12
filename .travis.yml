@@ -44,6 +44,7 @@ before_install:
       pyenv global $PYTHON_VERSION;
       python --version;
     fi
+  - /bin/bash .travis_build_mpi.sh
 
 install:
   - pip install -U pip wheel
