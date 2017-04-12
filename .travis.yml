@@ -6,31 +6,31 @@ cache:
 
 matrix:
   include:
-    - os: linux
-      python: "2.7"
-    - os: linux
-      python: "3.4"
+    # - os: linux
+    #   python: "2.7"
+    # - os: linux
+    #   python: "3.4"
     - os: linux
       python: "3.5.1"
 
-    - os: osx
-      language: generic
-      env:
-      - PYTHON_VERSION=2.7.10
-      - PYENV_ROOT=~/.pyenv
-      - PATH=$PYENV_ROOT/shims:$PATH:$PYENV_ROOT/bin
-    - os: osx
-      language: generic
-      env:
-      - PYTHON_VERSION=3.4.3
-      - PYENV_ROOT=~/.pyenv
-      - PATH=$PYENV_ROOT/shims:$PATH:$PYENV_ROOT/bin
-    - os: osx
-      language: generic
-      env:
-      - PYTHON_VERSION=3.5.1
-      - PYENV_ROOT=~/.pyenv
-      - PATH=$PYENV_ROOT/shims:$PATH:$PYENV_ROOT/bin
+    # - os: osx
+    #   language: generic
+    #   env:
+    #   - PYTHON_VERSION=2.7.10
+    #   - PYENV_ROOT=~/.pyenv
+    #   - PATH=$PYENV_ROOT/shims:$PATH:$PYENV_ROOT/bin
+    # - os: osx
+    #   language: generic
+    #   env:
+    #   - PYTHON_VERSION=3.4.3
+    #   - PYENV_ROOT=~/.pyenv
+    #   - PATH=$PYENV_ROOT/shims:$PATH:$PYENV_ROOT/bin
+    # - os: osx
+    #   language: generic
+    #   env:
+    #   - PYTHON_VERSION=3.5.1
+    #   - PYENV_ROOT=~/.pyenv
+    #   - PATH=$PYENV_ROOT/shims:$PATH:$PYENV_ROOT/bin
 
 before_install:
   - if [[ $TRAVIS_OS_NAME = "osx" ]]; then
@@ -46,13 +46,11 @@ before_install:
 install:
   - pip install -U pip wheel
   - pip install cython
-  - python setup.py build --no-nccl
-  - python setup.py sdist
-  - pip install dist/*.tar.gz
   - pip install nose hacking mock
   - pip install autopep8
   - pip install chainer
   - pip install mpi4py
+  - python setup.py install --no-nccl
 
 script:
   # - flake8
