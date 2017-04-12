@@ -46,7 +46,8 @@ before_install:
 install:
   - pip install -U pip wheel
   - pip install cython
-  - python setup.py sdist --no-nccl
+  - python setup.py build --no-nccl
+  - python setup.py sdist
   - pip install dist/*.tar.gz
   - pip install nose hacking mock
   - pip install autopep8
