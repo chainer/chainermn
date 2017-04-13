@@ -11,10 +11,14 @@ function install {
     DIST=$2
     FILE=$(basename $DIST)
 
-    echo $PREFIX
-    echo $DIST
+    echo PREFIX=$PREFIX
+    echo DIST=$DIST
 
-    if [ ! -d $PREFIX ]; then
+    echo "-------------------------------------------------"
+    echo "Installing $1"
+    echo "-------------------------------------------------"
+
+    if [ ! -x $PREFIX/bin/mpicxx ]; then
         rm -rf $BUILD_DIR/*
         cd $BUILD_DIR
         mkdir -p $PREFIX
@@ -25,7 +29,7 @@ function install {
     fi
 }
 
-install mpich30 "http://www.mpich.org/static/downloads/3.0.4/mpich-3.0.4.tar.gz"
+install mpich-3.0.4 "http://www.mpich.org/static/downloads/3.0.4/mpich-3.0.4.tar.gz"
 # install mpich32 "http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz"
 # install ompi110 "https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.6.tar.bz2"
 # install ompi108 "https://www.open-mpi.org/software/ompi/v1.8/downloads/openmpi-1.8.8.tar.bz2"
