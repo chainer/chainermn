@@ -8,7 +8,6 @@ python:
   - "3.5.1"
 
 env:
-  - MPI="mpich-3.2"
   - MPI="mpich-3.0.4"
   - MPI="openmpi-1.10.6"
   
