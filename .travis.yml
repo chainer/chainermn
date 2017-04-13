@@ -9,6 +9,10 @@ python:
 
 env:
   - MPI="mpich-3.0.4"
+  - MPI="mpich-3.1"
+  - MPI="mpich-3.2"
+  - MPI="openmpi-1.6.5"
+  - MPI="openmpi-1.8.8"
   - MPI="openmpi-1.10.6"
   
 

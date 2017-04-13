@@ -8,16 +8,8 @@ mkdir -p $BUILD_DIR
 
 function install_mpich {
     MPI=$1
-
-    if [ "$MPI" == "mpich-3.0.4" ]; then
-        DIST="http://www.mpich.org/static/downloads/3.0.4/mpich-3.0.4.tar.gz"
-    elif [ "$MPI" == "mpich-3.2" ]; then
-        DIST="http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz"
-    else
-        echo "Unknown MPICH version: $MPI"
-        exit -1
-    fi
-
+    VER=$(echo "$MPI" | grep -Eo "[0-9.]+$")
+    DIST="http://www.mpich.org/static/downloads/${VER}/mpich-${VER}.tar.gz"
     PREFIX=$HOME/mpi/$MPI
     FILE=$(basename $DIST)
 
@@ -48,17 +40,9 @@ function install_mpich {
 
 function install_ompi {
     MPI=$1
-
-    if [ "$MPI" == "openmpi-1.10.6" ]; then
-        DIST="https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.6.tar.bz2"
-    elif [ "$MPI" == "openmpi-1.8.8" ]; then
-        DIST="https://www.open-mpi.org/software/ompi/v1.8/downloads/openmpi-1.8.8.tar.bz2"
-    elif [ "$MPI" == "openmpi-1.6.5" ]; then
-        DIST="https://www.open-mpi.org/software/ompi/v1.6/downloads/openmpi-1.6.5.tar.gz"
-    else
-        echo "Unknown Open MPI version: $MPI"
-        exit -1
-    fi
+    VER=$(echo "$MPI" | grep -Eo "[0-9.]+$")
+    MAJOR=$(echo "$VER" | grep -Eo "^[0-9]+\.[0-9]+")
+    DIST="https://www.open-mpi.org/software/ompi/v${MAJOR}/downloads/openmpi-${VER}.tar.bz2"
 
     PREFIX=$HOME/mpi/$MPI
     FILE=$(basename $DIST)
