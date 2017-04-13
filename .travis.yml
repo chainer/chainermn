@@ -14,7 +14,10 @@ matrix:
     #   python: "3.4"
     - os: linux
       python: "3.5.1"
-
+      env:
+        - MPI=mpich30
+        - PATH=$HOME/mpi/$MPI/bin:$PATH
+        - LD_LIBRARY_PATH=$HOME/mpi/$MPI/lib:$HOME/mpi/$MPI/lib64:$LD_LIBRARY_PATH
     # - os: osx
     #   language: generic
     #   env:
