@@ -1,41 +1,23 @@
 language: python
 
+os:
+  - linux
+
+python:
+  - "2.7"
+  - "3.5.1"
+
+env:
+  - MPI="mpich-3.2"
+  - MPI="mpich-3.0.4"
+  - MPI="openmpi-1.10.6"
+  
+
 cache:
   - pip
   - ccache
   - directories:
       $HOME/mpi
-
-matrix:
-  include:
-    # - os: linux
-    #   python: "2.7"
-    # - os: linux
-    #   python: "3.4"
-    - os: linux
-      python: "3.5.1"
-      env:
-        - MPI=mpich-3.0.4
-        - PATH=$HOME/mpi/$MPI/bin:$PATH
-        - LD_LIBRARY_PATH=$HOME/mpi/$MPI/lib:$HOME/mpi/$MPI/lib64:$LD_LIBRARY_PATH
-    # - os: osx
-    #   language: generic
-    #   env:
-    #   - PYTHON_VERSION=2.7.10
-    #   - PYENV_ROOT=~/.pyenv
-    #   - PATH=$PYENV_ROOT/shims:$PATH:$PYENV_ROOT/bin
-    # - os: osx
-    #   language: generic
-    #   env:
-    #   - PYTHON_VERSION=3.4.3
-    #   - PYENV_ROOT=~/.pyenv
-    #   - PATH=$PYENV_ROOT/shims:$PATH:$PYENV_ROOT/bin
-    # - os: osx
-    #   language: generic
-    #   env:
-    #   - PYTHON_VERSION=3.5.1
-    #   - PYENV_ROOT=~/.pyenv
-    #   - PATH=$PYENV_ROOT/shims:$PATH:$PYENV_ROOT/bin
 
 before_install:
   - if [[ $TRAVIS_OS_NAME = "osx" ]]; then
@@ -48,6 +30,8 @@ before_install:
       python --version;
     fi
   - /bin/bash .travis_build_mpi.sh
+  - export PATH=$HOME/mpi/$MPI/bin:$PATH
+  - export LD_LIBRARY_PATH=$HOME/mpi/$MPI/lib:$HOME/mpi/$MPI/lib64:$LD_LIBRARY_PATH
 
 install:
   - pip install -U pip wheel
