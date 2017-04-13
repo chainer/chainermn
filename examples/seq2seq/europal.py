@@ -3,13 +3,14 @@ import collections
 import gzip
 import os
 import re
+import sys
 
 import numpy
 import progressbar
 
 
-split_pattern = re.compile('([.,!?"\':;)(])')
-digit_pattern = re.compile('\d')
+split_pattern = re.compile(r'([.,!?"\':;)(])')
+digit_pattern = re.compile(r'\d')
 
 
 def split_sentence(s):
@@ -25,7 +26,7 @@ def split_sentence(s):
 
 def open_file(path):
     if path.endswith('.gz'):
-        return gzip.open(path)
+        return gzip.open(path, 'rt', encoding=sys.getdefaultencoding())
     else:
         # Find gzipped version of the file
         gz = path + '.gz'
