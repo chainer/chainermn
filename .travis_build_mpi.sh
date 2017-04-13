@@ -60,8 +60,7 @@ function install_ompi {
         exit -1
     fi
 
-    PREFIX=$HOME/mpi/$1
-    DIST=$2
+    PREFIX=$HOME/mpi/$MPI
     FILE=$(basename $DIST)
 
     echo PREFIX=$PREFIX
