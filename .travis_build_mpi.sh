@@ -26,7 +26,7 @@ function install {
 }
 
 install mpich30 "http://www.mpich.org/static/downloads/3.0.4/mpich-3.0.4.tar.gz"
-install mpich32 "http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz"
-install ompi110 "https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.6.tar.bz2"
-install ompi108 "https://www.open-mpi.org/software/ompi/v1.8/downloads/openmpi-1.8.8.tar.bz2"
-install ompi106 "https://www.open-mpi.org/software/ompi/v1.6/downloads/openmpi-1.6.5.tar.gz"
+# install mpich32 "http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz"
+# install ompi110 "https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-1.10.6.tar.bz2"
+# install ompi108 "https://www.open-mpi.org/software/ompi/v1.8/downloads/openmpi-1.8.8.tar.bz2"
+# install ompi106 "https://www.open-mpi.org/software/ompi/v1.6/downloads/openmpi-1.6.5.tar.gz"
