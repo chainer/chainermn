@@ -33,7 +33,7 @@ function install_mpich {
         make -j4 && make install
     fi
 
-    $PREFIX/mpicxx -show
+    $PREFIX/bin/mpicxx -show
 }
 
 install_mpich mpich-3.0.4 \
