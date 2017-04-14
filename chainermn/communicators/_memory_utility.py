@@ -1,15 +1,22 @@
 import ctypes
 
 import cffi
-import chainer.cuda
-import cupy as cp
 import mpi4py.MPI
 import numpy as np
+
+import chainer.cuda
+try:
+    import cupy as cp
+    _cupy_avail = True
+except ImportError:
+    _cupy_avail = False
 
 
 class HostPinnedMemory(object):
 
     def __init__(self):
+        if not _cupy_avail:
+            raise RuntimeError("HostPinnedMemory: Cupy is not available.")
         self.size = 0
         self.memory = None
         self.cptr = None
@@ -35,6 +42,8 @@ class HostPinnedMemory(object):
 class DeviceMemory(object):
 
     def __init__(self):
+        if not _cupy_avail:
+            raise RuntimeError("HostPinnedMemory: Cupy is not available.")
         self.size = 0
         self.memory = None
         self.cptr = None
