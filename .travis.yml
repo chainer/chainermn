@@ -47,7 +47,7 @@ install:
   - python setup.py develop --no-nccl
 
 script:
-  # - flake8
+  - flake8
   # - flake8 --config=.flake8.cython
   # - autopep8 -r . --global-config .pep8 | tee check_autopep8
   # - test ! -s check_autopep8

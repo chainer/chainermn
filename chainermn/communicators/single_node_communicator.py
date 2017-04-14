@@ -1,5 +1,5 @@
 import chainer.cuda
-import mpi4py.MPI
+import mpi4py.MPI  # NOQA
 
 from chainermn.communicators import _base
 from chainermn.communicators import _memory_utility

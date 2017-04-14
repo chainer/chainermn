@@ -46,7 +46,8 @@ class TwoDimensionalCommunicator(_base.NodeAwareCommunicatorBase):
         _communication_utility.inter_allreduce_gpu(
             self.inter_mpi_comm, self.size,
             self.gpu_buffer_a, self.gpu_buffer_b,
-            n_bytes_per_node_1d, n_elems_per_node_2d, n_bytes_per_node_2d, stream)
+            n_bytes_per_node_1d, n_elems_per_node_2d, n_bytes_per_node_2d,
+            stream)
 
         # Intra-node allgather (1st dimension)
         self.intra_nccl_comm.allgather(
