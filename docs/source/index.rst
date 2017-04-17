@@ -12,7 +12,7 @@ Contents:
    :maxdepth: 1
 
    install
-   tutorial
+   tutorial/index
    reference/index
 
 
