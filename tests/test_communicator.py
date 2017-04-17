@@ -1,13 +1,15 @@
+import unittest
+import sys
+
+import mpi4py.MPI
+import nose.plugins.skip
+import numpy as np
+
 import chainer
 import chainer.cuda
 import chainer.links
 import chainer.testing
 import chainer.testing.attr
-import mpi4py.MPI
-import nose.plugins.skip
-import numpy as np
-import unittest
-
 from chainermn.communicators import _communication_utility
 from chainermn.communicators.flat_communicator \
     import FlatCommunicator
@@ -100,6 +102,13 @@ class TestCommunicator(unittest.TestCase):
         model.a.W.grad[:] = self.communicator.rank
         model.b.W.grad[:] = self.communicator.rank + 1
         model.c.b.grad[:] = self.communicator.rank + 2
+
+        sys.stdout.flush()
+        for i in range(self.communicator.size):
+            if self.communicator.rank == i:
+                sys.stderr.write("Rank: {}/{}\n".format(i, self.communicator.size))
+            self.communicator.mpi_comm.Barrier()
+
         self.communicator.allreduce_grad(model)
 
         base = (self.communicator.size - 1) / 2
