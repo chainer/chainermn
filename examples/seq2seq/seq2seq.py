@@ -360,8 +360,8 @@ def main():
     if comm.rank == 0:
         #trigger = chainermn.get_epoch_trigger(1, train_data, args.batchsize, comm)
                                               
-        trainer.extend(extensions.LogReport(trigger=(200, 'iteration')),
-                       trigger=(200, 'iteration'))
+        trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
+                       trigger=(1, 'epoch'))
         #trainer.extend(extensions.LogReport(trigger=trigger), trigger=trigger)
         
         report = extensions.PrintReport(['epoch',
@@ -371,7 +371,7 @@ def main():
                                          'main/perp',
                                          #'validation/main/perp',
                                          'elapsed_time'])
-        trainer.extend(report, trigger=(200, 'iteration'))
+        trainer.extend(report, trigger=(1, 'epoch'))
         #trainer.extend(translate, trigger=(200, 'iteration'))
 
         trainer.extend(CalculateBleu(model, test_data),
