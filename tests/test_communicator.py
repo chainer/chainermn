@@ -85,22 +85,9 @@ class TestCommunicator(unittest.TestCase):
         self.assertEqual(self.communicator.rank,
                          self.mpi_comm.Get_rank())
 
-        # Check all processes have correcxtr comm_rank.
-        s = self.communicator.size
-        r = self.communicator.rank
-        ranks = self.communicator.mpi_comm.allgather(r)
-        chainer.testing.assert_allclose(np.array(ranks),
-                                        np.array(range(s)))
-
     def test_size(self):
         self.assertEqual(self.communicator.size,
                          self.mpi_comm.Get_size())
-
-        # Check all processes have correct comm_size.
-        s = self.communicator.size
-        sizes = self.communicator.mpi_comm.allgather(s)
-        chainer.testing.assert_allclose(np.array(sizes),
-                                        np.ones(s) * s)
 
     def check_broadcast_data(self, model):
         model.a.W.data[:] = self.communicator.rank
@@ -117,19 +104,7 @@ class TestCommunicator(unittest.TestCase):
         model.c.b.grad[:] = self.communicator.rank + 2
 
         self.communicator.allreduce_grad(model)
-        base = (float(self.communicator.size) - 1) / 2
-
-        sys.stdout.flush()
-        for i in range(self.communicator.size):
-            if self.communicator.rank == i:
-                sys.stderr.write("\n--- Rank: {}/{}\n".format(i, self.communicator.size))
-                sys.stderr.write("a.W.grad = {}\n".format(model.a.W.grad))
-                sys.stderr.write("b.W.grad = {}\n".format(model.b.W.grad))
-                sys.stderr.write("c.W.grad = {}\n".format(model.c.b.grad))
-                sys.stderr.write("self.communicator.size = {}\n".format(self.communicator.size))
-                sys.stderr.write("base = {}\n".format(base))
-                sys.stderr.write("(base+0) * np.ones((3,2)) = {}\n".format((base + 0) * np.ones((3, 2))))
-            self.communicator.mpi_comm.Barrier()
+        base = (self.communicator.size - 1.0) / 2
 
         chainer.testing.assert_allclose(model.a.W.grad,
                                         (base + 0) * np.ones((3, 2)))
