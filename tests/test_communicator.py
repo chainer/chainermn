@@ -104,17 +104,19 @@ class TestCommunicator(unittest.TestCase):
         model.c.b.grad[:] = self.communicator.rank + 2
 
         self.communicator.allreduce_grad(model)
+        base = (self.communicator.size - 1) / 2
 
         sys.stdout.flush()
         for i in range(self.communicator.size):
             if self.communicator.rank == i:
-                sys.stderr.write("Rank: {}/{}\n".format(i, self.communicator.size))
+                sys.stderr.write("\n--- Rank: {}/{}\n".format(i, self.communicator.size))
                 sys.stderr.write("a.W.grad = {}\n".format(model.a.W.grad))
                 sys.stderr.write("b.W.grad = {}\n".format(model.b.W.grad))
                 sys.stderr.write("c.W.grad = {}\n".format(model.c.b.grad))
+                sys.stderr.write("base = {}\n".format(base))
+                sys.stderr.write("(base+0) * np.ones((3,2)) = {}\n".format((base + 0) * np.ones((3, 2))))
             self.communicator.mpi_comm.Barrier()
 
-        base = (self.communicator.size - 1) / 2
         chainer.testing.assert_allclose(model.a.W.grad,
                                         (base + 0) * np.ones((3, 2)))
         chainer.testing.assert_allclose(model.b.W.grad,
