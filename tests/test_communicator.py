@@ -117,7 +117,7 @@ class TestCommunicator(unittest.TestCase):
         model.c.b.grad[:] = self.communicator.rank + 2
 
         self.communicator.allreduce_grad(model)
-        base = (self.communicator.size - 1) / 2
+        base = (float(self.communicator.size) - 1) / 2
 
         sys.stdout.flush()
         for i in range(self.communicator.size):
