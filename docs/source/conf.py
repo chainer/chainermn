@@ -158,9 +158,9 @@ if not on_rtd:
 #
 # html_logo = None
 
-# The name of an image file (relative to this directory) to use as a
-# favicon of the docs.  This file should be a Windows icon file (.ico)
-# being 16x16 or 32x32 pixels large.
+# The name of an image file (relative to this directory) to use as a favicon of
+# the docs.  This file should be a Windows icon file (.ico) being 16x16 or
+# 32x32 pixels large.
 #
 # html_favicon = None
 
@@ -252,23 +252,23 @@ htmlhelp_basename = 'ChainerMNdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
-# latex_elements = {
-#      # The paper size ('letterpaper' or 'a4paper').
-#      #
-#      # 'papersize': 'letterpaper',
+latex_elements = {
+    # The paper size ('letterpaper' or 'a4paper').
+    #
+    # 'papersize': 'letterpaper',
 
-#      # The font size ('10pt', '11pt' or '12pt').
-#      #
-#      # 'pointsize': '10pt',
+    # The font size ('10pt', '11pt' or '12pt').
+    #
+    # 'pointsize': '10pt',
 
-#      # Additional stuff for the LaTeX preamble.
-#      #
-#      # 'preamble': '',
+    # Additional stuff for the LaTeX preamble.
+    #
+    # 'preamble': '',
 
-#      # Latex figure (float) alignment
-#      #
-#      # 'figure_align': 'htbp',
-# }
+    # Latex figure (float) alignment
+    #
+    # 'figure_align': 'htbp',
+}
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,

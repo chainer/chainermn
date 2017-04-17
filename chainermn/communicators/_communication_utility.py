@@ -60,9 +60,9 @@ def broadcast_naive(mpi_comm, model):
         mpi_comm.Bcast(buf)
 
 
-def inter_allreduce_gpu(inter_mpi_comm, size, gpu_buffer_a, gpu_buffer_b,
-                        n_bytes_buffer, n_elems_per_node, n_bytes_per_node,
-                        cuda_stream):
+def inter_allreduce_gpu(
+        inter_mpi_comm, size, gpu_buffer_a, gpu_buffer_b,
+        n_bytes_buffer, n_elems_per_node, n_bytes_per_node, cuda_stream):
     inter_size = inter_mpi_comm.size
 
     # Exchange all data to get own region data (bufferB -> bufferA)
