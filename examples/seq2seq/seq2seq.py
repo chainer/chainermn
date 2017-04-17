@@ -2,8 +2,10 @@
 
 import argparse
 import collections
+import pickle
 import os.path
 import sys
+import time
 
 from nltk.corpus import comtrans
 from nltk.translate import bleu_score
@@ -131,6 +133,31 @@ def convert(batch, device):
         to_device_batch([x for x, _ in batch]) +
         to_device_batch([y for _, y in batch]))
 
+def cached_call(fname, func, *args):
+    if os.path.exists(fname):
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
+    else:
+        # not yet cached
+        val = func(*args)
+        with open(fname, 'wb') as f:
+            pickle.dump(val, f)
+        return val
+
+def read_source(in_dir, cache=None):
+    en_path = os.path.join(in_dir, 'giga-fren.release2.fixed.en')
+    source_vocab = ['<eos>', '<unk>'] + europal.count_words(en_path)
+    source_data = europal.make_dataset(en_path, source_vocab)
+
+    return source_vocab, source_data
+
+def read_target(in_dir, cahce=None):
+    fr_path = os.path.join(in_dir, 'giga-fren.release2.fixed.fr')
+    target_vocab = ['<eos>', '<unk>'] + europal.count_words(fr_path)
+    target_data = europal.make_dataset(fr_path, target_vocab)
+
+    return target_vocab, target_data
+
 
 class CalculateBleu(chainer.training.Extension):
     def __init__(self, model, test_data, batch=100):
@@ -167,6 +194,8 @@ def main():
                         help="Input directory")
     parser.add_argument('--out', '-o', default='result',
                         help='Directory to output the result')
+    parser.add_argument('--cache', '-c', default=None,
+                        help='Directory to cache pre-processed dataset')
     parser.add_argument('--resume', '-r', default='',
                         help='Resume the training from snapshot')
     parser.add_argument('--unit', '-u', type=int, default=1024,
@@ -205,35 +234,54 @@ def main():
     else:
         # Rank 0 prepares all data
         if comm.rank == 0:
-            en_path = os.path.join(args.input, 'giga-fren.release2.fixed.en')
-            source_vocab = ['<eos>', '<unk>'] + europal.count_words(en_path)
-            source_data = europal.make_dataset(en_path, source_vocab)
+            if args.cache and not os.path.exists(args.cache):
+                os.mkdir(args.cache)
+
+            # Read source data
+            bt = time.time()
+            if args.cache:
+                cache_file = os.path.join(args.cache, 'source.pickle')
+                src_vocab, src_data = cached_call(cache_file,
+                                                  read_source,
+                                                  args.input, args.cache)
+            else:
+                src_vocab, src_data = read_source(args.input, args.cache)
+            et = time.time()
+            print("RD source done. {:.3f} [s]".format(et-bt))
             sys.stdout.flush()
 
-            fr_path = os.path.join(args.input, 'giga-fren.release2.fixed.fr')
-            target_vocab = ['<eos>', '<unk>'] + europal.count_words(fr_path)
-            target_data = europal.make_dataset(fr_path, target_vocab)
+            # Read target data
+            bt = time.time()
+            if args.cache:
+                cache_file = os.path.join(args.cache, 'target.pickle')
+                trg_vocab, trg_data = cached_call(cache_file,
+                                                  read_target,
+                                                  args.input, args.cache)
+            else:
+                trg_vocab, trg_data = read_target(args.input, args.cache)
+            et = time.time()
+            print("RD target done. {:.3f} [s]".format(et-bt))
             sys.stdout.flush()
 
-            print('Original training data size: %d' % len(source_data))
-            train_data = [(s, t) for s, t in zip(source_data, target_data)
-                          if len(s) < 50 and len(t) < 50]
+            print('Original training data size: %d' % len(src_data))
+            train_data = [(s, t) for s, t in zip(src_data, trg_data)
+                          if 0 < len(s) < 50 and len(t) < 50]
             print('Filtered training data size: %d' % len(train_data))
 
             en_path = os.path.join(args.input, 'dev','newstest2013.en')
-            source_data = europal.make_dataset(en_path, source_vocab)
+            src_data = europal.make_dataset(en_path, src_vocab)
             sys.stdout.flush()
 
             fr_path = os.path.join(args.input, 'dev','newstest2013.fr')
-            target_data = europal.make_dataset(fr_path, target_vocab)
+            trg_data = europal.make_dataset(fr_path, trg_vocab)
             sys.stdout.flush()
 
-            test_data = list(zip(source_data, target_data))
+            test_data = list(zip(src_data, trg_data))
 
-            source_ids = {word: index for index, word in enumerate(source_vocab)}
-            target_ids = {word: index for index, word in enumerate(target_vocab)}
+            source_ids = {word: index for index, word in enumerate(src_vocab)}
+            target_ids = {word: index for index, word in enumerate(trg_vocab)}
         else:
-            #target_data, source_data = None, None
+            #target_data, src_data = None, None
             train_data, test_data = None, None
             target_ids, source_ids = None, None
 
