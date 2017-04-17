@@ -4,10 +4,15 @@ from chainermn import nccl
 
 class NodeAwareCommunicatorBase(object):
 
-    def __init__(self, mpi_comm, use_nccl):
+    def __init__(self, mpi_comm, use_nccl = None):
+        # Automatically enable NCCL if not specified
+        if use_nccl is None and nccl._available:
+            use_nccl = True
+            
         if use_nccl and not nccl._available:
             raise RuntimeError('use_nccl is specified but ' +
                                'ChainerMN is not built with NCCL')
+
         self.mpi_comm = mpi_comm
         self.use_nccl = use_nccl
 
