@@ -39,7 +39,8 @@ def create_multi_node_optimizer(actual_optimizer, communicator):
     """Create a multi node optimizer from a Chainer optimizer.
 
     Args:
-        actual_optimizer: Chainer optimizer (e.g., ``chainer.optimizers.Adam``).
+        actual_optimizer: Chainer optimizer
+            (e.g., ``chainer.optimizers.Adam``).
         communicator: ChainerMN communicator.
 
     Returns:

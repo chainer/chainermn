@@ -1,6 +1,5 @@
 import chainer.cuda
 import math
-import mpi4py.MPI
 
 from chainermn.communicators import _base
 from chainermn.communicators import _communication_utility

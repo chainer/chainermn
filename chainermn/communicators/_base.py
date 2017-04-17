@@ -1,5 +1,5 @@
-from chainermn import nccl
 from chainermn.communicators import _communication_utility
+from chainermn import nccl
 
 
 class NodeAwareCommunicatorBase(object):

@@ -14,7 +14,7 @@ class Alex(chainer.Chain):
 
     def __init__(self):
         super(Alex, self).__init__(
-            conv1=L.Convolution2D(None,  96, 11, stride=4),
+            conv1=L.Convolution2D(None, 96, 11, stride=4),
             conv2=L.Convolution2D(None, 256,  5, pad=2),
             conv3=L.Convolution2D(None, 384,  3, pad=1),
             conv4=L.Convolution2D(None, 384,  3, pad=1),
