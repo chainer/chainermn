@@ -39,6 +39,7 @@ class ExampleModel(chainer.Chain):
         'multi_node': True,
     }, {
         'communicator_class': FlatCommunicator,
+        'gpu' : True,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
@@ -47,16 +48,19 @@ class ExampleModel(chainer.Chain):
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
+        'nccl' : True,
     }, {
         'communicator_class': TwoDimensionalCommunicator,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
+        'nccl' : True,
     }, {
         'communicator_class': SingleNodeCommunicator,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': False,
+        'nccl' : True,
     }
 )
 class TestCommunicator(unittest.TestCase):
