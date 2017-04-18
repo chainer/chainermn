@@ -42,7 +42,7 @@ Replacing Epoch Triggers
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 This step is necessary only when you decided to scatter datasets.
-When using ``scatter_datasets``,
+When using ``scatter_dataset``,
 please remember that *using epoch triggers is dangerous*.
 This is because, when the length of the original dataset before scatter
 is not divisible by the number of workers,
@@ -92,8 +92,8 @@ To create and use a multi-node evaluator, we modify that part as follows::
         trigger=chainermn.get_epoch_trigger(1, train, args.batchsize, comm))
 
 
-Suppressing Display Extensions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Suppressing Unnecessary Extensions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This step is also an optional step, although useful for most use cases.
 Some of extensions should be invoked only at one of the workers.
@@ -109,4 +109,8 @@ only at workers of rank zero as follows::
           ['epoch', 'main/loss', 'validation/main/loss',
            'main/accuracy', 'validation/main/accuracy', 'elapsed_time']))
       trainer.extend(extensions.ProgressBar())
+
+Please note that, even you are using ``scatter_dataset``,
+for these extensions, ``get_epoch_trigger`` should not be used,
+and it is okay to use epoch triggers instead.
 
