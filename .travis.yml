@@ -54,10 +54,9 @@ script:
   - for NP in 1 2 3 4; do PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' mpiexec -n ${NP} nosetests -a '!nccl,!gpu'; done
   # - cd tests
   # - PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' nosetests -a '!gpu,!slow' --with-doctest chainer_tests
-  # - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
-  #     cd ..;
-  #     READTHEDOCS=True python setup.py develop;
-  #   fi
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
+      READTHEDOCS=True python setup.py develop --no-nccl;
+    fi
 
 dist: trusty
 sudo: false
