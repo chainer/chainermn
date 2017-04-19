@@ -40,9 +40,9 @@ You can invoke MNIST example with four workers by the following command:
 mpiexec -n 4 python examples/mnist/train_mnist.py
 ```
 
-* If you are new to Chainer, we recommend to start from [Chainer tutorial](http://docs.chainer.org/en/latest/tutorial/index.html).
-* In our [tutorial](https://chainermn.readthedocs.org/en/latest/tutorial), we explain how to modify your existing code using Chainer to enable distributed training with ChainerMN in a step-by-step manner.
-* In our [example directory](examples), you will find useful examples.
+* **[Chainer Tutorial](http://docs.chainer.org/en/latest/tutorial/index.html)** --- If you are new to Chainer, we recommend to start from this.
+* **[ChainerMN Tutorial](https://chainermn.readthedocs.org/en/latest/tutorial)** --- In this tutorial, we explain how to modify your existing code using Chainer to enable distributed training with ChainerMN in a step-by-step manner.
+* **[Examples](examples)** --- The examples are based on the official examples of Chainer and the differences are highlighted.
 
 
 ## Contributing
