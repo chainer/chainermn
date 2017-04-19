@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/chainermn.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-# ChainerMN
+# ChainerMN: Distributed Deep Learning with Chainer
 
 [Documentation](https://chainermn.readthedocs.org) |
 [Installation](https://chainermn.readthedocs.org/en/latest/install.html) |
