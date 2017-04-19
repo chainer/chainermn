@@ -20,7 +20,7 @@
 ## Installation
 
 ChainerMN can be used for both inner-node (i.e., multiple GPUs inside a node) and inter-node settings.
-For inter-node settings, we highly recommend to use high speed interconnects such as InfiniBand.
+For inter-node settings, we highly recommend to use high-speed interconnects such as InfiniBand.
 
 In addition to Chainer, ChainerMN depends on the following software libraries: CUDA-Aware MPI, NVIDIA NCCL, and MPI4py.
 After setting them up, ChainerMN can be installed via PyPI:
@@ -29,7 +29,7 @@ After setting them up, ChainerMN can be installed via PyPI:
 pip install chainermn
 ```
 
-Please refer to [installation guide](https://chainermn.readthedocs.org/en/latest/install.html) for more information.
+Please refer to the [installation guide](https://chainermn.readthedocs.org/en/latest/install.html) for more information.
 
 
 ## Getting Started
@@ -46,10 +46,10 @@ mpiexec -n 4 python examples/mnist/train_mnist.py
 
 
 ## Contributing
-Any kind of contribution to ChainerMN would be highly appreciated.
+Any contribution to ChainerMN would be highly appreciated.
 Please refer to [Chainer Contribution Guide](http://docs.chainer.org/en/latest/contribution.html).
 
 
 ## License
 
-[MIT License](LICENSE).
+[MIT License](LICENSE)
