@@ -29,7 +29,7 @@ class MLP(chainer.Chain):
 class TestMNIST(unittest.TestCase):
     def test_mnist(self, display_log=False):
         # This test file is intended to be run on Travis-CI and
-        # GPU is not used.
+        # GPU is not used for now.
         epoch = 10
         batchsize = 100
         n_units = 100
