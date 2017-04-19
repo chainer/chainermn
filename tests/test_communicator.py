@@ -1,13 +1,15 @@
+import unittest
+import sys
+
+import mpi4py.MPI
+import nose.plugins.skip
+import numpy as np
+
 import chainer
 import chainer.cuda
 import chainer.links
 import chainer.testing
 import chainer.testing.attr
-import mpi4py.MPI
-import nose.plugins.skip
-import numpy as np
-import unittest
-
 from chainermn.communicators import _communication_utility
 from chainermn.communicators.flat_communicator \
     import FlatCommunicator
@@ -39,6 +41,7 @@ class ExampleModel(chainer.Chain):
         'multi_node': True,
     }, {
         'communicator_class': FlatCommunicator,
+        'gpu' : True,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
@@ -47,16 +50,19 @@ class ExampleModel(chainer.Chain):
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
+        'nccl' : True,
     }, {
         'communicator_class': TwoDimensionalCommunicator,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
+        'nccl' : True,
     }, {
         'communicator_class': SingleNodeCommunicator,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': False,
+        'nccl' : True,
     }
 )
 class TestCommunicator(unittest.TestCase):
@@ -96,9 +102,10 @@ class TestCommunicator(unittest.TestCase):
         model.a.W.grad[:] = self.communicator.rank
         model.b.W.grad[:] = self.communicator.rank + 1
         model.c.b.grad[:] = self.communicator.rank + 2
-        self.communicator.allreduce_grad(model)
 
-        base = (self.communicator.size - 1) / 2
+        self.communicator.allreduce_grad(model)
+        base = (self.communicator.size - 1.0) / 2
+
         chainer.testing.assert_allclose(model.a.W.grad,
                                         (base + 0) * np.ones((3, 2)))
         chainer.testing.assert_allclose(model.b.W.grad,

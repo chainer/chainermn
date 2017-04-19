@@ -1,9 +1,14 @@
 from chainermn.communicators import _communication_utility
+from chainermn import nccl
 
 
 class NodeAwareCommunicatorBase(object):
 
     def __init__(self, mpi_comm, use_nccl):
+        if use_nccl and not nccl._available:
+            raise RuntimeError('use_nccl is specified but ' +
+                               'ChainerMN is not built with NCCL')
+
         self.mpi_comm = mpi_comm
         self.use_nccl = use_nccl
 

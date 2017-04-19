@@ -1,0 +1,71 @@
+language: python
+
+os:
+  - linux
+
+python:
+  - "2.7"
+  - "3.5.1"
+
+env:
+  - MPI="mpich-3.0.4"
+  - MPI="mpich-3.1"
+  - MPI="mpich-3.2"
+  - MPI="openmpi-1.6.5"
+  - MPI="openmpi-1.8.8"
+  - MPI="openmpi-1.10.6"
+  
+
+cache:
+  - pip
+  - ccache
+  - directories:
+      $HOME/mpi
+
+before_install:
+  - if [[ $TRAVIS_OS_NAME = "osx" ]]; then
+      brew update >/dev/null;
+      brew outdated pyenv || brew upgrade --quiet pyenv;
+      brew install homebrew/boneyard/pyenv-pip-rehash;
+
+      PYTHON_CONFIGURE_OPTS="--enable-unicode=ucs2" pyenv install -ks $PYTHON_VERSION;
+      pyenv global $PYTHON_VERSION;
+      python --version;
+    fi
+  - /bin/bash .travis_build_mpi.sh
+  - export PATH=$HOME/mpi/$MPI/bin:$PATH
+  - export LD_LIBRARY_PATH=$HOME/mpi/$MPI/lib:$HOME/mpi/$MPI/lib64:$LD_LIBRARY_PATH
+
+install:
+  - pip install -U pip wheel
+  - pip install cython
+  - pip install nose hacking mock
+  - pip install autopep8
+  - pip install chainer
+  - pip install cffi
+  - pip install mpi4py
+  - python setup.py develop --no-nccl
+
+script:
+  # - flake8
+  # - flake8 --config=.flake8.cython
+  # - autopep8 -r . --global-config .pep8 | tee check_autopep8
+  # - test ! -s check_autopep8
+  - for NP in 1 2; do PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' mpiexec -n ${NP} nosetests -a '!nccl,!gpu'; done
+  # - cd tests
+  # - PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' nosetests -a '!gpu,!slow' --with-doctest chainer_tests
+  # - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
+  #     cd ..;
+  #     READTHEDOCS=True python setup.py develop;
+  #   fi
+
+dist: trusty
+sudo: false
+
+addons:
+  apt:
+    packages:
+      - gfortran
+      - libhdf5-serial-dev
+      - liblapack-dev
+      
