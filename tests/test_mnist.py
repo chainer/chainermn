@@ -29,7 +29,7 @@ class MLP(chainer.Chain):
 class TestMNIST(unittest.TestCase):
     def test_mnist(self, display_log=False):
         # This test file is intended to be run on Travis-CI and
-        # GPU is not used.
+        # GPU is not used for now.
         epoch = 10
         batchsize = 100
         n_units = 100
@@ -67,7 +67,6 @@ class TestMNIST(unittest.TestCase):
         # Some display and output extensions are necessary only for one worker.
         # (Otherwise, there would just be repeated outputs.)
         if comm.rank == 0 and display_log:
-            # trainer.extend(extensions.dump_graph('main/loss'))
             trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
                            trigger=(1, 'epoch'))
             trainer.extend(extensions.PrintReport(['epoch',
