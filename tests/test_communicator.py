@@ -1,5 +1,4 @@
 import unittest
-import sys
 
 import mpi4py.MPI
 import nose.plugins.skip
@@ -41,7 +40,7 @@ class ExampleModel(chainer.Chain):
         'multi_node': True,
     }, {
         'communicator_class': FlatCommunicator,
-        'gpu' : True,
+        'gpu': True,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
@@ -50,19 +49,19 @@ class ExampleModel(chainer.Chain):
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
-        'nccl' : True,
+        'nccl': True,
     }, {
         'communicator_class': TwoDimensionalCommunicator,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
-        'nccl' : True,
+        'nccl': True,
     }, {
         'communicator_class': SingleNodeCommunicator,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': False,
-        'nccl' : True,
+        'nccl': True,
     }
 )
 class TestCommunicator(unittest.TestCase):
