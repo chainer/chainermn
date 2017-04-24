@@ -43,8 +43,8 @@ If you see any error in above commands, please check your MPI installation.
 Your MPI must be configured as `CUDA-aware`. You can use
 `util/cuda_ware_check.c` to check your configuration.
 
-    $ mpicc util/cuda_aware_check.c
-    $ mpiexec -n 2 ./a.out
+    $ make -C util
+    $ mpiexec -n 2 ./util/cuda_aware_check
     OK.
     
 ### Check mpi4py
