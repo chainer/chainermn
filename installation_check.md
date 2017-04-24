@@ -43,9 +43,11 @@ If you see any error in above commands, please check your MPI installation.
 Your MPI must be configured as `CUDA-aware`. You can use
 `util/cuda_ware_check.c` to check your configuration.
 
-    $ make -C util
-    $ mpiexec -n 2 ./util/cuda_aware_check
-    OK.
+```bash
+$ make -C util
+$ mpiexec -n 2 ./util/cuda_aware_check
+OK.
+```
     
 ### Check mpi4py
 
@@ -60,25 +62,31 @@ each MPI process in a sequential manner.
 
 If you invoke the script without `mpiexec`, it just prints `0`.
 
-    $ python util/print_rank.py
-    0
+```bash
+$ python util/print_rank.py
+0
+```
     
 If you run it with multiple processes, you will see the following output.
 
-    $ mpiexec -n 4 python util/print_rank.py
-    0
-    1
-    2
-    3
+```bash
+$ mpiexec -n 4 python util/print_rank.py
+0
+1
+2
+3
+```
 
 Something is wrong with your installation if you get an output like below.
 
-    # Wrong output !
-    $ mpiexec -n 4 python util/print_rank.py
-    0
-    0
-    0
-    0
+```bash
+# Wrong output !
+$ mpiexec -n 4 python util/print_rank.py
+0
+0
+0
+0
+```
     
 A typical problem is that the `mpicc` used to build `mpi4py` and
 `mpiexec` used to run the script are from different MPI installations.
@@ -88,8 +96,10 @@ A typical problem is that the `mpicc` used to build `mpi4py` and
 
 To use ChainerMN on multiple nodes, you need to login computing hosts via ssh without password authentication.
 
-    $ ssh you@yourhost 'hostname'
-    yourhost  # without hitting the password
+```bash
+$ ssh you@yourhost 'hostname'
+yourhost  # without hitting the password
+```
     
 TODO: hostfile
 TODO: Run chainermn's nosetests
