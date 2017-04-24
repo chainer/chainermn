@@ -61,7 +61,7 @@ def main():
         chainer.cuda.get_device(device).use()
         model.to_gpu()
 
-    # Wrap standard Chainer optimizers by MultiNodeOptimizer.
+    # Create a multi node optimizer from a standard Chainer optimizer.
     optimizer = chainermn.create_multi_node_optimizer(
         chainer.optimizers.Adam(), comm)
     optimizer.setup(model)
@@ -83,7 +83,7 @@ def main():
     trainer = training.Trainer(updater, chainermn.get_epoch_trigger(
         args.epoch, train, args.batchsize, comm), out=args.out)
 
-    # Wrap standard Chainer evaluators by MultiNodeEvaluator.
+    # Create a multi node evaluator from a standard Chainer evaluator.
     evaluator = extensions.Evaluator(test_iter, model, device=device)
     trainer.extend(
         chainermn.create_multi_node_evaluator(evaluator, comm),
