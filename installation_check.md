@@ -91,4 +91,7 @@ To use ChainerMN on multiple nodes, you need to login computing hosts via ssh wi
     $ ssh you@yourhost 'hostname'
     yourhost  # without hitting the password
     
+TODO: hostfile
+TODO: Run chainermn's nosetests
+
 
