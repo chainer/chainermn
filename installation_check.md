@@ -1,6 +1,6 @@
 # Installation check for ChainerMN
 
-This is a step-by-step guide to check if your environment is correctly set up.
+This is a step-by-step trouble shooting to check if your environment is correctly set up.
 
 ## Single-node environment
 
@@ -96,19 +96,96 @@ A typical problem is that the `mpicc` used to build `mpi4py` and
 
 ## Multi-node environmnet
 
+### Check SSH connection
+
 To use ChainerMN on multiple hosts, you need to login computing hosts
 via ssh without password authentication (and preferreably without
-username)
+username), including the host you are currently logged in.
 
 ```bash
 $ ssh host00 'hostname'
 host00   # without hitting the password
+
+$ ssh host01 'hostname'
+host01   # without hitting the password
+
+...
 ```
+
+If your home directory is synched with NSF, you can achieve this just by doing:
+
+```bash
+$ cat ~/.ssh/id_rsa.pub >>~/.ssh/authorized_keys
+```
+
+Also, you need to pay attention to the environment variables on remote hosts.
+MPI runtime connect to the remote hosts in *non-interactive* mode and environment
+variables may differ from your interactive login session.
+
+```bash
+ssh host00 'env' | grep LD_LIBRARY_PATH
+# Check the values and compare it to the local value.
+
+ssh host01 'env' | grep LD_LIBRARY_PATH
+# Check the values and compare it to the local value.
+
+...
+```
+
+In particular, check the following variables, which are critical to
+execute MPI programs:
+
+    * `PATH`
+    * `LD_LIBRARY_PATH`
+    * `MV2_USE_CUDA`
+    * `MV2_CPU_MAPPING`
+    * `MV2_SMP_USE_CMA`
+    
+### Program files and data
+
+When you run MPI programs, all hosts must have the program Python
+binary and script files in the same path. First, check the python
+binary and version are identical among hosts. Be careful if you are
+using pyenv or Anaconda.
+
+```bash
+$ ssh host00 'which python; python --version'
+/home/username/.pyenv/shims/python
+Python 3.6.0 :: Anaconda 4.3.1 (64-bit)
+
+$ ssh host01 'which python'
+/home/username/.pyenv/shims/python
+Python 3.6.0 :: Anaconda 4.3.1 (64-bit)
+
+...
+```
+
+Also, the script file (and possibly data files) must be in the same
+path on each host. 
+
+```
+$ ls yourscript.py
+yourscript.py
+
+$ ssh host00 "ls $PWD/yourscript.py"
+/home/username/your/dir/yourscript.py
+
+$ ssh host01 "ls $PWD/yourscript.py"
+/home/username/your/dir/yourscript.py
+
+...
+```
+
+If you are using NFS everything should be fine,
+but if not you need to transfer all files manually.
+
+### hostfile
 
 Next step is to create a hostfile. A hostfile is a list of hosts on
 which MPI processes run.
 
 ```bash
+$ vi hostfile
 $ cat hostfile
 host00
 host01
@@ -119,7 +196,7 @@ host03
 Then, you can run your MPI program using the hostfile.
 
 ```bash
-$ mpiexec -n 4 python util/print_rank.py
+$ mpiexec -n 4 --hostfile hostfile python util/print_rank.py
 host00 0
 host01 1
 host02 2
@@ -145,9 +222,18 @@ host02 cpu=4
 host03 cpu=4
 ```
 
+```bash
+$ mpiexec -n 8 --hostfile hostfile python util/print_rank.py
+host00 0
+host00 1
+host00 2
+host00 3
+host01 4
+host01 5
+host01 6
+host01 7
+```
+
 You can also specify computing hosts and resource mapping/binding using
 command line options of `mpiexec`. Please refer to the MPI manual for more
 advanced use of `mpiexec` command.
-
-
-
