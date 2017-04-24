@@ -86,3 +86,9 @@ A typical problem is that the `mpicc` used to build `mpi4py` and
 
 ## Multi-node environmnet
 
+To use ChainerMN on multiple nodes, you need to login computing hosts via ssh without password authentication.
+
+    $ ssh you@yourhost 'hostname'
+    yourhost  # without hitting the password
+    
+
