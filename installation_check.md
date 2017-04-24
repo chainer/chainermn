@@ -71,21 +71,23 @@ If you run it with multiple processes, you will see the following output.
 
 ```bash
 $ mpiexec -n 4 python util/print_rank.py
-0
-1
-2
-3
+host00 0
+host00 1
+host00 2
+host00 3
 ```
 
-Something is wrong with your installation if you get an output like below.
+`host00` is the host name of the machine your are running the process.
+If you get an output like below, it indicates something is wrong with
+your installation.
 
 ```bash
 # Wrong output !
 $ mpiexec -n 4 python util/print_rank.py
-0
-0
-0
-0
+host00 0
+host00 0
+host00 0
+host00 0
 ```
     
 A typical problem is that the `mpicc` used to build `mpi4py` and
@@ -94,14 +96,58 @@ A typical problem is that the `mpicc` used to build `mpi4py` and
 
 ## Multi-node environmnet
 
-To use ChainerMN on multiple nodes, you need to login computing hosts via ssh without password authentication.
+To use ChainerMN on multiple hosts, you need to login computing hosts
+via ssh without password authentication (and preferreably without
+username)
 
 ```bash
-$ ssh you@yourhost 'hostname'
-yourhost  # without hitting the password
+$ ssh host00 'hostname'
+host00   # without hitting the password
 ```
-    
-TODO: hostfile
-TODO: Run chainermn's nosetests
+
+Next step is to create a hostfile. A hostfile is a list of hosts on
+which MPI processes run.
+
+```bash
+$ cat hostfile
+host00
+host01
+host02
+host03
+```
+
+Then, you can run your MPI program using the hostfile.
+
+```bash
+$ mpiexec -n 4 python util/print_rank.py
+host00 0
+host01 1
+host02 2
+host03 3
+```
+
+If you have multiple GPUs, you may want to run multiple processes on each host.
+You can modify hostfile and specify number of processes to run on each host.
+
+```bash
+# If you are using Mvapich or Mpich:
+$ cat hostfile
+host00:4
+host01:4
+host02:4
+host03:4
+
+# If you are using Open MPI
+$ cat hostfile
+host00 cpu=4
+host01 cpu=4
+host02 cpu=4
+host03 cpu=4
+```
+
+You can also specify computing hosts and resource mapping/binding using
+command line options of `mpiexec`. Please refer to the MPI manual for more
+advanced use of `mpiexec` command.
+
 
 
