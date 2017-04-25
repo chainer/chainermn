@@ -1,7 +1,7 @@
 .. -*- coding: utf-8; -*-
 
-Step-by-step troubleshooting for ChainerMN
-==========================================
+Step-by-Step Troubleshooting
+============================
 
 This is a step-by-step troublehsooting for ChainerMN.
 Please follow these steps to identify and fix your problem.

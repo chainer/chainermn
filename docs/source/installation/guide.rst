@@ -1,5 +1,5 @@
-Install Guide
-=============
+Installation Guide
+==================
 
 Requirements
 ------------

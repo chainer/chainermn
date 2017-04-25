@@ -11,9 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 1
 
-   install
+   installation/index
    tutorial
-   troubleshooting
    reference/index
 
 
