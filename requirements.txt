@@ -1,0 +1,4 @@
+cffi
+chainer
+cython
+mpi4py
