@@ -66,9 +66,9 @@ class GoogLeNetBN(chainer.Chain):
         test = not self.train
 
         h = F.max_pooling_2d(
-            F.relu(self.norm1(self.conv1(x))),  3, stride=2, pad=1)
+            F.relu(self.norm1(self.conv1(x), test=test)),  3, stride=2, pad=1)
         h = F.max_pooling_2d(
-            F.relu(self.norm2(self.conv2(h))), 3, stride=2, pad=1)
+            F.relu(self.norm2(self.conv2(h), test=test)), 3, stride=2, pad=1)
 
         h = self.inc3a(h)
         h = self.inc3b(h)
@@ -76,8 +76,8 @@ class GoogLeNetBN(chainer.Chain):
         h = self.inc4a(h)
 
         a = F.average_pooling_2d(h, 5, stride=3)
-        a = F.relu(self.norma(self.conva(a)))
-        a = F.relu(self.norma2(self.lina(a)))
+        a = F.relu(self.norma(self.conva(a), test=test))
+        a = F.relu(self.norma2(self.lina(a), test=test))
         a = self.outa(a)
         loss1 = F.softmax_cross_entropy(a, t)
 
@@ -86,8 +86,8 @@ class GoogLeNetBN(chainer.Chain):
         h = self.inc4d(h)
 
         b = F.average_pooling_2d(h, 5, stride=3)
-        b = F.relu(self.normb(self.convb(b)))
-        b = F.relu(self.normb2(self.linb(b)))
+        b = F.relu(self.normb(self.convb(b), test=test))
+        b = F.relu(self.normb2(self.linb(b), test=test))
         b = self.outb(b)
         loss2 = F.softmax_cross_entropy(b, t)
 

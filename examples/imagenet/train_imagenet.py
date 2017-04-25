@@ -13,13 +13,20 @@ from chainer.training import extensions
 
 import chainermn
 
-import alex
-import googlenet
-import googlenetbn
-import nin
-import resnet50
+if chainer.__version__.find('2.') == 0:
+    import alex_v2 as alex
+    import googlenet_v2 as googlenet
+    import googlenetbn_v2 as googlenetbn
+    import nin_v2 as nin
+    import resnet50
+else:
+    import alex
+    import googlenet
+    import googlenetbn
+    import nin
+    import resnet50
 
-
+    
 class PreprocessedDataset(chainer.dataset.DatasetMixin):
 
     def __init__(self, path, root, mean, crop_size, random=True):
