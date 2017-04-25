@@ -19,7 +19,7 @@ from single-node execution. First of all, you need MPI. If MPI is
 correctly installed, you will see ``mpicc`` and ``mpiexec`` command in
 your PATH.
 
-Below is an example of output from Mvapich on Linux::
+Below is an example of output from Mvapich on Linux.::
 
     $ which mpicc
     /usr/local/bin/mpicc
@@ -53,7 +53,9 @@ Check if MPI is CUDA-aware
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Your MPI must be configured as *CUDA-aware*. You can use the following
-C program to check it.::
+C program to check it.
+
+.. code-block:: c
 
   /* test_cuda_aware.c */
   #include <assert.h>
@@ -100,7 +102,7 @@ C program to check it.::
   }
 
 Copy the code to a file named :command:`check_cuda_aware.c`. You can compile
-and run it with the following command::
+and run it with the following command.::
 
     $ export MPICH_CC=nvcc  # if you use Mvapich
     $ export OMPI_CC=nvcc   # if you use Open MPI
@@ -129,7 +131,7 @@ Next, let's check mpi4py is correctly installed. You can use the following scrip
     comm.Barrier()
 
 Save the script into a file named :file:`check_mpi4py.py` and run it.
-The output from the script should look like this::
+The output from the script should look like this.::
 
   $ mpiexec -np 4 python check_mpi4py.py
   host00 0
