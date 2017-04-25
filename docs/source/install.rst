@@ -16,7 +16,8 @@ Please refer to `the official instructions <http://docs.chainer.org/en/latest/in
 
 
 
-.. _mpi-install-label:
+.. _mpi-install:
+
 CUDA-Aware MPI
 ~~~~~~~~~~~~~~
 

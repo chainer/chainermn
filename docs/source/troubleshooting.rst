@@ -19,8 +19,6 @@ from single-node execution. First of all, you need MPI. If MPI is
 correctly installed, you will see ``mpicc`` and ``mpiexec`` command in
 your PATH.
 
-You can install MPI 
-
 Below is an example of output from Mvapich on Linux::
 
     $ which mpicc
@@ -180,13 +178,14 @@ You may get a message like this::
   ECDSA key fingerprint is SHA256:haGUMcCeC5A8lGh1lpjpwL5dF4xCglZArhhxxxxxxxxx.
   Are you sure you want to continue connecting (yes/no)?
 
-This message is shown when you login to a host for the first
-time. Just type `yes` and the message won't appear again. You need to
-repeat this process on all computing hosts.
+This message appears when you log in a host for the first time. Just
+type `yes` and the message won't appear again. You need to repeat this
+process on all computing hosts.
 
-Also, you need to pay attention to the environment variables on remote hosts.
-MPI runtime connect to the remote hosts in *non-interactive* mode and environment
-variables may differ from your interactive login sessions.::
+Also, you need to pay attention to the environment variables on remote
+hosts.  MPI runtime connect to the remote hosts in *non-interactive*
+mode, and environment variables may differ from your interactive login
+sessions.::
 
   ssh host00 'env' | grep LD_LIBRARY_PATH
   # Check the values and compare it to the local value.
@@ -208,10 +207,10 @@ execute MPI programs:
 Program files and data
 ~~~~~~~~~~~~~~~~~~~~~~
 
-When you run MPI programs, all hosts must have the program Python
-binary and script files in the same path. First, check the python
-binary and version are identical among hosts. Be careful if you are
-using pyenv or Anaconda.::
+When you run MPI programs, all hosts must have the same Python binary
+and script files on the same path. First, check the python binary and
+version are identical among hosts. Be careful if you are using `pyenv`
+or `Anaconda`.::
 
   $ ssh host00 'which python; python --version'
   /home/username/.pyenv/shims/python
@@ -226,7 +225,7 @@ using pyenv or Anaconda.::
 Also, the script file (and possibly data files) must be in the same
 path on each host. ::
 
-  $ ls yourscript.py
+  $ ls yourscript.py  # in the current directory
   yourscript.py
 
   $ ssh host00 "ls $PWD/yourscript.py"
@@ -237,8 +236,8 @@ path on each host. ::
 
   ...
 
-If you are using NFS everything should be fine,
-but if not you need to transfer all files manually.
+If you are using NFS, everything should be okay, but if not you need
+to transfer all files manually.
 
 hostfile
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -261,10 +260,11 @@ Then, you can run your MPI program using the hostfile.::
   host02 2
   host03 3
 
-If you have multiple GPUs, you may want to run multiple processes on each host.
-You can modify hostfile and specify number of processes to run on each host.::
+If you have multiple GPUs, you may want to run multiple processes on
+each host.  You can modify hostfile and specify the number of
+processes to run on each host.::
 
-  # If you are using Mvapich or Mpich:
+  # If you are using Mvapich:
   $ cat hostfile
   host00:4
   host01:4
@@ -293,6 +293,6 @@ With this hostfile, try running mpiexec again.::
 You will find that the first 4 processes run on host00 and the latter
 4 on host01.
   
-You can also specify computing hosts and resource mapping/binding using
-command line options of mpiexec. Please refer to the MPI manual for more
-advanced use of mpiexec command.
+You can also specify computing hosts and resource mapping/binding
+using command line options of mpiexec. Please refer to the MPI manual
+for the more advanced use of mpiexec command.
