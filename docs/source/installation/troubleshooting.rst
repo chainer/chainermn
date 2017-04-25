@@ -154,6 +154,16 @@ A typical problem is that the :command:`mpicc` used to build
 :mod:`mpi4py` and :command:`mpiexec` used to run the script are from
 different MPI installations.
 
+Finally, run :command:`nosetests` to check the single-node
+configration is ready.::
+
+  $ nosetests
+  ......S.S...S.S...S.S...S.S.........SS
+  ----------------------------------------------------------------------
+  Ran 38 tests in 63.083s
+
+  OK (SKIP=10)
+
 Multi-node environmnet
 -----------------------
 
