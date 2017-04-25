@@ -13,6 +13,7 @@ Contents:
 
    install
    tutorial
+   troubleshooting
    reference/index
 
 
