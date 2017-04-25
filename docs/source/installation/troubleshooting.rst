@@ -199,10 +199,10 @@ hosts.  MPI runtime connect to the remote hosts in *non-interactive*
 mode, and environment variables may differ from your interactive login
 sessions.::
 
-  ssh host00 'env' | grep LD_LIBRARY_PATH
+  $ ssh host00 'env' | grep LD_LIBRARY_PATH
   # Check the values and compare it to the local value.
 
-  ssh host01 'env' | grep LD_LIBRARY_PATH
+  $ ssh host01 'env' | grep LD_LIBRARY_PATH
   # Check the values and compare it to the local value.
 
   ...
