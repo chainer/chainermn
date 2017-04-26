@@ -11,8 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 1
 
-   install
-   tutorial/index
+   installation/index
+   tutorial
    reference/index
 
 

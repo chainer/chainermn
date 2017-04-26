@@ -1,5 +1,5 @@
-Install Guide
-=============
+Installation Guide
+==================
 
 Requirements
 ------------
@@ -14,6 +14,9 @@ ChainerMN adds distributed training feature to Chainer,
 thus it naturally requires Chainer.
 Please refer to `the official instructions <http://docs.chainer.org/en/latest/install.html>`_ to install.
 
+
+
+.. _mpi-install:
 
 CUDA-Aware MPI
 ~~~~~~~~~~~~~~
