@@ -61,12 +61,34 @@ To obtain a multi-node optimizer, we modify that part as follows::
 Run
 ~~~
 
-With the above two changes, your script is ready for distributed training.
-Invoke your script with ``mpiexec`` or ``mpirun`` (see your MPI's manual for details).
-The following is an example to execute the training with four processes at localhost::
+With the above two changes, your script is ready for distributed
+training.  Invoke your script with ``mpiexec`` or ``mpirun`` (see your
+MPI's manual for details).  The following is an example to execute the
+training with four processes at localhost::
 
   $ mpiexec -n 4 python train_mnist.py
 
+
+Multi-node execution
+~~~~~~~~~~~~~~~~~~~~
+
+If you can successfully run the multi-process version of MNIST
+example, you are almost ready for multi-node executions. The simplest
+way is to specify ``--host`` argument to :command:`mpiexec`
+command. Let's suppose you have two GPU-equipped computing nodes:
+``host00`` and ``host01``, so you have 8 GPUs in total::
+
+  $ mpiexec -n 8 -host host00,host01 python train_mnist.py
+
+The script should run identically to the previous intra-node execution.
+
+
+If you have trouble
+~~~~~~~~~~~~~~~~~~~
+
+If you have any trouble running the script in your environment,
+go to the :ref:`troubleshooting` page and follow the steps to check
+your environment and configuration.
 
 Next Steps
 ~~~~~~~~~~
