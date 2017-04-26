@@ -31,7 +31,6 @@ class GoogLeNet(chainer.Chain):
             loss2_fc1=L.Linear(None, 1024),
             loss2_fc2=L.Linear(None, 1000)
         )
-        self.train = True
 
     def __call__(self, x, t):
         h = F.relu(self.conv1(x))

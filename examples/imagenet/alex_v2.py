@@ -23,7 +23,6 @@ class Alex(chainer.Chain):
             fc7=L.Linear(None, 4096),
             fc8=L.Linear(None, 1000),
         )
-        self.train = True
 
     def __call__(self, x, t):
         h = F.max_pooling_2d(F.local_response_normalization(
@@ -68,7 +67,6 @@ class AlexFp16(Alex):
             fc7=L.Linear(None, 4096, initialW=W, initial_bias=bias),
             fc8=L.Linear(None, 1000, initialW=W, initial_bias=bias),
         )
-        self.train = True
 
     def __call__(self, x, t):
         return Alex.__call__(self, F.cast(x, self.dtype), t)

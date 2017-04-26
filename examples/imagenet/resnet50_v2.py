@@ -103,7 +103,6 @@ class ResNet50(chainer.Chain):
             res5=Block(3, 1024, 512, 2048),
             fc=L.Linear(2048, 1000),
         )
-        self.train = True
 
     def clear(self):
         self.loss = None
@@ -111,15 +110,14 @@ class ResNet50(chainer.Chain):
 
     def __call__(self, x, t):
         self.clear()
-        with chainer.using_config('train', self.train):
-            h = self.bn1(self.conv1(x))
-            h = F.max_pooling_2d(F.relu(h), 3, stride=2)
-            h = self.res2(h)
-            h = self.res3(h)
-            h = self.res4(h)
-            h = self.res5(h)
-            h = F.average_pooling_2d(h, 7, stride=1)
-            h = self.fc(h)
+        h = self.bn1(self.conv1(x))
+        h = F.max_pooling_2d(F.relu(h), 3, stride=2)
+        h = self.res2(h)
+        h = self.res3(h)
+        h = self.res4(h)
+        h = self.res5(h)
+        h = F.average_pooling_2d(h, 7, stride=1)
+        h = self.fc(h)
 
         loss = F.softmax_cross_entropy(h, t)
         chainer.report({'loss': loss, 'accuracy': F.accuracy(h, t)}, self)

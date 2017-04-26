@@ -23,7 +23,6 @@ class NIN(chainer.Chain):
             mlpconv4=L.MLPConvolution2D(
                 None, (1024, 1024, 1000), 3, pad=1, wscale=w),
         )
-        self.train = True
 
     def __call__(self, x, t):
         h = F.max_pooling_2d(F.relu(self.mlpconv1(x)), 3, stride=2)
