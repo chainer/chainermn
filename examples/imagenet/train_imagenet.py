@@ -18,7 +18,7 @@ if chainer.__version__.find('2.') == 0:
     import googlenet_v2 as googlenet
     import googlenetbn_v2 as googlenetbn
     import nin_v2 as nin
-    import resnet50
+    import resnet50_v2 as resnet50
 else:
     import alex
     import googlenet
