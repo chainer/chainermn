@@ -1,6 +1,6 @@
 .. -*- coding: utf-8; -*-
 
-.. _troubleshooting
+.. _troubleshooting:
    
 Step-by-Step Troubleshooting
 ============================
