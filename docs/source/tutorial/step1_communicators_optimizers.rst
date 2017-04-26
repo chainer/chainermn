@@ -77,7 +77,7 @@ i.e.,
 the model parameters are updated
 by using gradients that are aggregated over all the workers.
 However,
-your MNIST example still have a few problems or rooms of improvement.
+your MNIST example still has a few problems or rooms of improvement.
 In the next page, we will see how to address the following problems:
 
 * Training period is wrong; 'one epoch' is not one epoch.
