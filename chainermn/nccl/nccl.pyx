@@ -47,12 +47,14 @@ cdef extern from "nccl.h":
     ncclResult_t ncclBcast(void* buff, int count, ncclDataType_t datatype,
                            int root, ncclComm_t comm, Stream stream) nogil
 
-    ncclResult_t ncclReduceScatter(const void* sendbuff, void* recvbuff, int recvcount,
+    ncclResult_t ncclReduceScatter(const void* sendbuff,
+                                   void* recvbuff, int recvcount,
                                    ncclDataType_t datatype, ncclRedOp_t op,
                                    ncclComm_t comm, Stream stream) nogil
 
-    ncclResult_t ncclAllGather(const void* sendbuff, int count, ncclDataType_t datatype,
-                               void* recvbuff, ncclComm_t comm, Stream stream) nogil
+    ncclResult_t ncclAllGather(const void* sendbuff, int count,
+                               ncclDataType_t datatype, void* recvbuff,
+                               ncclComm_t comm, Stream stream) nogil
 
 
 cdef dict STATUS = {
@@ -192,8 +194,6 @@ class NcclCommunicator(object):
         cdef comm_info _ci = self.ci
         with nogil:
             status = ncclAllGather(
-                <void*>sendbuf, count, <ncclDataType_t>datatype, <void*>recvbuf,
-                <ncclComm_t>_ci.ptr, <Stream>stream)
+                <void*>sendbuf, count, <ncclDataType_t>datatype,
+                <void*>recvbuf, <ncclComm_t>_ci.ptr, <Stream>stream)
         check_status(status)
-
-
