@@ -53,8 +53,8 @@ class AlexFp16(Alex):
         bias = initializers.Zero(self.dtype)
         chainer.Chain.__init__(
             self,
-            conv1=L.Convolution2D(None, 96, 11,
-                                  stride=4, initialW=W, bias=bias),
+            conv1=L.Convolution2D(None, 96, 11, stride=4,
+                                  initialW=W, initial_bias=bias),
             conv2=L.Convolution2D(None, 256, 5, pad=2,
                                   initialW=W, initial_bias=bias),
             conv3=L.Convolution2D(None, 384, 3, pad=1,
