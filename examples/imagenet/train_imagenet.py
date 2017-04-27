@@ -13,18 +13,18 @@ from chainer.training import extensions
 
 import chainermn
 
-if chainer.__version__.find('2.') == 0:
-    import alex_v2 as alex
-    import googlenet_v2 as googlenet
-    import googlenetbn_v2 as googlenetbn
-    import nin_v2 as nin
-    import resnet50_v2 as resnet50
+if chainer.__version__.startswith('1.'):
+    import models_v1.alex as alex
+    import models_v1.googlenet as googlenet
+    import models_v1.googlenetbn as googlenetbn
+    import models_v1.nin as nin
+    import models_v1.resnet50 as resnet50
 else:
-    import alex
-    import googlenet
-    import googlenetbn
-    import nin
-    import resnet50
+    import models_v2.alex as alex
+    import models_v2.googlenet as googlenet
+    import models_v2.googlenetbn as googlenetbn
+    import models_v2.nin as nin
+    import models_v2.resnet50 as resnet50
 
 
 class PreprocessedDataset(chainer.dataset.DatasetMixin):
