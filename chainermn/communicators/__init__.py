@@ -1,8 +1,5 @@
-import mpi4py.MPI
-
-
 def create_communicator(
-        communicator_name='hierarchical', mpi_comm=mpi4py.MPI.COMM_WORLD):
+        communicator_name='hierarchical', mpi_comm=None):
     """Create a ChainerMN communicator.
 
     Different communicators provide different approaches of communication, so
@@ -31,6 +28,11 @@ def create_communicator(
         ChainerMN communicator
 
     """
+
+    if mpi_comm is None:
+        import mpi4py.MPI
+        mpi_comm = mpi4py.MPI.COMM_WORLD
+
     if communicator_name == 'naive':
         from chainermn.communicators.naive_communicator \
             import NaiveCommunicator
