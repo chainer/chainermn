@@ -1,15 +1,13 @@
-import numpy as np
-
 import chainer
 import chainer.functions as F
-from chainer import initializers
 import chainer.links as L
 
 
 class GoogLeNetBN(chainer.Chain):
-
     """New GoogLeNet of BatchNormalization version
-       (patched for Chainer version 2)."""
+
+       (patched for Chainer version 2).
+    """
 
     insize = 224
 

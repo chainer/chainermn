@@ -3,9 +3,8 @@
 
 import chainer
 import chainer.functions as F
-import chainer.links as L
 from chainer import initializers
-import math
+import chainer.links as L
 
 
 class BottleNeckA(chainer.Chain):
@@ -91,7 +90,6 @@ class ResNet50(chainer.Chain):
     insize = 224
 
     def __init__(self):
-        w = math.sqrt(2)
         super(ResNet50, self).__init__(
             conv1=L.Convolution2D(3, 64, 7, 2, 3,
                                   initialW=initializers.HeNormal(),

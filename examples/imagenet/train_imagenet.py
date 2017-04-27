@@ -26,7 +26,7 @@ else:
     import nin
     import resnet50
 
-    
+
 class PreprocessedDataset(chainer.dataset.DatasetMixin):
 
     def __init__(self, path, root, mean, crop_size, random=True):

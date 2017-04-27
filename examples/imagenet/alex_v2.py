@@ -1,8 +1,5 @@
-import numpy as np
-
 import chainer
 import chainer.functions as F
-from chainer import initializers
 import chainer.links as L
 
 
@@ -39,5 +36,3 @@ class Alex(chainer.Chain):
         loss = F.softmax_cross_entropy(h, t)
         chainer.report({'loss': loss, 'accuracy': F.accuracy(h, t)}, self)
         return loss
-
-
