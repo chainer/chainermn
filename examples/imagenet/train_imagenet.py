@@ -13,11 +13,18 @@ from chainer.training import extensions
 
 import chainermn
 
-import alex
-import googlenet
-import googlenetbn
-import nin
-import resnet50
+if chainer.__version__.startswith('1.'):
+    import models_v1.alex as alex
+    import models_v1.googlenet as googlenet
+    import models_v1.googlenetbn as googlenetbn
+    import models_v1.nin as nin
+    import models_v1.resnet50 as resnet50
+else:
+    import models_v2.alex as alex
+    import models_v2.googlenet as googlenet
+    import models_v2.googlenetbn as googlenetbn
+    import models_v2.nin as nin
+    import models_v2.resnet50 as resnet50
 
 
 class PreprocessedDataset(chainer.dataset.DatasetMixin):
@@ -76,10 +83,8 @@ class TestModeEvaluator(extensions.Evaluator):
 def main():
     archs = {
         'alex': alex.Alex,
-        'alex_fp16': alex.AlexFp16,
         'googlenet': googlenet.GoogLeNet,
         'googlenetbn': googlenetbn.GoogLeNetBN,
-        'googlenetbn_fp16': googlenetbn.GoogLeNetBNFp16,
         'nin': nin.NIN,
         'resnet50': resnet50.ResNet50,
     }
