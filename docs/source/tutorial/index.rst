@@ -1,3 +1,5 @@
+.. module:: chainermn
+
 Tutorial
 ========
 
