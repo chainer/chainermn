@@ -10,7 +10,7 @@ CUDA-Aware MPI, NVIDIA NCCL, and MPI4py.
 Chainer
 ~~~~~~~
 
-ChainerMN adds distributed training feature to Chainer,
+ChainerMN adds distributed training feature to Chainer;
 thus it naturally requires Chainer.
 Please refer to `the official instructions <http://docs.chainer.org/en/latest/install.html>`_ to install.
 
@@ -44,6 +44,8 @@ OpenMPI (for details, see `the official instruction <https://www.open-mpi.org/fa
   $ sudo make install
 
 
+.. _nccl-install:
+  
 NVIDIA NCCL
 ~~~~~~~~~~~
 
@@ -51,11 +53,16 @@ To enable efficient intra-node GPU-to-GPU communication,
 we use `NVIDIA NCCL <https://github.com/NVIDIA/nccl>`_.
 See `the official instructions <https://github.com/NVIDIA/nccl#build--run>`_ for installation.
 
+ChainerMN requires NCCL even if you have only one GPU per node.  The
+only exception is when you run ChainerMN on CPU-only environments. See
+:ref:`non-gpu-env` for more details.
+
+.. _mpi4py-install:
 
 MPI4py
 ~~~~~~
 
-ChainerMN depends on MPI4py. It can be installed via ``pip`` as follows::
+ChainerMN depends on MPI4py. It can be installed via :command:`pip` as follows::
 
   $ pip install mpi4py
 
@@ -69,17 +76,21 @@ ChainerMN depends on MPI4py. It can be installed via ``pip`` as follows::
   on environment where a node contains multiple GPUs.
 
 
+.. _chainermn-install:
+
 Installation
 ------------
 
 Install via pip
 ~~~~~~~~~~~~~~~
 
-We recommend to install ChainerMN via pip::
+We recommend to install ChainerMN via :command:`pip`::
 
   $ pip install chainermn
 
 
+.. _install-from-source:
+  
 Install from Source
 ~~~~~~~~~~~~~~~~~~~
 
@@ -89,7 +100,15 @@ You can use ``setup.py`` to install ChainerMN from source::
   $ cd chainermn-x.y.z
   $ python setup.py install
 
-When your environment does not have NCCL, pass ``--no-nccl`` flag to ``setup.py``::
+.. _non-gpu-env:
+  
+Non-GPU environments
+~~~~~~~~~~~~~~~~~~~~
+
+For users who wnat to try ChainerMN in a CPU-only environment,
+typically for testing for debuggin purpose, ChainerMN can be build
+with ``--no-nccl`` flag.::
 
   $ python setup.py install --no-nccl
 
+In this case, the MPI does not have to be CUDA-aware.
