@@ -21,6 +21,7 @@ cache:
   - ccache
   - directories:
       $HOME/mpi
+      $HOME/.chaier
 
 before_install:
   - if [[ $TRAVIS_OS_NAME = "osx" ]]; then
@@ -38,26 +39,22 @@ before_install:
 
 install:
   - pip install -U pip wheel
-  - pip install cython
   - pip install nose hacking mock
   - pip install autopep8
-  - pip install chainer
-  - pip install cffi
-  - pip install mpi4py
+  - pip install -r requirements.txt
   - python setup.py develop --no-nccl
 
 script:
-  # - flake8
-  # - flake8 --config=.flake8.cython
-  # - autopep8 -r . --global-config .pep8 | tee check_autopep8
-  # - test ! -s check_autopep8
+  - flake8 .
+  - flake8 --config=.flake8.cython .
+  - autopep8 -r . --global-config .pep8 | tee check_autopep8
+  - test ! -s check_autopep8
   - for NP in 1 2; do PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' mpiexec -n ${NP} nosetests -a '!nccl,!gpu'; done
   # - cd tests
   # - PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' nosetests -a '!gpu,!slow' --with-doctest chainer_tests
-  # - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
-  #     cd ..;
-  #     READTHEDOCS=True python setup.py develop;
-  #   fi
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
+      READTHEDOCS=True python setup.py develop --no-nccl;
+    fi
 
 dist: trusty
 sudo: false

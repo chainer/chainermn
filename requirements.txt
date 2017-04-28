@@ -1,0 +1,4 @@
+cffi
+chainer >= 1.23
+cython
+mpi4py

@@ -1,10 +1,10 @@
-Install Guide
-=============
+Installation Guide
+==================
 
 Requirements
 ------------
 In addition to Chainer, ChainerMN depends on the following software libraries:
-CUDA-Aware MPI, NVIDIA NCCL, and MPI4py.
+CUDA-Aware MPI, NVIDIA NCCL, and a few Python packages including MPI4py.
 
 
 Chainer
@@ -14,6 +14,9 @@ ChainerMN adds distributed training feature to Chainer,
 thus it naturally requires Chainer.
 Please refer to `the official instructions <http://docs.chainer.org/en/latest/install.html>`_ to install.
 
+
+
+.. _mpi-install:
 
 CUDA-Aware MPI
 ~~~~~~~~~~~~~~
@@ -52,10 +55,16 @@ See `the official instructions <https://github.com/NVIDIA/nccl#build--run>`_ for
 MPI4py
 ~~~~~~
 
-ChainerMN depends on MPI4py. It can be installed via ``pip`` as follows::
+ChainerMN depends on a few Python packages, which are listed in ``requirements.txt``.
+They are automatically installed when you install ChainerMN via PyPI.
 
-  $ pip install mpi4py
-
+However, among them, we need to be a little careful about MPI4py.
+It links to MPI at the installation time, so please be sure
+to properly configure environment variables
+so that MPI is available at the installation time.
+In particular, if you have multiple MPI implementations in your environment,
+please expose the implementation that you want to use
+both when you install and use ChainerMN.
 
 .. note::
 
@@ -84,6 +93,7 @@ You can use ``setup.py`` to install ChainerMN from source::
 
   $ tar zxf chainermn-x.y.z.tar.gz
   $ cd chainermn-x.y.z
+  $ pip install -r requirements.txt
   $ python setup.py install
 
 When your environment does not have NCCL, pass ``--no-nccl`` flag to ``setup.py``::
