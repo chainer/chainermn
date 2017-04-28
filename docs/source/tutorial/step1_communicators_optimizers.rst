@@ -76,19 +76,33 @@ If you can successfully run the multi-process version of MNIST
 example, you are almost ready for multi-node executions. The simplest
 way is to specify ``--host`` argument to :command:`mpiexec`
 command. Let's suppose you have two GPU-equipped computing nodes:
-``host00`` and ``host01``, so you have 8 GPUs in total::
+``host00`` and ``host01``, each of which has 4 GPUs so you have 8 GPUs
+in total::
 
   $ mpiexec -n 8 -host host00,host01 python train_mnist.py
 
-The script should run identically to the previous intra-node execution.
+The script should print similar results to the previous intra-node execution.
+
+Copying datasets
+~~~~~~~~~~~~~~~~
+
+In the MNIST example, the rank 0 process reads the entire portion of
+the dataset and scatter it to other processes. In some applications,
+such as the ImageNet exmaple of ChainerMN, however, only pathes to
+each data file are scattered and each process reads the actual data
+files. In such a case, all dataset must be readable on all computing
+nodes in the same location. You don't need to worry about this if you
+use NFS (Network File System) or any other similar data synchronizing
+system. Otherwise, you need to manually copy data files between nodes
+using :command:`scp` or :command:`rsync`.
 
 
 If you have trouble
 ~~~~~~~~~~~~~~~~~~~
 
-If you have any trouble running the script in your environment,
-go to the :ref:`troubleshooting` page and follow the steps to check
-your environment and configuration.
+If you have any trouble running the sample programs in your
+environment, go to the :ref:`troubleshooting` page and follow the
+steps to check your environment and configuration.
 
 Next Steps
 ~~~~~~~~~~
