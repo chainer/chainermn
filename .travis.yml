@@ -21,6 +21,7 @@ cache:
   - ccache
   - directories:
       $HOME/mpi
+      $HOME/.chaier
 
 before_install:
   - if [[ $TRAVIS_OS_NAME = "osx" ]]; then
