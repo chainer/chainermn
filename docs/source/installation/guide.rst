@@ -50,6 +50,14 @@ To enable efficient intra-node GPU-to-GPU communication,
 we use `NVIDIA NCCL <https://github.com/NVIDIA/nccl>`_.
 See `the official instructions <https://github.com/NVIDIA/nccl#build--run>`_ for installation.
 
+Please properly configure environment variables to expose NCCL both when you install and use ChainerMN.
+Typical configurations should look like the following::
+
+  export NCCL_ROOT=<path to NCCL directory>
+  export CPATH=$NCCL_ROOT/include:$CPATH
+  export LD_LIBRARY_PATH=$NCCL_ROOT/lib/:$LD_LIBRARY_PATH
+  export LIBRARY_PATH=$NCCL_ROOT/lib/:$LIBRARY_PATH
+
 ChainerMN requires NCCL even if you have only one GPU per node.  The
 only exception is when you run ChainerMN on CPU-only environments. See
 :ref:`non-gpu-env` for more details.
