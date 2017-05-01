@@ -124,3 +124,4 @@ with the ``--no-nccl`` flag.::
   $ python setup.py install --no-nccl
 
 In this case, the MPI does not have to be CUDA-aware.
+Only ``naive`` communicator works with the CPU mode.
