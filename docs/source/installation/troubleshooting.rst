@@ -1,12 +1,14 @@
 .. -*- coding: utf-8; -*-
 
+.. _troubleshooting:
+   
 Step-by-Step Troubleshooting
 ============================
 
-This is a step-by-step troublehsooting for ChainerMN.
+This section is a step-by-step troubleshooting guide for ChainerMN.
 Please follow these steps to identify and fix your problem.
 
-We assume that you are using Linux or other Unix-like environment.
+We assume that you are using Linux or another Unix-like environment.
 
 Single-node environment
 -----------------------
@@ -14,12 +16,12 @@ Single-node environment
 Basic MPI installation
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Although ChainerMN stands for "Chainer MultiNode", it is good to start
+Although ChainerMN stands for "Chainer MultiNode," it is good to start
 from single-node execution. First of all, you need MPI. If MPI is
-correctly installed, you will see ``mpicc`` and ``mpiexec`` command in
+correctly installed, you will see the ``mpicc`` and ``mpiexec`` commands in
 your PATH.
 
-Below is an example of output from Mvapich on Linux.::
+Below is an example of the output from Mvapich on Linux.::
 
     $ which mpicc
     /usr/local/bin/mpicc
@@ -101,21 +103,21 @@ C program to check it.
     MPI_Finalize();
   }
 
-Copy the code to a file named :command:`check_cuda_aware.c`. You can compile
+Save the code to a file named ``check_cuda_aware.c``. You can compile
 and run it with the following command.::
 
     $ export MPICH_CC=nvcc  # if you use Mvapich
     $ export OMPI_CC=nvcc   # if you use Open MPI
-    $ $(mpicc -show cuda_aware_check.c -arch sm_53 | sed -e 's/-Wl,/-Xlinker /g')
+    $ $(mpicc -show cuda_aware_check.c -arch sm_53 | sed -e 's/-Wl,/-Xlinker /g' | sed -e 's/-pthread/-Xcompiler -pthread/')
     $ ./a.out
     OK.
 
-If the proglam prints `OK.`, your MPI seems to be good!
-    
+If the proglam prints `OK.`, your MPI is correctly configured.
+
 Check mpi4py
 ~~~~~~~~~~~~
 
-Next, let's check mpi4py is correctly installed. You can use the following script to check it::
+Next, let's check that mpi4py is correctly installed. You can use the following script to check it::
 
   # coding: utf-8
   import os
@@ -139,7 +141,7 @@ The output from the script should look like this.::
   host00 2
   host00 3
 
-The scripts prints hostnames and ranks (process id in MPI) from
+The script prints hostnames and ranks (process id in MPI) from
 each MPI process in a sequential manner.
 `host00` is the host name of the machine your are running the process.
 If you get an output like below, it indicates something is wrong with
@@ -152,12 +154,12 @@ your installation.::
   host00 0
   host00 0
     
-A typical problem is that the :command:`mpicc` used to build
+A common problem is that the :command:`mpicc` used to build
 :mod:`mpi4py` and :command:`mpiexec` used to run the script are from
 different MPI installations.
 
 Finally, run :command:`nosetests` to check the single-node
-configration is ready.::
+configuration is ready.::
 
   $ nosetests
   ......S.S...S.S...S.S...S.S.........SS
@@ -172,9 +174,9 @@ Multi-node environmnet
 Check SSH connection
 ~~~~~~~~~~~~~~~~~~~~~~
 
-To use ChainerMN on multiple hosts, you need to login computing hosts,
-including the one you are currently logged in, via ssh without
-password authentication (and preferreably without username).::
+To use ChainerMN on multiple hosts, you need to connect to computing hosts,
+including the one you are currently logged into, via ssh without
+password authentication (and preferably without username).::
 
   $ ssh host00 'hostname'
   host00   # without hitting the password
@@ -195,7 +197,7 @@ type `yes` and the message won't appear again. You need to repeat this
 process on all computing hosts.
 
 Also, you need to pay attention to the environment variables on remote
-hosts.  MPI runtime connect to the remote hosts in *non-interactive*
+hosts.  The MPI runtime connects to the remote hosts in *non-interactive*
 mode, and environment variables may differ from your interactive login
 sessions.::
 
@@ -208,7 +210,7 @@ sessions.::
   ...
 
 In particular, check the following variables, which are critical to
-execute MPI programs:
+executing MPI programs:
 
     * :envvar:`PATH`
     * :envvar:`LD_LIBRARY_PATH`
@@ -220,7 +222,7 @@ Program files and data
 ~~~~~~~~~~~~~~~~~~~~~~
 
 When you run MPI programs, all hosts must have the same Python binary
-and script files on the same path. First, check the python binary and
+and script files in the same path. First, check that the python binary and
 version are identical among hosts. Be careful if you are using `pyenv`
 or `Anaconda`.::
 
@@ -248,13 +250,16 @@ path on each host. ::
 
   ...
 
-If you are using NFS, everything should be okay, but if not you need
-to transfer all files manually.
+If you are using NFS, everything should be okay. If not, you need
+to transfer all the necessary files manually.
+
+In particular, when you run the ImageNet example in ChainerMN
+repository, all data files must be available on all computing hosts.
 
 hostfile
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Next step is to create a hostfile. A hostfile is a list of hosts on
+The next step is to create a hostfile. A hostfile is a list of hosts on
 which MPI processes run.::
 
   $ vi hostfile
@@ -264,9 +269,26 @@ which MPI processes run.::
   host02
   host03
 
-Then, you can run your MPI program using the hostfile.::
+Then, you can run your MPI program using the hostfile.
+To check if the MPI processes run over multiple hosts, save the following script to a file and run it via :command:`mpiexec`::
 
-  $ mpiexec -n 4 --hostfile hostfile python util/print_rank.py
+  # print_rank.py
+  import os
+
+  from mpi4py import MPI
+
+  comm = MPI.COMM_WORLD
+  size = comm.Get_size()
+  rank = comm.Get_rank()
+
+  for i in range(size):
+    if i == rank:
+      print("{} {}".format(os.uname()[1], i))
+    comm.Barrier()
+
+If you get an output like below, it is working correctly.::
+
+  $ mpiexec -n 4 --hostfile hostfile python print_rank.py
   host00 0
   host01 1
   host02 2
