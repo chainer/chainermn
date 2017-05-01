@@ -35,5 +35,5 @@ then you can obtain MPI4py communicator by ``comm.mpi_comm``.
 Please refer to `MPI4py API reference <http://pythonhosted.org/mpi4py/apiref/mpi4py.MPI.Comm-class.html>`_.
 
 Using FP16
--~~~~~~~~~~
+~~~~~~~~~~
 FP16 (16-bit half precision floating point values) is not supported in ChainerMN as of now.
