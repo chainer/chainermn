@@ -26,15 +26,7 @@ In particular, for efficient communication between GPUs, it uses CUDA-aware MPI.
 For details about CUDA-aware MPI, see `this introduction article <https://devblogs.nvidia.com/parallelforall/introduction-cuda-aware-mpi/>`_.
 
 The CUDA-aware features depend on several MPI packages, which need to be configured and built properly.
-The following are examples of MVAPICH and OpenMPI.
-
-
-MVAPICH (for details, see `the official instructions <http://mvapich.cse.ohio-state.edu/static/media/mvapich/mvapich2-2.0-userguide.html#x1-120004.5>`_)::
-
-  $ ./configure --enable-cuda
-  $ make -j4
-  $ sudo make install
-  $ export MV2_USE_CUDA=1  # Should be set all the time when using ChainerMN
+The following are examples of OpenMPI and MVAPICH.
 
 OpenMPI (for details, see `the official instructions <https://www.open-mpi.org/faq/?category=building#build-cuda>`_)::
 
@@ -42,6 +34,12 @@ OpenMPI (for details, see `the official instructions <https://www.open-mpi.org/f
   $ make -j4
   $ sudo make install
 
+MVAPICH (for details, see `the official instructions <http://mvapich.cse.ohio-state.edu/static/media/mvapich/mvapich2-2.0-userguide.html#x1-120004.5>`_)::
+
+  $ ./configure --enable-cuda
+  $ make -j4
+  $ sudo make install
+  $ export MV2_USE_CUDA=1  # Should be set all the time when using ChainerMN
 
 .. _nccl-install:
   
