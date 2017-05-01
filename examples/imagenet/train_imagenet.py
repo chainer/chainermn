@@ -86,7 +86,7 @@ def main():
     # Check if GPU is available
     # (ImageNet example does not support CPU execution)
     if not chainer.cuda.available:
-        sys.stderr.write("Error: ImageNet requires GPU support.")
+        sys.stderr.write("Error: ImageNet requires GPU support.\n")
         sys.exit(-1)
 
     archs = {
