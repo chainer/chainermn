@@ -78,14 +78,6 @@ In particular, if you have multiple MPI implementations in your environment,
 please expose the implementation that you want to use
 both when you install and use ChainerMN.
 
-.. note::
-
-  If you are not using GPUs, communicator ``naive`` works with *non*-CUDA-aware MPI.
-
-  Communicators ``naive`` and ``flat`` can be used without NCCL.
-  However, they are far slower than other communicators
-  in an environment where a node contains multiple GPUs.
-
 
 .. _chainermn-install:
 
