@@ -4,10 +4,12 @@ from __future__ import print_function
 import argparse
 import multiprocessing
 import random
+import sys
 
 import numpy as np
 
 import chainer
+import chainer.cuda
 from chainer import training
 from chainer.training import extensions
 
@@ -81,6 +83,12 @@ class TestModeEvaluator(extensions.Evaluator):
 
 
 def main():
+    # Check if GPU is available
+    # (ImageNet example does not support CPU execution)
+    if not chainer.cuda.available:
+        sys.stderr.write("Error: ImageNet requires GPU support.")
+        sys.exit(-1)
+
     archs = {
         'alex': alex.Alex,
         'googlenet': googlenet.GoogLeNet,
