@@ -4,7 +4,6 @@ from __future__ import print_function
 import argparse
 import multiprocessing
 import random
-import sys
 
 import numpy as np
 
@@ -86,8 +85,7 @@ def main():
     # Check if GPU is available
     # (ImageNet example does not support CPU execution)
     if not chainer.cuda.available:
-        sys.stderr.write("Error: ImageNet requires GPU support.\n")
-        sys.exit(-1)
+        raise RuntimeError("Error: ImageNet requires GPU support.\n")
 
     archs = {
         'alex': alex.Alex,
