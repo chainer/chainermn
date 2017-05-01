@@ -24,6 +24,7 @@ CUDA-Aware MPI
 ChainerMN relies on MPI.
 In particular, for efficient communication between GPUs, it uses CUDA-aware MPI.
 For details about CUDA-aware MPI, see `this introduction article <https://devblogs.nvidia.com/parallelforall/introduction-cuda-aware-mpi/>`_.
+(If you use only the CPU mode, MPI does not need to be CUDA-Aware. See :ref:`non-gpu-env` for more details.)
 
 The CUDA-aware features depend on several MPI packages, which need to be configured and built properly.
 The following are examples of OpenMPI and MVAPICH.
