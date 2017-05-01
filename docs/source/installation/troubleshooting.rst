@@ -5,10 +5,10 @@
 Step-by-Step Troubleshooting
 ============================
 
-This section is a step-by-step troubleshooting for ChainerMN.
+This section is a step-by-step troubleshooting guide for ChainerMN.
 Please follow these steps to identify and fix your problem.
 
-We assume that you are using Linux or other Unix-like environments.
+We assume that you are using Linux or another Unix-like environment.
 
 Single-node environment
 -----------------------
@@ -18,10 +18,10 @@ Basic MPI installation
 
 Although ChainerMN stands for "Chainer MultiNode," it is good to start
 from single-node execution. First of all, you need MPI. If MPI is
-correctly installed, you will see ``mpicc`` and ``mpiexec`` command in
+correctly installed, you will see the ``mpicc`` and ``mpiexec`` commands in
 your PATH.
 
-Below is an example of output from Mvapich on Linux.::
+Below is an example of the output from Mvapich on Linux.::
 
     $ which mpicc
     /usr/local/bin/mpicc
@@ -117,7 +117,7 @@ If the proglam prints `OK.`, your MPI is correctly configured.
 Check mpi4py
 ~~~~~~~~~~~~
 
-Next, let's check mpi4py is correctly installed. You can use the following script to check it::
+Next, let's check that mpi4py is correctly installed. You can use the following script to check it::
 
   # coding: utf-8
   import os
@@ -174,8 +174,8 @@ Multi-node environmnet
 Check SSH connection
 ~~~~~~~~~~~~~~~~~~~~~~
 
-To use ChainerMN on multiple hosts, you need to login computing hosts,
-including the one you are currently logged in, via ssh without
+To use ChainerMN on multiple hosts, you need to connect to computing hosts,
+including the one you are currently logged into, via ssh without
 password authentication (and preferably without username).::
 
   $ ssh host00 'hostname'
@@ -197,7 +197,7 @@ type `yes` and the message won't appear again. You need to repeat this
 process on all computing hosts.
 
 Also, you need to pay attention to the environment variables on remote
-hosts.  MPI runtime connect to the remote hosts in *non-interactive*
+hosts.  The MPI runtime connects to the remote hosts in *non-interactive*
 mode, and environment variables may differ from your interactive login
 sessions.::
 
@@ -222,7 +222,7 @@ Program files and data
 ~~~~~~~~~~~~~~~~~~~~~~
 
 When you run MPI programs, all hosts must have the same Python binary
-and script files on the same path. First, check the python binary and
+and script files in the same path. First, check that the python binary and
 version are identical among hosts. Be careful if you are using `pyenv`
 or `Anaconda`.::
 
@@ -259,7 +259,7 @@ repository, all data files must be available on all computing hosts.
 hostfile
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Next step is to create a hostfile. A hostfile is a list of hosts on
+The next step is to create a hostfile. A hostfile is a list of hosts on
 which MPI processes run.::
 
   $ vi hostfile
@@ -286,7 +286,7 @@ To check if the MPI processes run over multiple hosts, save the following script
       print("{} {}".format(os.uname()[1], i))
     comm.Barrier()
 
-If you get an output like below, it works well.::
+If you get an output like below, it is working correctly.::
 
   $ mpiexec -n 4 --hostfile hostfile python print_rank.py
   host00 0

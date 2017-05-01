@@ -38,7 +38,7 @@ MPI
 
 ChainerMN is built on MPI.
 MPI invokes our training script in the SPMD (single program, multiple data) way.
-ChainerMN is designed to make a process for each GPU.
+ChainerMN is designed to create a process on each GPU.
 For example, let us suppose you have two nodes with four GPUs each,
 and want to run ``train_imagenet.py``.
 Then, you will invoke eight Python processes running ``train_imagenet.py``

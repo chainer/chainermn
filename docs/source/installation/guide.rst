@@ -10,7 +10,7 @@ CUDA-Aware MPI, NVIDIA NCCL, and a few Python packages including MPI4py.
 Chainer
 ~~~~~~~
 
-ChainerMN adds distributed training feature to Chainer;
+ChainerMN adds distributed training features to Chainer;
 thus it naturally requires Chainer.
 Please refer to `the official instructions <http://docs.chainer.org/en/latest/install.html>`_ to install.
 
@@ -23,21 +23,20 @@ CUDA-Aware MPI
 
 ChainerMN relies on MPI.
 In particular, for efficient communication between GPUs, it uses CUDA-aware MPI.
-About CUDA-aware MPI, see `this introduction article <https://devblogs.nvidia.com/parallelforall/introduction-cuda-aware-mpi/>`_.
+For details about CUDA-aware MPI, see `this introduction article <https://devblogs.nvidia.com/parallelforall/introduction-cuda-aware-mpi/>`_.
 
-Several MPI packages support the CUDA-aware feature.
-They generally require to be configured and built properly.
+The CUDA-aware features depend on several MPI packages, which need to be configured and built properly.
 The following are examples of MVAPICH and OpenMPI.
 
 
-MVAPICH (for details, see `the official instruction <http://mvapich.cse.ohio-state.edu/static/media/mvapich/mvapich2-2.0-userguide.html#x1-120004.5>`_)::
+MVAPICH (for details, see `the official instructions <http://mvapich.cse.ohio-state.edu/static/media/mvapich/mvapich2-2.0-userguide.html#x1-120004.5>`_)::
 
   $ ./configure --enable-cuda
   $ make -j4
   $ sudo make install
   $ export MV2_USE_CUDA=1  # Should be set all the time when using ChainerMN
 
-OpenMPI (for details, see `the official instruction <https://www.open-mpi.org/faq/?category=building#build-cuda>`_)::
+OpenMPI (for details, see `the official instructions <https://www.open-mpi.org/faq/?category=building#build-cuda>`_)::
 
   $ ./configure --with-cuda
   $ make -j4
@@ -66,9 +65,9 @@ ChainerMN depends on a few Python packages, which are listed in ``requirements.t
 They are automatically installed when you install ChainerMN via PyPI.
 
 However, among them, we need to be a little careful about MPI4py.
-It links to MPI at the installation time, so please be sure
+It links to MPI at installation time, so please be sure
 to properly configure environment variables
-so that MPI is available at the installation time.
+so that MPI is available at installation time.
 In particular, if you have multiple MPI implementations in your environment,
 please expose the implementation that you want to use
 both when you install and use ChainerMN.
@@ -78,8 +77,8 @@ both when you install and use ChainerMN.
   If you are not using GPUs, communicator ``naive`` works with *non*-CUDA-aware MPI.
 
   Communicators ``naive`` and ``flat`` can be used without NCCL.
-  However, it is common that they are far slower than other communicators
-  on environment where a node contains multiple GPUs.
+  However, they are far slower than other communicators
+  in an environment where a node contains multiple GPUs.
 
 
 .. _chainermn-install:
@@ -112,9 +111,9 @@ You can use ``setup.py`` to install ChainerMN from source::
 Non-GPU environments
 ~~~~~~~~~~~~~~~~~~~~
 
-For users who wnat to try ChainerMN in a CPU-only environment,
-typically for testing for debuggin purpose, ChainerMN can be build
-with ``--no-nccl`` flag.::
+For users who want to try ChainerMN in a CPU-only environment,
+typically for testing for debugging purpose, ChainerMN can be built
+with the ``--no-nccl`` flag.::
 
   $ python setup.py install --no-nccl
 
