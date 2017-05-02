@@ -68,8 +68,8 @@ only exception is when you run ChainerMN on CPU-only environments. See
 MPI4py
 ~~~~~~
 
-ChainerMN depends on a few Python packages, which are listed in ``requirements.txt``.
-They are automatically installed when you install ChainerMN via PyPI.
+ChainerMN depends on a few Python packages, which are
+automatically installed when you install ChainerMN.
 
 However, among them, we need to be a little careful about MPI4py.
 It links to MPI at installation time, so please be sure
@@ -102,7 +102,6 @@ You can use ``setup.py`` to install ChainerMN from source::
 
   $ tar zxf chainermn-x.y.z.tar.gz
   $ cd chainermn-x.y.z
-  $ pip install -r requirements.txt
   $ python setup.py install
 
 .. _non-gpu-env:
