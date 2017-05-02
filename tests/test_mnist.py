@@ -30,7 +30,7 @@ class TestMNIST(unittest.TestCase):
     def test_mnist(self, display_log=True):
         # This test file is intended to be run on Travis-CI and
         # GPU is not used for now.
-        epoch = 10
+        epoch = 5
         batchsize = 100
         n_units = 100
 
