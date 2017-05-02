@@ -28,5 +28,11 @@ setup(
     author_email='akiba@preferred.jp',
     packages=find_packages(),
     ext_modules=ext_modules,
-    cmdclass={'build_ext': build_ext}
+    cmdclass={'build_ext': build_ext},
+    install_requires=[
+        'cffi',
+        'chainer',
+        'cython',
+        'mpi4py',
+    ]
 )
