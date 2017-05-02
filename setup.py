@@ -4,18 +4,23 @@ from setuptools import find_packages
 from setuptools import setup
 import sys
 
+import setup_build
 
-if '--no-nccl' in sys.argv:
-    sys.argv.remove('--no-nccl')
-    ext_modules = []
+if False:
+    if '--no-nccl' in sys.argv:
+        sys.argv.remove('--no-nccl')
+        ext_modules = []
+    else:
+        ext_modules = [
+            Extension(
+                name='chainermn.nccl.nccl',
+                sources=['chainermn/nccl/nccl.pyx'],
+                libraries=['nccl'])
+        ]
 else:
-    ext_modules = [
-        Extension(
-            name='chainermn.nccl.nccl',
-            sources=['chainermn/nccl/nccl.pyx'],
-            libraries=['nccl'])
-    ]
-
+    ext_modules = setup_build.get_ext_modules()
+    
+    
 setup(
     name='chainermn',
     version='0.0.1',
