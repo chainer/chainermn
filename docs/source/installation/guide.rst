@@ -24,10 +24,16 @@ CUDA-Aware MPI
 ChainerMN relies on MPI.
 In particular, for efficient communication between GPUs, it uses CUDA-aware MPI.
 For details about CUDA-aware MPI, see `this introduction article <https://devblogs.nvidia.com/parallelforall/introduction-cuda-aware-mpi/>`_.
+(If you use only the CPU mode, MPI does not need to be CUDA-Aware. See :ref:`non-gpu-env` for more details.)
 
 The CUDA-aware features depend on several MPI packages, which need to be configured and built properly.
-The following are examples of MVAPICH and OpenMPI.
+The following are examples of Open MPI and MVAPICH.
 
+Open MPI (for details, see `the official instructions <https://www.open-mpi.org/faq/?category=building#build-cuda>`_)::
+
+  $ ./configure --with-cuda
+  $ make -j4
+  $ sudo make install
 
 MVAPICH (for details, see `the official instructions <http://mvapich.cse.ohio-state.edu/static/media/mvapich/mvapich2-2.0-userguide.html#x1-120004.5>`_)::
 
@@ -35,13 +41,6 @@ MVAPICH (for details, see `the official instructions <http://mvapich.cse.ohio-st
   $ make -j4
   $ sudo make install
   $ export MV2_USE_CUDA=1  # Should be set all the time when using ChainerMN
-
-OpenMPI (for details, see `the official instructions <https://www.open-mpi.org/faq/?category=building#build-cuda>`_)::
-
-  $ ./configure --with-cuda
-  $ make -j4
-  $ sudo make install
-
 
 .. _nccl-install:
   
@@ -51,6 +50,14 @@ NVIDIA NCCL
 To enable efficient intra-node GPU-to-GPU communication,
 we use `NVIDIA NCCL <https://github.com/NVIDIA/nccl>`_.
 See `the official instructions <https://github.com/NVIDIA/nccl#build--run>`_ for installation.
+
+Please properly configure environment variables to expose NCCL both when you install and use ChainerMN.
+Typical configurations should look like the following::
+
+  export NCCL_ROOT=<path to NCCL directory>
+  export CPATH=$NCCL_ROOT/include:$CPATH
+  export LD_LIBRARY_PATH=$NCCL_ROOT/lib/:$LD_LIBRARY_PATH
+  export LIBRARY_PATH=$NCCL_ROOT/lib/:$LIBRARY_PATH
 
 ChainerMN requires NCCL even if you have only one GPU per node.  The
 only exception is when you run ChainerMN on CPU-only environments. See
@@ -71,14 +78,6 @@ so that MPI is available at installation time.
 In particular, if you have multiple MPI implementations in your environment,
 please expose the implementation that you want to use
 both when you install and use ChainerMN.
-
-.. note::
-
-  If you are not using GPUs, communicator ``naive`` works with *non*-CUDA-aware MPI.
-
-  Communicators ``naive`` and ``flat`` can be used without NCCL.
-  However, they are far slower than other communicators
-  in an environment where a node contains multiple GPUs.
 
 
 .. _chainermn-install:
@@ -118,3 +117,4 @@ with the ``--no-nccl`` flag.::
   $ python setup.py install --no-nccl
 
 In this case, the MPI does not have to be CUDA-aware.
+Only ``naive`` communicator works with the CPU mode.
