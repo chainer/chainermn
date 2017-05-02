@@ -16,6 +16,7 @@
 * **Flexible** --- even dynamic neural networks can be trained in parallel thanks to Chainer's flexibility, and
 * **Easy** --- minimal changes to existing user code are required.
 
+[This blog post](http://chainer.org/general/2017/02/08/Performance-of-Distributed-Deep-Learning-Using-ChainerMN.html) provides our benchmark results using up to 128 GPUs.
 
 ## Installation
 
