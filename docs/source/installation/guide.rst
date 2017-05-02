@@ -27,9 +27,9 @@ For details about CUDA-aware MPI, see `this introduction article <https://devblo
 (If you use only the CPU mode, MPI does not need to be CUDA-Aware. See :ref:`non-gpu-env` for more details.)
 
 The CUDA-aware features depend on several MPI packages, which need to be configured and built properly.
-The following are examples of OpenMPI and MVAPICH.
+The following are examples of Open MPI and MVAPICH.
 
-OpenMPI (for details, see `the official instructions <https://www.open-mpi.org/faq/?category=building#build-cuda>`_)::
+Open MPI (for details, see `the official instructions <https://www.open-mpi.org/faq/?category=building#build-cuda>`_)::
 
   $ ./configure --with-cuda
   $ make -j4
