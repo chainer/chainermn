@@ -59,7 +59,7 @@ C program to check it.
 
 .. code-block:: c
 
-  /* test_cuda_aware.c */
+  /* check_cuda_aware.c */
   #include <assert.h>
   #include <stdio.h>
   #include <mpi.h>
@@ -108,7 +108,7 @@ and run it with the following command.::
 
     $ export MPICH_CC=nvcc  # if you use Mvapich
     $ export OMPI_CC=nvcc   # if you use Open MPI
-    $ $(mpicc -show cuda_aware_check.c -arch sm_53 | sed -e 's/-Wl,/-Xlinker /g' | sed -e 's/-pthread/-Xcompiler -pthread/')
+    $ $(mpicc -show check_cuda_aware.c -arch sm_53 | sed -e 's/-Wl,/-Xlinker /g' | sed -e 's/-pthread/-Xcompiler -pthread/')
     $ ./a.out
     OK.
 
