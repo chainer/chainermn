@@ -79,6 +79,11 @@ In particular, if you have multiple MPI implementations in your environment,
 please expose the implementation that you want to use
 both when you install and use ChainerMN.
 
+In addition, Cython may not be installed automatically.
+It can be installed manually via :command:`pip`::
+
+  $ pip install cython
+
 
 .. _chainermn-install:
 
