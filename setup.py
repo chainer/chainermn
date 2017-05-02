@@ -2,11 +2,15 @@ from Cython.Distutils import build_ext
 from setuptools import Extension
 from setuptools import find_packages
 from setuptools import setup
+
+import os
 import sys
 
 
 if '--no-nccl' in sys.argv:
     sys.argv.remove('--no-nccl')
+    ext_modules = []
+elif os.environ.get('READTHEDOCS', None) == 'True':
     ext_modules = []
 else:
     ext_modules = [
