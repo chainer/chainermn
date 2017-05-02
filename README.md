@@ -12,10 +12,11 @@
 
 *ChainerMN* is an additional package for [Chainer](https://github.com/pfnet/chainer), a flexible deep learning framework. ChainerMN enables multi-node distributed deep learning with the following features:
 
-* **Scalable** --- it makes full use of latest technologies such as NVIDIA NCCL and CUDA-Aware MPI,
+* **Scalable** --- it makes full use of the latest technologies such as NVIDIA NCCL and CUDA-Aware MPI,
 * **Flexible** --- even dynamic neural networks can be trained in parallel thanks to Chainer's flexibility, and
-* **Easy** --- required changes to user codes are minimal.
+* **Easy** --- minimal changes to existing user code are required.
 
+[This blog post](http://chainer.org/general/2017/02/08/Performance-of-Distributed-Deep-Learning-Using-ChainerMN.html) provides our benchmark results using up to 128 GPUs.
 
 ## Installation
 
