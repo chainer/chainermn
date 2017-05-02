@@ -145,17 +145,13 @@ def check_cython_version():
 def cythonize(extensions, arg_options):
     import Cython.Build
 
-    #directive_keys = ('linetrace', 'profile')
-    directive_keys = ()
-    directives = {key: arg_options[key] for key in directive_keys}
-
     cythonize_option_keys = ()
     cythonize_options = {key: arg_options[key]
                          for key in cythonize_option_keys}
 
     return Cython.Build.cythonize(
         extensions, verbose=True,
-        compiler_directives=directives, **cythonize_options)
+        **cythonize_options)
 
 
 def check_extensions(extensions):
