@@ -8,6 +8,7 @@ import random
 import numpy as np
 
 import chainer
+import chainer.cuda
 from chainer import training
 from chainer.training import extensions
 
@@ -81,6 +82,11 @@ class TestModeEvaluator(extensions.Evaluator):
 
 
 def main():
+    # Check if GPU is available
+    # (ImageNet example does not support CPU execution)
+    if not chainer.cuda.available:
+        raise RuntimeError("ImageNet requires GPU support.")
+
     archs = {
         'alex': alex.Alex,
         'googlenet': googlenet.GoogLeNet,
@@ -99,8 +105,6 @@ def main():
                         help='Learning minibatch size')
     parser.add_argument('--epoch', '-E', type=int, default=10,
                         help='Number of epochs to train')
-    parser.add_argument('--gpu', '-g', action='store_true',
-                        help='GPU ID (negative value indicates CPU')
     parser.add_argument('--initmodel',
                         help='Initialize the model from given file')
     parser.add_argument('--loaderjob', '-j', type=int,
@@ -122,19 +126,15 @@ def main():
 
     # Prepare ChainerMN communicator.
     comm = chainermn.create_communicator(args.communicator)
-    if args.gpu:
-        device = comm.intra_rank
-    else:
-        device = -1
+    device = comm.intra_rank
 
     model = archs[args.arch]()
     if args.initmodel:
         print('Load model from', args.initmodel)
         chainer.serializers.load_npz(args.initmodel, model)
 
-    if device >= 0:
-        chainer.cuda.get_device(device).use()  # Make the GPU current
-        model.to_gpu()
+    chainer.cuda.get_device(device).use()  # Make the GPU current
+    model.to_gpu()
 
     # Split and distribute the dataset. Only worker 0 loads the whole dataset.
     # Datasets of worker 0 are evenly split and distributed to all workers.
