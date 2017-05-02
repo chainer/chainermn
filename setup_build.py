@@ -54,7 +54,7 @@ def check_library(compiler, includes=(), libraries=(),
     return True
 
 
-def make_extensions(options, compiler, use_cython):
+def make_extensions(modules, options, compiler, use_cython):
     """Produce a list of Extension instances which passed to cythonize()."""
 
     settings = build.get_compiler_setting()
@@ -82,7 +82,7 @@ def make_extensions(options, compiler, use_cython):
 
     ret = []
     ext = '.pyx' if use_cython else '.cpp'
-    for module in MODULES:
+    for module in modules:
         print('Include directories:', settings['include_dirs'])
         print('Library directories:', settings['library_dirs'])
 
@@ -127,11 +127,11 @@ def make_extensions(options, compiler, use_cython):
 
 
 def parse_args():
-    return {}
-    if check_readthedocs_environment():
-        arg_options['no_cuda'] = True
+    arg_options = {}
+    if '--no-nccl' in sys.argv:
+        arg_options['no-nccl'] = True
+        sys.argv.remove('--no-nccl')
     return arg_options
-
 
 def check_cython_version():
     try:
@@ -164,10 +164,18 @@ def check_extensions(extensions):
                        'See http://docs.chainer.org/en/stable/install.html')
                 raise RuntimeError(msg)
 
+def list_modules(arg_options):
+    modules = MODULES
+    if '--no-nccl' in arg_options:
+        modules = [m for m in modules if m['name'] != 'nccl']
+
+    return modules
 
 def get_ext_modules():
     arg_options = parse_args()
     print('Options:', arg_options)
+
+    modules = list_modules(arg_options)
 
     # We need to call get_config_vars to initialize _config_vars in distutils
     # see #1849
@@ -176,7 +184,7 @@ def get_ext_modules():
     sysconfig.customize_compiler(compiler)
 
     use_cython = check_cython_version()
-    extensions = make_extensions(arg_options, compiler, use_cython)
+    extensions = make_extensions(modules, arg_options, compiler, use_cython)
 
     if use_cython:
         extensions = cythonize(extensions, arg_options)
