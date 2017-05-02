@@ -2,8 +2,8 @@
 
 import argparse
 import collections
-import pickle
 import os.path
+import pickle
 import sys
 import time
 
@@ -21,6 +21,7 @@ from chainer.training import extensions
 import chainermn
 
 import europal
+
 
 def sequence_embed(embed, xs):
     x_len = [len(x) for x in xs]
@@ -44,8 +45,8 @@ class Seq2seq(chainer.Chain):
         self.n_units = n_units
 
     def __call__(self, *inputs):
-        #print("{} sentences".format(len(inputs)))
-        #print([d.data for d in inputs])
+        # print("{} sentences".format(len(inputs)))
+        # print([d.data for d in inputs])
         xs = inputs[:len(inputs) // 2]
         ys = inputs[len(inputs) // 2:]
 
@@ -105,6 +106,7 @@ class Seq2seq(chainer.Chain):
             outs.append(y)
         return outs
 
+
 def convert(batch, device):
     sys.stdout.flush()
     if device is None:
@@ -133,6 +135,7 @@ def convert(batch, device):
         to_device_batch([x for x, _ in batch]) +
         to_device_batch([y for _, y in batch]))
 
+
 def cached_call(fname, func, *args):
     if os.path.exists(fname):
         with open(fname, 'rb') as f:
@@ -144,12 +147,14 @@ def cached_call(fname, func, *args):
             pickle.dump(val, f)
         return val
 
+
 def read_source(in_dir, cache=None):
     en_path = os.path.join(in_dir, 'giga-fren.release2.fixed.en')
     source_vocab = ['<eos>', '<unk>'] + europal.count_words(en_path)
     source_data = europal.make_dataset(en_path, source_vocab)
 
     return source_vocab, source_data
+
 
 def read_target(in_dir, cahce=None):
     fr_path = os.path.join(in_dir, 'giga-fren.release2.fixed.fr')
@@ -247,7 +252,7 @@ def main():
             else:
                 src_vocab, src_data = read_source(args.input, args.cache)
             et = time.time()
-            print("RD source done. {:.3f} [s]".format(et-bt))
+            print("RD source done. {:.3f} [s]".format(et - bt))
             sys.stdout.flush()
 
             # Read target data
@@ -260,7 +265,7 @@ def main():
             else:
                 trg_vocab, trg_data = read_target(args.input, args.cache)
             et = time.time()
-            print("RD target done. {:.3f} [s]".format(et-bt))
+            print("RD target done. {:.3f} [s]".format(et - bt))
             sys.stdout.flush()
 
             print('Original training data size: %d' % len(src_data))
@@ -268,11 +273,11 @@ def main():
                           if 0 < len(s) < 50 and len(t) < 50]
             print('Filtered training data size: %d' % len(train_data))
 
-            en_path = os.path.join(args.input, 'dev','newstest2013.en')
+            en_path = os.path.join(args.input, 'dev', 'newstest2013.en')
             src_data = europal.make_dataset(en_path, src_vocab)
             sys.stdout.flush()
 
-            fr_path = os.path.join(args.input, 'dev','newstest2013.fr')
+            fr_path = os.path.join(args.input, 'dev', 'newstest2013.fr')
             trg_data = europal.make_dataset(fr_path, trg_vocab)
             sys.stdout.flush()
 
@@ -281,7 +286,7 @@ def main():
             source_ids = {word: index for index, word in enumerate(src_vocab)}
             target_ids = {word: index for index, word in enumerate(trg_vocab)}
         else:
-            #target_data, src_data = None, None
+            # target_data, src_data = None, None
             train_data, test_data = None, None
             target_ids, source_ids = None, None
 
@@ -303,15 +308,14 @@ def main():
     if comm.rank == 0:
         print("target_words : {}".format(len(target_words)))
         print("source_words : {}".format(len(source_words)))
-        
 
     model = Seq2seq(3, len(source_ids), len(target_ids), args.unit)
-    
+
     if dev >= 0:
         chainer.cuda.get_device(dev).use()
         model.to_gpu(dev)
 
-    #optimizer = chainer.optimizers.Adam()
+    # optimizer = chainer.optimizers.Adam()
     optimizer = chainermn.create_multi_node_optimizer(
         chainer.optimizers.Adam(), comm)
     optimizer.setup(model)
@@ -328,9 +332,10 @@ def main():
     trainer = training.Trainer(updater,
                                # Use epoch trigger
                                chainermn.get_epoch_trigger(
-                                   args.epoch, train_data, args.batchsize, comm),
+                                   args.epoch, train_data,
+                                   args.batchsize, comm),
                                out=args.out)
-    
+
     def translate_one(source, target):
         words = europal.split_sentence(source)
         print('# source : ' + ' '.join(words))
@@ -341,7 +346,7 @@ def main():
         print('#  result : ' + ' '.join(words))
         print('#  expect : ' + target)
 
-    #@chainer.training.make_extension(trigger=(200, 'iteration'))
+    # @chainer.training.make_extension(trigger=(200, 'iteration'))
     def translate(trainer):
         translate_one(
             'Who are we ?',
@@ -358,25 +363,27 @@ def main():
         translate_one(source, target)
 
     if comm.rank == 0:
-        #trigger = chainermn.get_epoch_trigger(1, train_data, args.batchsize, comm)
-                                              
+        # trigger = chainermn.get_epoch_trigger(1, train_data,
+        #                                       args.batchsize, comm)
+
         trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
                        trigger=(1, 'epoch'))
-        #trainer.extend(extensions.LogReport(trigger=trigger), trigger=trigger)
-        
+        # trainer.extend(extensions.LogReport(trigger=trigger),
+        #                trigger=trigger)
+
         report = extensions.PrintReport(['epoch',
                                          'iteration',
                                          'main/loss',
-                                         #'validation/main/loss',
+                                         # 'validation/main/loss',
                                          'main/perp',
-                                         #'validation/main/perp',
+                                         # 'validation/main/perp',
                                          'elapsed_time'])
         trainer.extend(report, trigger=(1, 'epoch'))
-        #trainer.extend(translate, trigger=(200, 'iteration'))
+        # trainer.extend(translate, trigger=(200, 'iteration'))
 
         trainer.extend(CalculateBleu(model, test_data),
                        trigger=(10000, 'iteration'))
-        
+
     comm.mpi_comm.Barrier()
     if comm.rank == 0:
         print('start training')

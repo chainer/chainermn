@@ -4,7 +4,6 @@ import collections
 import gzip
 import os
 import re
-import sys
 
 import numpy
 import progressbar
