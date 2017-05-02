@@ -28,9 +28,10 @@ MODULES = [
             'cuda',
             'cudart',
         ],
-        #'check_method': build.check_cuda_version,
+        # 'check_method': build.check_cuda_version,
     },
 ]
+
 
 def check_readthedocs_environment():
     return os.environ.get('READTHEDOCS', None) == 'True'
@@ -94,7 +95,7 @@ def make_extensions(modules, options, compiler, use_cython):
                 'Skip installing %s support' % module['name'],
                 'Check your CFLAGS environment variable')
             continue
-        
+
         if not check_library(compiler,
                              libraries=module['libraries'],
                              library_dirs=settings['library_dirs']):
@@ -133,6 +134,7 @@ def parse_args():
         sys.argv.remove('--no-nccl')
     return arg_options
 
+
 def check_cython_version():
     try:
         import Cython
@@ -164,12 +166,14 @@ def check_extensions(extensions):
                        'See http://docs.chainer.org/en/stable/install.html')
                 raise RuntimeError(msg)
 
+
 def list_modules(arg_options):
     modules = MODULES
     if '--no-nccl' in arg_options:
         modules = [m for m in modules if m['name'] != 'nccl']
 
     return modules
+
 
 def get_ext_modules():
     arg_options = parse_args()
