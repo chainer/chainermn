@@ -39,7 +39,7 @@ install:
   - pip install -U pip wheel
   - pip install nose hacking mock
   - pip install autopep8
-  - pip install cython mpi4py
+  - pip install cython mpi4py cffi
   - python setup.py develop --no-nccl
 
 script:
