@@ -31,7 +31,7 @@ setup(
     cmdclass={'build_ext': build_ext},
     install_requires=[
         'cffi',
-        'chainer',
+        'chainer >= 1.23',
         'cython',
         'mpi4py',
     ]
