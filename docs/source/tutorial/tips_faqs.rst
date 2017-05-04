@@ -15,6 +15,8 @@ to change the way to start child processes::
 
 Both ``forkserver`` mode and ``spawn`` mode should work.
 Please also refer to our ImageNet example, where ``MultiprocessIterator`` is used.
+Unfortunately, ``multiprocessing.set_start_method`` is only available in Python 3.4+.
+Therefore you need those recent Python versions to use ``MultiprocessIterator``.
 
 
 Using Your Own Evaluator
