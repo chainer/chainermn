@@ -1,7 +1,7 @@
 .. -*- coding: utf-8; -*-
 
 .. _troubleshooting:
-   
+
 Step-by-Step Troubleshooting
 ============================
 
@@ -31,7 +31,7 @@ Below is an example of the output from Mvapich on Linux.::
 
     $ which mpiexec
     /usr/local/bin/mpiexec
-    
+
     $ mpiexec --version
     HYDRA build details:
     Version:                                 3.1.4
@@ -47,7 +47,7 @@ Below is an example of the output from Mvapich on Linux.::
     Resource management kernels available:   user slurm ll lsf sge pbs cobalt
     Checkpointing libraries available:
     Demux engines available:                 poll select
-    
+
 If you see any error in above commands, please go back to the
 :ref:`mpi-install` and check your MPI installation.
 
@@ -153,7 +153,7 @@ your installation.::
   host00 0
   host00 0
   host00 0
-    
+
 A common problem is that the :command:`mpicc` used to build
 :mod:`mpi4py` and :command:`mpiexec` used to run the script are from
 different MPI installations.
@@ -171,7 +171,9 @@ configuration is ready.::
 Multi-node environmnet
 -----------------------
 
-Check SSH connection
+.. _ssh_and_envvars:
+
+Check SSH connection and enviornment variables
 ~~~~~~~~~~~~~~~~~~~~~~
 
 To use ChainerMN on multiple hosts, you need to connect to computing hosts,
@@ -217,7 +219,7 @@ executing MPI programs:
     * :envvar:`MV2_USE_CUDA`
     * :envvar:`MV2_CPU_MAPPING`
     * :envvar:`MV2_SMP_USE_CMA`
-    
+
 Program files and data
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -313,7 +315,7 @@ processes to run on each host.::
   host03 cpu=4
 
 With this hostfile, try running mpiexec again.::
-  
+
   $ mpiexec -n 8 --hostfile hostfile python print_rank.py
   host00 0
   host00 1
@@ -326,7 +328,37 @@ With this hostfile, try running mpiexec again.::
 
 You will find that the first 4 processes run on host00 and the latter
 4 on host01.
-  
+
 You can also specify computing hosts and resource mapping/binding
 using command line options of mpiexec. Please refer to the MPI manual
 for the more advanced use of mpiexec command.
+
+.. _troubleshooting_errors:
+
+If you get runtime error:
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you get the folloing error messages, please check the specified
+section of the troubleshooting or installation guide.
+
+::
+   [sakura3:mpi_rank_0][MPIDI_CH3I_SMP_init] CMA is not available. Set MV2_SMP_USE_CMA=0 to disable CMA.
+   [cli_0]: aborting job:
+   Fatal error in PMPI_Init_thread:
+   Other MPI error, error stack:
+   MPIR_Init_thread(514)....:
+   MPID_Init(365)...........: channel initialization failed
+   MPIDI_CH3_Init(404)......:
+   MPIDI_CH3I_SMP_Init(2132): process_vm_readv: Operation not permitted
+
+
+   ===================================================================================
+   =   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+   =   PID 20327 RUNNING AT sakura3
+   =   EXIT CODE: 1
+   =   CLEANING UP REMAINING PROCESSES
+   =   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+   ===================================================================================
+
+Please check :envvar:`MV2_SMP_USE_CMA` (see :ref:`mpi-install` and
+:ref:`ssh-and-envvars`).
