@@ -51,6 +51,23 @@ Below is an example of the output from Mvapich on Linux.::
 If you see any error in above commands, please go back to the
 :ref:`mpi-install` and check your MPI installation.
 
+.. _check-what-mpi:
+     
+Check what MPI you are using
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In :ref:`mpi-install`, we mention both of `Open MPI` and
+`Mvapich`. If the MPI is provided by the system administrator and
+you are not really sure which MPI you are using, check the output of
+`mpiexec --version`.
+
+- If the output contains `HYDRA`, then it's MVAPICH (or possibly MPICH).
+- If the output contains `OpenRTE`, then it's Open MPI.
+
+However, in such a case, you should make sure that the MPI is
+`CUDA-aware`, as mentioned below.  We recommend to build your own MPI.
+
+
 Check if MPI is CUDA-aware
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -171,7 +188,7 @@ configuration is ready.::
 Multi-node environmnet
 -----------------------
 
-.. _ssh_and_envvars:
+.. _ssh-and-envvars:
 
 Check SSH connection and enviornment variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -343,7 +360,7 @@ section of the troubleshooting or installation guide.
 
 ::
    
-   [sakura3:mpi_rank_0][MPIDI_CH3I_SMP_init] CMA is not available. Set MV2_SMP_USE_CMA=0 to disable CMA.
+   [hostxxx:mpi_rank_0][MPIDI_CH3I_SMP_init] CMA is not available. Set MV2_SMP_USE_CMA=0 to disable CMA.
    [cli_0]: aborting job:
    Fatal error in PMPI_Init_thread:
    Other MPI error, error stack:
@@ -355,11 +372,31 @@ section of the troubleshooting or installation guide.
 
    ===================================================================================
    =   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
-   =   PID 20327 RUNNING AT sakura3
+   =   PID 20327 RUNNING AT hostxxx
    =   EXIT CODE: 1
    =   CLEANING UP REMAINING PROCESSES
    =   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
    ===================================================================================
 
-Please check :envvar:`MV2_SMP_USE_CMA` (see :ref:`mpi-install` and
+-> Check the value of :envvar:`MV2_SMP_USE_CMA` (see :ref:`mpi-install` and
 :ref:`ssh-and-envvars`).
+
+
+::
+
+   [hostxx:mpi_rank_0][error_sighandler] Caught error: Segmentation fault (signal 11)
+
+   ===================================================================================
+   =   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+   =   PID 20643 RUNNING AT hostxx
+   =   EXIT CODE: 11
+   =   CLEANING UP REMAINING PROCESSES
+   =   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+   ===================================================================================
+   YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)
+   This typically refers to a problem with your application.
+   Please see the FAQ page for debugging suggestions
+
+-> Check the value of :envvar:`MV2_USE_CUDA` (see :ref:`mpi-install` and :ref:`ssh-and-envvars`)
+
+
