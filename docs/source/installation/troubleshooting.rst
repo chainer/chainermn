@@ -174,7 +174,7 @@ Multi-node environmnet
 .. _ssh_and_envvars:
 
 Check SSH connection and enviornment variables
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To use ChainerMN on multiple hosts, you need to connect to computing hosts,
 including the one you are currently logged into, via ssh without
@@ -342,6 +342,7 @@ If you get the folloing error messages, please check the specified
 section of the troubleshooting or installation guide.
 
 ::
+   
    [sakura3:mpi_rank_0][MPIDI_CH3I_SMP_init] CMA is not available. Set MV2_SMP_USE_CMA=0 to disable CMA.
    [cli_0]: aborting job:
    Fatal error in PMPI_Init_thread:
