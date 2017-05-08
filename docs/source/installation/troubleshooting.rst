@@ -314,7 +314,7 @@ processes to run on each host.::
 
 With this hostfile, try running mpiexec again.::
   
-  $ mpiexec -n 8 --hostfile hostfile python util/print_rank.py
+  $ mpiexec -n 8 --hostfile hostfile python print_rank.py
   host00 0
   host00 1
   host00 2
