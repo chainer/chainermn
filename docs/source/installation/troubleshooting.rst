@@ -18,8 +18,8 @@ Basic MPI installation
 
 Although ChainerMN stands for "Chainer MultiNode," it is good to start
 from single-node execution. First of all, you need MPI. If MPI is
-correctly installed, you will see the ``mpicc`` and ``mpiexec`` commands in
-your PATH.
+correctly installed, you will see the :command:`mpicc` and
+:command:`mpiexec` commands in your PATH.
 
 Below is an example of the output from Mvapich on Linux.::
 
@@ -233,10 +233,20 @@ executing MPI programs:
 
     * :envvar:`PATH`
     * :envvar:`LD_LIBRARY_PATH`
-    * :envvar:`MV2_USE_CUDA`
-    * :envvar:`MV2_CPU_MAPPING`
-    * :envvar:`MV2_SMP_USE_CMA`
+    * :envvar:`MV2_USE_CUDA` (if you use MVAPICH)
+    * :envvar:`MV2_SMP_USE_CMA` (if you use MVAPICH)
 
+Besides, you need to make sure the same :command:`mpiexec` binary is
+used to run MPI programs.::
+
+  $ ssh host00 'which mpiexec'
+  /usr/local/bin/mpiexec
+  
+  $ ssh host01 'which mpiexec'
+  /usr/local/bin/mpiexec
+
+All the commands should give the same :command:`mpiexec` binary path.
+  
 Program files and data
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -288,8 +298,9 @@ which MPI processes run.::
   host02
   host03
 
-Then, you can run your MPI program using the hostfile.
-To check if the MPI processes run over multiple hosts, save the following script to a file and run it via :command:`mpiexec`::
+Then, you can run your MPI program using the hostfile.  To check if
+the MPI processes run over multiple hosts, save the following script
+to a file and run it via :command:`mpiexec`::
 
   # print_rank.py
   import os
@@ -355,7 +366,7 @@ for the more advanced use of mpiexec command.
 If you get runtime error:
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you get the folloing error messages, please check the specified
+If you get the following error messages, please check the specified
 section of the troubleshooting or installation guide.
 
 ::
