@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.com/pfnet/chainermn.svg?token=2AzpxygqZgSaxVxfTPzs&branch=master)](https://travis-ci.com/pfnet/chainermn)
 [![Documentation Status](https://readthedocs.org/projects/chainermn/badge/?version=latest)](http://chainermn.readthedocs.io/en/latest/?badge=latest)
-[![PyPI](https://img.shields.io/pypi/v/chainermn.svg)]()
+[![PyPI](https://img.shields.io/pypi/v/chainermn.svg)](https://pypi.python.org/pypi/chainermn)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 # ChainerMN: Distributed Deep Learning with Chainer
