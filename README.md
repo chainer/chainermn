@@ -6,7 +6,7 @@
 # ChainerMN: Distributed Deep Learning with Chainer
 
 [Documentation](https://chainermn.readthedocs.org) |
-[Installation](https://chainermn.readthedocs.org/en/latest/install.html) |
+[Installation](https://chainermn.readthedocs.io/en/latest/installation/index.html) |
 [Examples](examples) |
 [Release Notes](https://github.com/pfnet/chainermn/releases)
 
@@ -30,7 +30,7 @@ After setting them up, ChainerMN can be installed via PyPI:
 pip install chainermn
 ```
 
-Please refer to the [installation guide](https://chainermn.readthedocs.org/en/latest/install.html) for more information.
+Please refer to the [installation guide](https://chainermn.readthedocs.io/en/latest/installation/index.html) for more information.
 
 
 ## Getting Started
