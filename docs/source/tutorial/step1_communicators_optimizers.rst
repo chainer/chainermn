@@ -4,7 +4,7 @@ Step 1: Communicators and Optimizers
 In the following, we explain how to modify your code using Chainer
 to enable distributed training with ChainerMN.
 We take `Chainer's MNIST example <https://github.com/pfnet/chainer/blob/master/examples/mnist/train_mnist.py>`_
- and modify it in a step-by-step manner
+and modify it in a step-by-step manner
 to see the standard way of using ChainerMN.
 
 

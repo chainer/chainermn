@@ -59,7 +59,7 @@ C program to check it.
 
 .. code-block:: c
 
-  /* test_cuda_aware.c */
+  /* check_cuda_aware.c */
   #include <assert.h>
   #include <stdio.h>
   #include <mpi.h>
@@ -108,7 +108,7 @@ and run it with the following command.::
 
     $ export MPICH_CC=nvcc  # if you use Mvapich
     $ export OMPI_CC=nvcc   # if you use Open MPI
-    $ $(mpicc -show cuda_aware_check.c -arch sm_53 | sed -e 's/-Wl,/-Xlinker /g' | sed -e 's/-pthread/-Xcompiler -pthread/')
+    $ $(mpicc -show check_cuda_aware.c -arch sm_53 | sed -e 's/-Wl,/-Xlinker /g' | sed -e 's/-pthread/-Xcompiler -pthread/')
     $ ./a.out
     OK.
 
@@ -314,7 +314,7 @@ processes to run on each host.::
 
 With this hostfile, try running mpiexec again.::
   
-  $ mpiexec -n 8 --hostfile hostfile python util/print_rank.py
+  $ mpiexec -n 8 --hostfile hostfile python print_rank.py
   host00 0
   host00 1
   host00 2

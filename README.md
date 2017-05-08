@@ -23,7 +23,7 @@
 ChainerMN can be used for both inner-node (i.e., multiple GPUs inside a node) and inter-node settings.
 For inter-node settings, we highly recommend to use high-speed interconnects such as InfiniBand.
 
-In addition to Chainer, ChainerMN depends on the following software libraries: CUDA-Aware MPI, NVIDIA NCCL, and [a few Python packages](requirements.txt).
+In addition to Chainer, ChainerMN depends on the following software libraries: CUDA-Aware MPI, NVIDIA NCCL, and a few Python packages.
 After setting them up, ChainerMN can be installed via PyPI:
 
 ```

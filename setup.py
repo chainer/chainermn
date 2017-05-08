@@ -2,11 +2,15 @@ from Cython.Distutils import build_ext
 from setuptools import Extension
 from setuptools import find_packages
 from setuptools import setup
+
+import os
 import sys
 
 
 if '--no-nccl' in sys.argv:
     sys.argv.remove('--no-nccl')
+    ext_modules = []
+elif os.environ.get('READTHEDOCS', None) == 'True':
     ext_modules = []
 else:
     ext_modules = [
@@ -24,5 +28,11 @@ setup(
     author_email='akiba@preferred.jp',
     packages=find_packages(),
     ext_modules=ext_modules,
-    cmdclass={'build_ext': build_ext}
+    cmdclass={'build_ext': build_ext},
+    install_requires=[
+        'cffi',
+        'chainer >=1.23, !=2.0.0a1, !=2.0.0b1',
+        'cython',
+        'mpi4py',
+    ]
 )

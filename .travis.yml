@@ -9,11 +9,9 @@ python:
 
 env:
   - MPI="mpich-3.0.4"
-  - MPI="mpich-3.1"
   - MPI="mpich-3.2"
   - MPI="openmpi-1.6.5"
-  - MPI="openmpi-1.8.8"
-  - MPI="openmpi-1.10.6"
+  - MPI="openmpi-1.10.3"
   
 
 cache:
@@ -41,7 +39,7 @@ install:
   - pip install -U pip wheel
   - pip install nose hacking mock
   - pip install autopep8
-  - pip install -r requirements.txt
+  - pip install cython mpi4py cffi
   - python setup.py develop --no-nccl
 
 script:
@@ -65,4 +63,7 @@ addons:
       - gfortran
       - libhdf5-serial-dev
       - liblapack-dev
-      
+
+notifications:
+  slack:
+    secure: BMQN8rhuB2Syqm2u1TdJBqiil34eTrnvZyqnb7RJOvZ/7TqN5wH6Qy1Ncl1ihOpbAhxAFXzp3szKOPg2duzrZ3/LBGxJlPWqBnGRNMJDHSM0rnG8zv4LpZFhzwyvy5g2V3Jj9Z8VTRC920z/gF5y/M622Xve1t+8b5SUSFS2rYCgNDwd2RU99WUKt5GNL/6eAe8SI1752BhLTd+zEkg38HcpH7R8Q2fXoz5gIRJTGO+Cp8UVKgzUFQL0SJMlfYHNHpCw2BcRQl3whFNZiBD4XAHzbxtHRRE/TznUmKsN7pSTQrXSDHz4RbaQ3ZSEOKchwbsgB98Flx8F3xYjm5fyVMekbhkRggOuB0SME1YWIgM5Oa9EF5a3NniEf971iw6VrWaFFjr90JF4S/2oVLgzx09mhH0CGVP/Uyfp2/o8UMP1C69/YemmfVbhrnFCRMT86svFGSdu+fW7iNjv4wlmCwDKaSk/7xsVzznNmsocvJdRBREoKh1BU1YOshXh2OrLvAOqsKRbkf5vHCxRpe8NR6r02QY+CZmBjEJ0XLURXPn6LQF+OP/QK87FNjZmlJjdbWNytgXXUmiMxzhwN63u1LSgD9TZKQACb9ZyepqMTuk8EuQrDeAVGvdU8OndnW9kR41XBPwpiLWD6oAw5YSs5lwXTVaMj/OVe/lf/riix7E=
