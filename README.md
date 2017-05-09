@@ -1,12 +1,12 @@
 [![Build Status](https://travis-ci.com/pfnet/chainermn.svg?token=2AzpxygqZgSaxVxfTPzs&branch=master)](https://travis-ci.com/pfnet/chainermn)
 [![Documentation Status](https://readthedocs.org/projects/chainermn/badge/?version=latest)](http://chainermn.readthedocs.io/en/latest/?badge=latest)
-[![PyPI](https://img.shields.io/pypi/v/chainermn.svg)]()
+[![PyPI](https://img.shields.io/pypi/v/chainermn.svg)](https://pypi.python.org/pypi/chainermn)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 # ChainerMN: Distributed Deep Learning with Chainer
 
 [Documentation](https://chainermn.readthedocs.org) |
-[Installation](https://chainermn.readthedocs.org/en/latest/install.html) |
+[Installation](https://chainermn.readthedocs.io/en/latest/installation/index.html) |
 [Examples](examples) |
 [Release Notes](https://github.com/pfnet/chainermn/releases)
 
@@ -30,7 +30,7 @@ After setting them up, ChainerMN can be installed via PyPI:
 pip install chainermn
 ```
 
-Please refer to the [installation guide](https://chainermn.readthedocs.org/en/latest/install.html) for more information.
+Please refer to the [installation guide](https://chainermn.readthedocs.io/en/latest/installation/index.html) for more information.
 
 
 ## Getting Started
