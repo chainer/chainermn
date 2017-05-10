@@ -99,9 +99,10 @@ many redundant lines will appear in your console.
 Therefore, it is convenient to register these extensions
 only at workers of rank zero as follows::
 
+  log_interval = chainermn.get_epoch_trigger(1, train, args.batchsize, comm)
   if comm.rank == 0:
       trainer.extend(extensions.dump_graph('main/loss'))
-      trainer.extend(extensions.LogReport())
+      trainer.extend(extensions.LogReport(trigger=log_interval))
       trainer.extend(extensions.PrintReport(
           ['epoch', 'main/loss', 'validation/main/loss',
            'main/accuracy', 'validation/main/accuracy', 'elapsed_time']))
