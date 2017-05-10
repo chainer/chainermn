@@ -91,9 +91,10 @@ def main():
 
     # Some display and output extensions are necessary only for one worker.
     # (Otherwise, there would just be repeated outputs.)
+    log_interval = chainermn.get_epoch_trigger(1, train, args.batchsize, comm)
     if comm.rank == 0:
         trainer.extend(extensions.dump_graph('main/loss'))
-        trainer.extend(extensions.LogReport())
+        trainer.extend(extensions.LogReport(trigger=log_interval))
         trainer.extend(extensions.PrintReport(
             ['epoch', 'main/loss', 'validation/main/loss',
              'main/accuracy', 'validation/main/accuracy', 'elapsed_time']))
