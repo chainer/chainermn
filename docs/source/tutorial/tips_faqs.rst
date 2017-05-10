@@ -15,6 +15,8 @@ to change the way to start child processes::
 
 Both ``forkserver`` mode and ``spawn`` mode should work.
 Please also refer to our ImageNet example, where ``MultiprocessIterator`` is used.
+Unfortunately, ``multiprocessing.set_start_method`` is only available in Python 3.4+.
+Therefore you need those recent Python versions to use ``MultiprocessIterator``.
 
 
 Using Your Own Evaluator
@@ -35,5 +37,5 @@ then you can obtain MPI4py communicator by ``comm.mpi_comm``.
 Please refer to `MPI4py API reference <http://pythonhosted.org/mpi4py/apiref/mpi4py.MPI.Comm-class.html>`_.
 
 Using FP16
--~~~~~~~~~~
+~~~~~~~~~~
 FP16 (16-bit half precision floating point values) is not supported in ChainerMN as of now.

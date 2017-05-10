@@ -1,7 +1,7 @@
 .. -*- coding: utf-8; -*-
 
 .. _troubleshooting:
-   
+
 Step-by-Step Troubleshooting
 ============================
 
@@ -18,8 +18,8 @@ Basic MPI installation
 
 Although ChainerMN stands for "Chainer MultiNode," it is good to start
 from single-node execution. First of all, you need MPI. If MPI is
-correctly installed, you will see the ``mpicc`` and ``mpiexec`` commands in
-your PATH.
+correctly installed, you will see the :command:`mpicc` and
+:command:`mpiexec` commands in your PATH.
 
 Below is an example of the output from Mvapich on Linux.::
 
@@ -31,7 +31,7 @@ Below is an example of the output from Mvapich on Linux.::
 
     $ which mpiexec
     /usr/local/bin/mpiexec
-    
+
     $ mpiexec --version
     HYDRA build details:
     Version:                                 3.1.4
@@ -47,9 +47,26 @@ Below is an example of the output from Mvapich on Linux.::
     Resource management kernels available:   user slurm ll lsf sge pbs cobalt
     Checkpointing libraries available:
     Demux engines available:                 poll select
-    
+
 If you see any error in above commands, please go back to the
 :ref:`mpi-install` and check your MPI installation.
+
+.. _check-what-mpi:
+     
+Check what MPI you are using
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In :ref:`mpi-install`, we mention both of `Open MPI` and
+`Mvapich`. If the MPI is provided by the system administrator and
+you are not really sure which MPI you are using, check the output of
+`mpiexec --version`.
+
+- If the output contains `HYDRA`, then it's MVAPICH (or possibly MPICH).
+- If the output contains `OpenRTE`, then it's Open MPI.
+
+However, in such a case, you should make sure that the MPI is
+`CUDA-aware`, as mentioned below.  We recommend to build your own MPI.
+
 
 Check if MPI is CUDA-aware
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -59,7 +76,7 @@ C program to check it.
 
 .. code-block:: c
 
-  /* test_cuda_aware.c */
+  /* check_cuda_aware.c */
   #include <assert.h>
   #include <stdio.h>
   #include <mpi.h>
@@ -108,7 +125,7 @@ and run it with the following command.::
 
     $ export MPICH_CC=nvcc  # if you use Mvapich
     $ export OMPI_CC=nvcc   # if you use Open MPI
-    $ $(mpicc -show cuda_aware_check.c -arch sm_53 | sed -e 's/-Wl,/-Xlinker /g' | sed -e 's/-pthread/-Xcompiler -pthread/')
+    $ $(mpicc -show check_cuda_aware.c -arch sm_53 | sed -e 's/-Wl,/-Xlinker /g' | sed -e 's/-pthread/-Xcompiler -pthread/')
     $ ./a.out
     OK.
 
@@ -153,7 +170,7 @@ your installation.::
   host00 0
   host00 0
   host00 0
-    
+
 A common problem is that the :command:`mpicc` used to build
 :mod:`mpi4py` and :command:`mpiexec` used to run the script are from
 different MPI installations.
@@ -171,8 +188,10 @@ configuration is ready.::
 Multi-node environmnet
 -----------------------
 
-Check SSH connection
-~~~~~~~~~~~~~~~~~~~~~~
+.. _ssh-and-envvars:
+
+Check SSH connection and enviornment variables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To use ChainerMN on multiple hosts, you need to connect to computing hosts,
 including the one you are currently logged into, via ssh without
@@ -214,10 +233,20 @@ executing MPI programs:
 
     * :envvar:`PATH`
     * :envvar:`LD_LIBRARY_PATH`
-    * :envvar:`MV2_USE_CUDA`
-    * :envvar:`MV2_CPU_MAPPING`
-    * :envvar:`MV2_SMP_USE_CMA`
-    
+    * :envvar:`MV2_USE_CUDA` (if you use MVAPICH)
+    * :envvar:`MV2_SMP_USE_CMA` (if you use MVAPICH)
+
+Besides, you need to make sure the same :command:`mpiexec` binary is
+used to run MPI programs.::
+
+  $ ssh host00 'which mpiexec'
+  /usr/local/bin/mpiexec
+  
+  $ ssh host01 'which mpiexec'
+  /usr/local/bin/mpiexec
+
+All the commands should give the same :command:`mpiexec` binary path.
+  
 Program files and data
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -269,8 +298,9 @@ which MPI processes run.::
   host02
   host03
 
-Then, you can run your MPI program using the hostfile.
-To check if the MPI processes run over multiple hosts, save the following script to a file and run it via :command:`mpiexec`::
+Then, you can run your MPI program using the hostfile.  To check if
+the MPI processes run over multiple hosts, save the following script
+to a file and run it via :command:`mpiexec`::
 
   # print_rank.py
   import os
@@ -313,8 +343,8 @@ processes to run on each host.::
   host03 cpu=4
 
 With this hostfile, try running mpiexec again.::
-  
-  $ mpiexec -n 8 --hostfile hostfile python util/print_rank.py
+
+  $ mpiexec -n 8 --hostfile hostfile python print_rank.py
   host00 0
   host00 1
   host00 2
@@ -326,7 +356,58 @@ With this hostfile, try running mpiexec again.::
 
 You will find that the first 4 processes run on host00 and the latter
 4 on host01.
-  
+
 You can also specify computing hosts and resource mapping/binding
 using command line options of mpiexec. Please refer to the MPI manual
 for the more advanced use of mpiexec command.
+
+.. _troubleshooting_errors:
+
+If you get runtime error:
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you get the following error messages, please check the specified
+section of the troubleshooting or installation guide.
+
+::
+   
+   [hostxxx:mpi_rank_0][MPIDI_CH3I_SMP_init] CMA is not available. Set MV2_SMP_USE_CMA=0 to disable CMA.
+   [cli_0]: aborting job:
+   Fatal error in PMPI_Init_thread:
+   Other MPI error, error stack:
+   MPIR_Init_thread(514)....:
+   MPID_Init(365)...........: channel initialization failed
+   MPIDI_CH3_Init(404)......:
+   MPIDI_CH3I_SMP_Init(2132): process_vm_readv: Operation not permitted
+
+
+   ===================================================================================
+   =   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+   =   PID 20327 RUNNING AT hostxxx
+   =   EXIT CODE: 1
+   =   CLEANING UP REMAINING PROCESSES
+   =   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+   ===================================================================================
+
+-> Check the value of :envvar:`MV2_SMP_USE_CMA` (see :ref:`mpi-install` and
+:ref:`ssh-and-envvars`).
+
+
+::
+
+   [hostxx:mpi_rank_0][error_sighandler] Caught error: Segmentation fault (signal 11)
+
+   ===================================================================================
+   =   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+   =   PID 20643 RUNNING AT hostxx
+   =   EXIT CODE: 11
+   =   CLEANING UP REMAINING PROCESSES
+   =   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+   ===================================================================================
+   YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)
+   This typically refers to a problem with your application.
+   Please see the FAQ page for debugging suggestions
+
+-> Check the value of :envvar:`MV2_USE_CUDA` (see :ref:`mpi-install` and :ref:`ssh-and-envvars`)
+
+
