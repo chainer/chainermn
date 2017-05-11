@@ -28,10 +28,11 @@ if False:
         ext_modules = []
     elif os.environ.get('READTHEDOCS', None) == 'True':
         ext_modules = []
-        install_requires.remove('mpi4py')  # mpi4py cannot be installed without MPI
+        # mpi4py cannot be installed without MPI
+        install_requires.remove('mpi4py')
 else:
     ext_modules = setup_build.get_ext_modules()
-    
+
 setup(
     name='chainermn',
     version='1.0.0b1',
