@@ -80,21 +80,18 @@ def main():
                                                  repeat=False, shuffle=False)
 
     updater = training.StandardUpdater(train_iter, optimizer, device=device)
-    trainer = training.Trainer(updater, chainermn.get_epoch_trigger(
-        args.epoch, train, args.batchsize, comm), out=args.out)
+    trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
 
     # Create a multi node evaluator from a standard Chainer evaluator.
     evaluator = extensions.Evaluator(test_iter, model, device=device)
-    trainer.extend(
-        chainermn.create_multi_node_evaluator(evaluator, comm),
-        trigger=chainermn.get_epoch_trigger(1, train, args.batchsize, comm))
+    evaluator = chainermn.create_multi_node_evaluator(evaluator, comm)
+    trainer.extend(evaluator)
 
     # Some display and output extensions are necessary only for one worker.
     # (Otherwise, there would just be repeated outputs.)
-    log_interval = chainermn.get_epoch_trigger(1, train, args.batchsize, comm)
     if comm.rank == 0:
         trainer.extend(extensions.dump_graph('main/loss'))
-        trainer.extend(extensions.LogReport(trigger=log_interval))
+        trainer.extend(extensions.LogReport())
         trainer.extend(extensions.PrintReport(
             ['epoch', 'main/loss', 'validation/main/loss',
              'main/accuracy', 'validation/main/accuracy', 'elapsed_time']))
