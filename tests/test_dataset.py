@@ -13,9 +13,9 @@ class TestDataset(unittest.TestCase):
         self.communicator = NaiveCommunicator(self.mpi_comm)
 
     def check_scatter_dataset(self, original_dataset):
-        sub_dataset = chainermn.scatter_dataset(
+        my_dataset = chainermn.scatter_dataset(
             original_dataset, self.communicator)
-        sub_datasets = self.mpi_comm.gather(sub_dataset)
+        sub_datasets = self.mpi_comm.gather(my_dataset)
 
         if self.mpi_comm.rank == 0:
             # Test the sizes
