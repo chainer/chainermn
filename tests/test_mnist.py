@@ -54,15 +54,12 @@ class TestMNIST(unittest.TestCase):
                                                      shuffle=False)
 
         updater = training.StandardUpdater(train_iter, optimizer)
-        trainer = training.Trainer(updater, chainermn.get_epoch_trigger(
-            epoch, train, batchsize, comm))
+        trainer = training.Trainer(updater, (epoch, 'epoch'))
 
         # Wrap standard Chainer evaluators by MultiNodeEvaluator.
         evaluator = extensions.Evaluator(test_iter, model)
         evaluator = chainermn.create_multi_node_evaluator(evaluator, comm)
-        trainer.extend(
-            evaluator,
-            trigger=chainermn.get_epoch_trigger(1, train, batchsize, comm))
+        trainer.extend(evaluator)
 
         # Some display and output extensions are necessary only for one worker.
         # (Otherwise, there would just be repeated outputs.)
