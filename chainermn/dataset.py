@@ -27,10 +27,11 @@ def scatter_dataset(dataset, comm):
     # TODO(akiba): write why we do not use mpi_comm.scatter
     if comm.rank == 0:
         mine = None
-        n_samples = len(dataset)
+        n_total_samples = len(dataset)
+        n_sub_samples = (n_total_samples + comm.size - 1) // comm.size
         for i in range(comm.size):
-            b = n_samples * i // comm.size
-            e = n_samples * (i + 1) // comm.size
+            b = n_total_samples * i // comm.size
+            e = b + n_sub_samples
             subds = chainer.datasets.SubDataset(dataset, b, e)
             if i == 0:
                 mine = subds
