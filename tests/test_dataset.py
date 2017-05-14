@@ -15,26 +15,22 @@ class TestDataset(unittest.TestCase):
     def check_scatter_dataset(self, original_dataset):
         sub_dataset = chainermn.scatter_dataset(
             original_dataset, self.communicator)
-        all_datasets = self.mpi_comm.gather(sub_dataset)
+        sub_datasets = self.mpi_comm.gather(sub_dataset)
 
         if self.mpi_comm.rank == 0:
-            # Test the total length
-            total_size = sum(len(sub_dataset) for sub_dataset in all_datasets)
-            self.assertEqual(len(original_dataset), total_size)
-
-            # Test the length of each sub dataset
-            expected_sub_dataset_size = len(
-                original_dataset) // self.communicator.size
-            for sub_dataset in all_datasets:
-                self.assertGreaterEqual(
-                    len(sub_dataset), expected_sub_dataset_size)
-                self.assertLessEqual(
-                    len(sub_dataset), expected_sub_dataset_size + 1)
+            # Test the sizes
+            sub_sizes = [len(sub_dataset) for sub_dataset in sub_datasets]
+            self.assertEqual(len(set(sub_sizes)), 1)
+            sub_size = sub_sizes[0]
+            self.assertLessEqual(
+                len(original_dataset), sub_size * self.mpi_comm.size)
+            self.assertGreater(
+                len(original_dataset), (sub_size - 1) * self.mpi_comm.size)
 
             # Test the content of scattered datasets
             joined_dataset = sum((sub_dataset[:]
-                                  for sub_dataset in all_datasets), [])
-            self.assertEqual(joined_dataset, list(original_dataset[:]))
+                                  for sub_dataset in sub_datasets), [])
+            self.assertEqual(set(joined_dataset), set(original_dataset))
 
     def test_scatter_dataset(self):
         n = self.communicator.size
