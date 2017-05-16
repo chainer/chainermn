@@ -33,6 +33,10 @@ if False:
 else:
     ext_modules = setup_build.get_ext_modules()
 
+print("=====================================")
+print("ext_modules={}".format(ext_modules))
+print("=====================================")
+
 setup(
     name='chainermn',
     version='1.0.0b1',
