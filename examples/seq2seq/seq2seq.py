@@ -56,7 +56,7 @@ class Seq2seq(chainer.Chain):
         ys_in = [F.concat([eos, y], axis=0) for y in ys]
         ys_out = [F.concat([y, eos], axis=0) for y in ys]
 
-        exs = sequence_embed(self.embed_x, xs)
+        exs = sequence_embed(self.embed_x, [self.xp.array(x) for x in xs])
         eys = sequence_embed(self.embed_y, ys_in)
 
         batch = len(xs)
@@ -79,17 +79,17 @@ class Seq2seq(chainer.Chain):
         batch = len(xs)
         with chainer.no_backprop_mode():
             xs = [x[::-1] for x in xs]
-            exs = sequence_embed(self.embed_x, xs)
+            exs = sequence_embed(self.embed_x, [self.xp.array(x) for x in xs])
             # Initial hidden variable and cell variable
             zero = self.xp.zeros((self.n_layers, batch, self.n_units), 'f')
-            h, c, _ = self.encoder(zero, zero, exs, train=False)
+            h, c, _ = self.encoder(zero, zero, exs)
             ys = self.xp.zeros(batch, 'i')
             result = []
             for i in range(max_length):
                 eys = self.embed_y(ys)
                 eys = chainer.functions.split_axis(
                     eys, batch, 0, force_tuple=True)
-                h, c, ys = self.decoder(h, c, eys, train=False)
+                h, c, ys = self.decoder(h, c, eys)
                 cys = chainer.functions.concat(ys, axis=0)
                 wy = self.W(cys)
                 ys = self.xp.argmax(wy.data, axis=1).astype('i')
@@ -171,20 +171,21 @@ class CalculateBleu(chainer.training.Extension):
         self.batch = batch
 
     def __call__(self, trainer):
-        with chainer.no_backprop_mode():
-            references = []
-            hypotheses = []
-            for i in range(0, len(self.test_data), self.batch):
-                sources, targets = zip(*self.test_data[i:i + self.batch])
-                references.extend([[t.tolist()] for t in targets])
+        with chainer.using_config('train', False):
+            with chainer.no_backprop_mode():
+                references = []
+                hypotheses = []
+                for i in range(0, len(self.test_data), self.batch):
+                    sources, targets = zip(*self.test_data[i:i + self.batch])
+                    references.extend([[t.tolist()] for t in targets])
 
-                ys = [y.tolist() for y in self.model.translate(sources)]
-                hypotheses.extend(ys)
+                    ys = [y.tolist() for y in self.model.translate(sources)]
+                    hypotheses.extend(ys)
 
-        bleu = bleu_score.corpus_bleu(
-            references, hypotheses,
-            smoothing_function=bleu_score.SmoothingFunction().method1)
-        print('BELU {}'.format(bleu))
+            bleu = bleu_score.corpus_bleu(
+                references, hypotheses,
+                smoothing_function=bleu_score.SmoothingFunction().method1)
+            print('BELU {}'.format(bleu))
 
 
 def main():
@@ -382,7 +383,7 @@ def main():
         # trainer.extend(translate, trigger=(200, 'iteration'))
 
         trainer.extend(CalculateBleu(model, test_data),
-                       trigger=(10000, 'iteration'))
+                       trigger=(10, 'iteration'))
 
     comm.mpi_comm.Barrier()
     if comm.rank == 0:
