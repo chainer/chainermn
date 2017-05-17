@@ -164,6 +164,34 @@ def read_target(in_dir, cahce=None):
     return target_vocab, target_data
 
 
+class BleuEvaluator(extensions.Evaluator):
+    def __init__(self, model, test_data, batch=100):
+        super(BleuEvaluator, self).__init__({'main':None}, model)
+        self.model = model
+        self.test_data = test_data
+        self.batch = batch
+        
+    def evaluate(self):
+        with chainer.no_backprop_mode():
+            with chainer.using_config('train', False):
+                references = []
+                hypotheses = []
+                observation = {}
+                with reporter.report_scope(observation):
+                    for i in range(0, len(self.test_data), self.batch): # for batch in it:
+                        sources, targets = zip(*self.test_data[i:i + self.batch])
+                        references.extend([[t.tolist()] for t in targets])
+
+                        ys = [y.tolist() for y in self.model.translate(sources)]
+                        hypotheses.extend(ys)
+
+                    bleu = bleu_score.corpus_bleu(
+                        references, hypotheses,
+                        smoothing_function=bleu_score.SmoothingFunction().method1)
+                    reporter.report({'bleu' : bleu}, self.model)
+        return observation
+
+
 class CalculateBleu(chainer.training.Extension):
     def __init__(self, model, test_data, batch=100):
         self.model = model
@@ -185,7 +213,6 @@ class CalculateBleu(chainer.training.Extension):
             bleu = bleu_score.corpus_bleu(
                 references, hypotheses,
                 smoothing_function=bleu_score.SmoothingFunction().method1)
-            print('BELU {}'.format(bleu))
 
 
 def main():
@@ -328,6 +355,8 @@ def main():
     train_iter = chainer.iterators.SerialIterator(train_data,
                                                   args.batchsize,
                                                   shuffle=False)
+    test_iter = chainer.iterators.SerialIterator(test_data,
+                                                 args.batchsize)
     updater = training.StandardUpdater(
         train_iter, optimizer, converter=convert, device=dev)
     trainer = training.Trainer(updater,
@@ -367,6 +396,8 @@ def main():
         # trigger = chainermn.get_epoch_trigger(1, train_data,
         #                                       args.batchsize, comm)
 
+        trainer.extend(BleuEvaluator(model, test_data))
+
         trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
                        trigger=(1, 'epoch'))
         # trainer.extend(extensions.LogReport(trigger=trigger),
@@ -377,13 +408,14 @@ def main():
                                          'main/loss',
                                          # 'validation/main/loss',
                                          'main/perp',
+                                         'validation/main/bleu',
                                          # 'validation/main/perp',
                                          'elapsed_time'])
         trainer.extend(report, trigger=(1, 'epoch'))
         # trainer.extend(translate, trigger=(200, 'iteration'))
 
-        trainer.extend(CalculateBleu(model, test_data),
-                       trigger=(10, 'iteration'))
+        # trainer.extend(CalculateBleu(model, test_data),
+        #                trigger=(10, 'iteration'))
 
     comm.mpi_comm.Barrier()
     if comm.rank == 0:
