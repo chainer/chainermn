@@ -166,29 +166,31 @@ def read_target(in_dir, cahce=None):
 
 class BleuEvaluator(extensions.Evaluator):
     def __init__(self, model, test_data, batch=100):
-        super(BleuEvaluator, self).__init__({'main':None}, model)
+        super(BleuEvaluator, self).__init__({'main': None}, model)
         self.model = model
         self.test_data = test_data
         self.batch = batch
-        
+
     def evaluate(self):
+        batch = self.batch
+        test_data = self.test_data
         with chainer.no_backprop_mode():
             with chainer.using_config('train', False):
                 references = []
                 hypotheses = []
                 observation = {}
                 with reporter.report_scope(observation):
-                    for i in range(0, len(self.test_data), self.batch): # for batch in it:
-                        sources, targets = zip(*self.test_data[i:i + self.batch])
-                        references.extend([[t.tolist()] for t in targets])
+                    for i in range(0, len(self.test_data), self.batch):
+                        src, trg = zip(*test_data[i:i + batch])
+                        references.extend([[t.tolist()] for t in trg])
 
-                        ys = [y.tolist() for y in self.model.translate(sources)]
+                        ys = [y.tolist() for y in self.model.translate(src)]
                         hypotheses.extend(ys)
 
                     bleu = bleu_score.corpus_bleu(
                         references, hypotheses,
-                        smoothing_function=bleu_score.SmoothingFunction().method1)
-                    reporter.report({'bleu' : bleu}, self.model)
+                        smoothing_function=bleu_score.SmoothingFunction().method1)  # NOQA
+                    reporter.report({'bleu': bleu}, self.model)
         return observation
 
 
@@ -213,6 +215,7 @@ class CalculateBleu(chainer.training.Extension):
             bleu = bleu_score.corpus_bleu(
                 references, hypotheses,
                 smoothing_function=bleu_score.SmoothingFunction().method1)
+            print("BLEU: {}".format(bleu))
 
 
 def main():
@@ -355,8 +358,6 @@ def main():
     train_iter = chainer.iterators.SerialIterator(train_data,
                                                   args.batchsize,
                                                   shuffle=False)
-    test_iter = chainer.iterators.SerialIterator(test_data,
-                                                 args.batchsize)
     updater = training.StandardUpdater(
         train_iter, optimizer, converter=convert, device=dev)
     trainer = training.Trainer(updater,
