@@ -13,28 +13,24 @@ class TestDataset(unittest.TestCase):
         self.communicator = NaiveCommunicator(self.mpi_comm)
 
     def check_scatter_dataset(self, original_dataset):
-        sub_dataset = chainermn.scatter_dataset(
+        my_dataset = chainermn.scatter_dataset(
             original_dataset, self.communicator)
-        all_datasets = self.mpi_comm.gather(sub_dataset)
+        sub_datasets = self.mpi_comm.gather(my_dataset)
 
         if self.mpi_comm.rank == 0:
-            # Test the total length
-            total_size = sum(len(sub_dataset) for sub_dataset in all_datasets)
-            self.assertEqual(len(original_dataset), total_size)
-
-            # Test the length of each sub dataset
-            expected_sub_dataset_size = len(
-                original_dataset) // self.communicator.size
-            for sub_dataset in all_datasets:
-                self.assertGreaterEqual(
-                    len(sub_dataset), expected_sub_dataset_size)
-                self.assertLessEqual(
-                    len(sub_dataset), expected_sub_dataset_size + 1)
+            # Test the sizes
+            sub_sizes = [len(sub_dataset) for sub_dataset in sub_datasets]
+            self.assertEqual(len(set(sub_sizes)), 1)
+            sub_size = sub_sizes[0]
+            self.assertLessEqual(
+                len(original_dataset), sub_size * self.mpi_comm.size)
+            self.assertGreater(
+                len(original_dataset), (sub_size - 1) * self.mpi_comm.size)
 
             # Test the content of scattered datasets
             joined_dataset = sum((sub_dataset[:]
-                                  for sub_dataset in all_datasets), [])
-            self.assertEqual(joined_dataset, list(original_dataset[:]))
+                                  for sub_dataset in sub_datasets), [])
+            self.assertEqual(set(joined_dataset), set(original_dataset))
 
     def test_scatter_dataset(self):
         n = self.communicator.size
@@ -48,48 +44,3 @@ class TestDataset(unittest.TestCase):
         self.check_scatter_dataset(np.array([0]))
         self.check_scatter_dataset(np.arange(n))
         self.check_scatter_dataset(np.arange(n * 5 - 1))
-
-    def test_get_n_iterations_for_one_epoch(self):
-        n_elements = 10 + self.mpi_comm.rank
-        local_batch_size = 2
-        n_iterations = chainermn.get_n_iterations_for_one_epoch(
-            list(range(n_elements)), local_batch_size, self.communicator
-        )
-        all_n_iterations = self.mpi_comm.gather(n_iterations)
-
-        if self.mpi_comm.rank == 0:
-            # Check that all workers obtained the same number of iterations
-            all_n_iterations = list(set(all_n_iterations))
-            self.assertEqual(len(all_n_iterations), 1)
-
-            # Check that the obtained number of iterations is close to 1 epoch
-            expected_n_iterations = n_elements // local_batch_size
-            self.assertGreaterEqual(
-                n_iterations, expected_n_iterations)
-            self.assertLessEqual(
-                n_iterations, expected_n_iterations + 1)
-
-    def test_get_epoch_trigger(self):
-        n_elements = 10 + self.mpi_comm.rank
-        n_epochs = 5
-        local_batch_size = 2
-        trigger = chainermn.get_epoch_trigger(
-            n_epochs, list(range(n_elements)
-                           ), local_batch_size, self.communicator
-        )
-        all_triggers = self.mpi_comm.gather(trigger)
-
-        if self.mpi_comm.rank == 0:
-            # Check that all workers obtained the same number of iterations
-            all_triggers = list(set(all_triggers))
-            self.assertEqual(len(all_triggers), 1)
-
-            # Check that the obtained number of iterations is close to 1 epoch
-            expected_n_iterations = n_elements * n_epochs // local_batch_size
-            self.assertGreaterEqual(
-                trigger[0], expected_n_iterations)
-            self.assertLessEqual(
-                trigger[0], expected_n_iterations + 1)
-
-            # Check that the trigger is iteration trigger
-            self.assertEqual(trigger[1], 'iteration')

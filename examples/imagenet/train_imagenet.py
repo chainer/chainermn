@@ -166,15 +166,10 @@ def main():
 
     # Set up a trainer
     updater = training.StandardUpdater(train_iter, optimizer, device=device)
-    trainer = training.Trainer(
-        updater,
-        chainermn.get_epoch_trigger(args.epoch, train, args.batchsize, comm),
-        args.out)
+    trainer = training.Trainer(updater, (args.epoch, 'epoch'), args.out)
 
-    val_interval = (10, 'iteration') if args.test else \
-        chainermn.get_epoch_trigger(1, train, args.batchsize, comm)
-    log_interval = (10, 'iteration') if args.test else \
-        chainermn.get_epoch_trigger(1, train, args.batchsize, comm)
+    val_interval = (10, 'iteration') if args.test else (1, 'epoch')
+    log_interval = (10, 'iteration') if args.test else (1, 'epoch')
 
     # Create a multi node evaluator from an evaluator.
     evaluator = TestModeEvaluator(val_iter, model, device=device)
