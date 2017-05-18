@@ -1,7 +1,8 @@
-# coding: utf-8
-import codecs
+from __future__ import unicode_literals
+
 import collections
 import gzip
+import io
 import os
 import re
 
@@ -15,7 +16,7 @@ digit_pattern = re.compile(r'\d')
 
 def split_sentence(s):
     s = s.lower()
-    s = s.replace("’", "'")
+    s = s.replace('\u2019', "'")
     s = digit_pattern.sub('0', s)
     words = []
     for word in s.strip().split():
@@ -33,7 +34,7 @@ def open_file(path):
         if os.path.exists(gz):
             return open_file(gz)
         else:
-            return codecs.open(path, encoding='utf-8')
+            return io.open(path, encoding='utf-8', errors='ignore')
 
 
 def count_lines(path):
@@ -43,9 +44,9 @@ def count_lines(path):
 
 def read_file(path):
     n_lines = count_lines(path)
-    bar = progressbar.ProgressBar(maxval=n_lines)
+    bar = progressbar.ProgressBar()
     with open_file(path) as f:
-        for line in bar(f):
+        for line in bar(f, max_value=n_lines):
             words = split_sentence(line)
             yield words
 
