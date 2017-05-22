@@ -1,4 +1,8 @@
+import mpi4py.MPI
+import numpy
+
 from chainermn.communicators import _communication_utility
+from chainermn.communicators import _memory_utility
 from chainermn import nccl
 
 
@@ -14,6 +18,19 @@ class CommunicatorBase(object):
     @property
     def size(self):
         return self.mpi_comm.size
+
+    def send(self, array, dest, tag):
+        shape = numpy.array(array.shape, dtype='int')
+        buf = _memory_utility.array_to_buffer_object(array)
+        self.mpi_comm.Send([shape, mpi4py.MPI.INT], dest=dest, tag=tag)
+        self.mpi_comm.Send(buf, dest=dest, tag=tag)
+
+    def recv(self, source, tag):
+        shape = numpy.empty(2, dtype='int')
+        self.mpi_comm.Recv([shape, mpi4py.MPI.INT], source=source, tag=tag)
+        buf = numpy.empty(shape[0] * shape[1], dtype='float32')
+        self.mpi_comm.Recv(buf, source=source, tag=tag)
+        return buf.reshape(shape)
 
     def broadcast_data(self, model):
         raise NotImplementedError()
