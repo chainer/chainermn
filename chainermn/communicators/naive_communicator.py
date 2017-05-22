@@ -1,21 +1,14 @@
 import mpi4py.MPI
 
+from chainermn.communicators import _base
 from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
 
 
-class NaiveCommunicator(object):
+class NaiveCommunicator(_base.CommunicatorBase):
 
     def __init__(self, mpi_comm):
-        self.mpi_comm = mpi_comm
-
-    @property
-    def rank(self):
-        return self.mpi_comm.rank
-
-    @property
-    def size(self):
-        return self.mpi_comm.size
+        super(NaiveCommunicator, self).__init__(mpi_comm)
 
     def broadcast_data(self, model):
         _communication_utility.broadcast_naive(self.mpi_comm, model)
