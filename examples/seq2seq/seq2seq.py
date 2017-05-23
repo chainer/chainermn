@@ -354,9 +354,7 @@ def main():
         train_iter, optimizer, converter=convert, device=dev)
     trainer = training.Trainer(updater,
                                # Use epoch trigger
-                               chainermn.get_epoch_trigger(
-                                   args.epoch, train_data,
-                                   args.batchsize, comm),
+                               (args.epoch, 'epoch'),
                                out=args.out)
 
     def translate_one(source, target):
@@ -386,15 +384,10 @@ def main():
         translate_one(source, target)
 
     if comm.rank == 0:
-        # trigger = chainermn.get_epoch_trigger(1, train_data,
-        #                                       args.batchsize, comm)
-
         trainer.extend(BleuEvaluator(model, test_data, dev))
 
         trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
                        trigger=(1, 'epoch'))
-        # trainer.extend(extensions.LogReport(trigger=trigger),
-        #                trigger=trigger)
 
         report = extensions.PrintReport(['epoch',
                                          'iteration',
