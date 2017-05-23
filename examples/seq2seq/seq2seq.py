@@ -152,6 +152,7 @@ def convert(batch, device):
         to_device_batch([x for x, _ in batch]) +
         to_device_batch([y for _, y in batch]))
 
+
 class CalculateBleu(chainer.training.Extension):
 
     trigger = 1, 'epoch'
@@ -224,20 +225,16 @@ def main():
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', action='store_true',
                         help='Use GPU')
-    parser.add_argument('--input', '-i', type=str, default="wmt",
-                        help="Input directory")
-    parser.add_argument('--out', '-o', default='result',
-                        help='Directory to output the result')
     parser.add_argument('--cache', '-c', default=None,
                         help='Directory to cache pre-processed dataset')
     parser.add_argument('--resume', '-r', default='',
                         help='Resume the training from snapshot')
     parser.add_argument('--unit', '-u', type=int, default=1024,
                         help='Number of units')
-    parser.add_argument('--shift-gpu', type=int, default=0,
-                        help=("Shift device ID of GPUs " +
-                              "(convenient if you want to " +
-                              "run multiple seq2seq_mn.py on a sinle node"))
+    parser.add_argument('--input', '-i', type=str, default='wmt',
+                        help='Input directory')
+    parser.add_argument('--out', '-o', default='result',
+                        help='Directory to output the result')
     args = parser.parse_args()
 
     # Prepare ChainerMN communicator
@@ -247,8 +244,6 @@ def main():
     else:
         comm = chainermn.create_communicator('naive')
         dev = -1
-
-    dev += args.shift_gpu
 
     if False:
         sentences = comtrans.aligned_sents('alignment-en-fr.txt')
