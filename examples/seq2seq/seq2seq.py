@@ -189,7 +189,8 @@ class CalculateBleu(chainer.training.Extension):
 
 
 class BleuEvaluator(extensions.Evaluator):
-    def __init__(self, model, test_data, device=-1, batch=100, max_length=100, comm=None):
+    def __init__(self, model, test_data, device=-1, batch=100,
+                 max_length=100, comm=None):
         super(BleuEvaluator, self).__init__({'main': None}, model)
         self.model = model
         self.test_data = test_data
@@ -222,12 +223,17 @@ class BleuEvaluator(extensions.Evaluator):
         et = time.time()
 
         if self.comm is not None:
+            # This evaluator is called via chainermn.MultiNodeEvaluator
             for i in range(0, self.comm.mpi_comm.size):
-                print("BleuEvaluator::evaluate(): took {:.3f} [s]".format(et-bt))
+                print("BleuEvaluator::evaluate(): "
+                      "took {:.3f} [s]".format(et - bt))
                 sys.stdout.flush()
                 self.comm.mpi_comm.Barrier()
         else:
-            print("BleuEvaluator(single)::evaluate(): took {:.3f} [s]".format(et-bt))
+            # This evaluator is called from a conventional
+            # Chainer exntension
+            print("BleuEvaluator(single)::evaluate(): "
+                  "took {:.3f} [s]".format(et - bt))
             sys.stdout.flush()
         return observation
 
@@ -363,7 +369,7 @@ def main():
 
     # Broadcast dataset
     train_data = chainermn.scatter_dataset(train_data, comm)
-    test_data_all = test_data
+    test_data_all = test_data  # NOQA
     test_data = chainermn.scatter_dataset(test_data, comm)
 
     train_iter = chainer.iterators.SerialIterator(train_data,
@@ -407,7 +413,7 @@ def main():
         translate_one(source, target)
 
     if comm.rank == 0:
-        #trainer.extend(BleuEvaluator(model, test_data_all, dev))
+        # trainer.extend(BleuEvaluator(model, test_data_all, dev))
         trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
                        trigger=(1, 'epoch'))
 
