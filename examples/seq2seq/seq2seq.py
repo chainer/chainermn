@@ -189,15 +189,17 @@ class CalculateBleu(chainer.training.Extension):
 
 
 class BleuEvaluator(extensions.Evaluator):
-    def __init__(self, model, test_data, device=-1, batch=100, max_length=100):
+    def __init__(self, model, test_data, device=-1, batch=100, max_length=100, comm=None):
         super(BleuEvaluator, self).__init__({'main': None}, model)
         self.model = model
         self.test_data = test_data
         self.batch = batch
         self.device = device
         self.max_length = max_length
+        self.comm = comm
 
     def evaluate(self):
+        bt = time.time()
         with chainer.no_backprop_mode():
             references = []
             hypotheses = []
@@ -217,6 +219,16 @@ class BleuEvaluator(extensions.Evaluator):
                     references, hypotheses,
                     smoothing_function=bleu_score.SmoothingFunction().method1)
                 reporter.report({'bleu': bleu}, self.model)
+        et = time.time()
+
+        if self.comm is not None:
+            for i in range(0, self.comm.mpi_comm.size):
+                print("BleuEvaluator::evaluate(): took {:.3f} [s]".format(et-bt))
+                sys.stdout.flush()
+                self.comm.mpi_comm.Barrier()
+        else:
+            print("BleuEvaluator(single)::evaluate(): took {:.3f} [s]".format(et-bt))
+            sys.stdout.flush()
         return observation
 
 
@@ -351,6 +363,7 @@ def main():
 
     # Broadcast dataset
     train_data = chainermn.scatter_dataset(train_data, comm)
+    test_data_all = test_data
     test_data = chainermn.scatter_dataset(test_data, comm)
 
     train_iter = chainer.iterators.SerialIterator(train_data,
@@ -362,6 +375,10 @@ def main():
                                # Use epoch trigger
                                (args.epoch, 'epoch'),
                                out=args.out)
+
+    trainer.extend(chainermn.create_multi_node_evaluator(
+        BleuEvaluator(model, test_data, device=dev, comm=comm),
+        comm))
 
     def translate_one(source, target):
         words = europal.split_sentence(source)
@@ -390,8 +407,7 @@ def main():
         translate_one(source, target)
 
     if comm.rank == 0:
-        trainer.extend(BleuEvaluator(model, test_data, dev))
-
+        #trainer.extend(BleuEvaluator(model, test_data_all, dev))
         trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
                        trigger=(1, 'epoch'))
 
