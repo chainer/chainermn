@@ -21,6 +21,3 @@ Dataset Utilities
 ~~~~~~~~~~~~~~~~~
 
 .. autofunction:: scatter_dataset
-.. autofunction:: get_epoch_trigger
-.. autofunction:: get_n_iterations_for_one_epoch
-

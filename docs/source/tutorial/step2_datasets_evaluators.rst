@@ -37,35 +37,6 @@ We modify it as follows. Only worker 0 loads the dataset, and then it is scatter
   test = chainermn.scatter_dataset(test, comm)
 
 
-Replacing Epoch Triggers
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-This step is necessary only when you use ``scatter_dataset``.
-Please remember that *using normal epoch triggers is dangerous*.
-This is because, when the length of the original dataset before scatter
-is not divisible by the number of workers,
-different workers may have sub datasets of different lengths.
-Therefore, epoch triggers may be invoked in different timings,
-and this may cause critical problems.
-
-For this purpose, we offer a utility function ``get_epoch_trigger``.
-Please note that this function communicates between workers,
-so, if you use it, then all the workers should call this.
-
-The following line of code in the original MNIST example creates a trainer::
-
-  trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
-
-
-We replace the stop trigger from an epoch trigger to the roughly same interval trigger
-by using ``get_epoch_trigger`` as follows::
-
-  trainer = training.Trainer(updater,
-      chainermn.get_epoch_trigger(args.epoch, train, args.batchsize, comm),
-      out=args.out)
-
-
-
 Creating A Multi-Node Evaluator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -86,8 +57,7 @@ To create and use a multi-node evaluator, we modify that part as follows::
 
   evaluator = extensions.Evaluator(test_iter, model, device=device)
   evaluator = chainermn.create_multi_node_evaluator(evaluator, comm)
-  trainer.extend(evaluator,
-        trigger=chainermn.get_epoch_trigger(1, train, args.batchsize, comm))
+  trainer.extend(evaluator)
 
 
 Suppressing Unnecessary Extensions
@@ -99,16 +69,10 @@ many redundant lines will appear in your console.
 Therefore, it is convenient to register these extensions
 only at workers of rank zero as follows::
 
-  log_interval = chainermn.get_epoch_trigger(1, train, args.batchsize, comm)
   if comm.rank == 0:
       trainer.extend(extensions.dump_graph('main/loss'))
-      trainer.extend(extensions.LogReport(trigger=log_interval))
+      trainer.extend(extensions.LogReport())
       trainer.extend(extensions.PrintReport(
           ['epoch', 'main/loss', 'validation/main/loss',
            'main/accuracy', 'validation/main/accuracy', 'elapsed_time']))
       trainer.extend(extensions.ProgressBar())
-
-Please note that ``chainermn.get_epoch_trigger`` should not be used
-for these extensions, even if you use ``scatter_dataset``.  You should
-use normal epoch triggers because these extensions are activated only
-in one worker.
