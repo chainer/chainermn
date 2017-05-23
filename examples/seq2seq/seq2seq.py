@@ -23,6 +23,7 @@ import chainermn
 
 import europal
 
+
 def cached_call(fname, func, *args):
     if os.path.exists(fname):
         with open(fname, 'rb') as f:
@@ -206,8 +207,10 @@ class BleuEvaluator(extensions.Evaluator):
                     src, trg = zip(*self.test_data[i:i + self.batch])
                     references.extend([[t.tolist()] for t in trg])
 
-                    src = [chainer.dataset.to_device(self.device, x) for x in src]
-                    ys = [y.tolist() for y in self.model.translate(src, self.max_length)]
+                    src = [chainer.dataset.to_device(self.device, x)
+                           for x in src]
+                    ys = [y.tolist()
+                          for y in self.model.translate(src, self.max_length)]
                     hypotheses.extend(ys)
 
                 bleu = bleu_score.corpus_bleu(
@@ -271,8 +274,8 @@ def main():
             if args.cache:
                 cache_file = os.path.join(args.cache, 'source.pickle')
                 source_vocab, source_data = cached_call(cache_file,
-                                                  read_source,
-                                                  args.input, args.cache)
+                                                        read_source,
+                                                        args.input, args.cache)
             else:
                 source_vocab, source_data = read_source(args.input, args.cache)
             et = time.time()
@@ -284,8 +287,8 @@ def main():
             if args.cache:
                 cache_file = os.path.join(args.cache, 'target.pickle')
                 target_vocab, target_data = cached_call(cache_file,
-                                                  read_target,
-                                                  args.input, args.cache)
+                                                        read_target,
+                                                        args.input, args.cache)
             else:
                 target_vocab, target_data = read_target(args.input, args.cache)
             et = time.time()
@@ -303,11 +306,14 @@ def main():
             fr_path = os.path.join(args.input, 'dev', 'newstest2013.fr')
             target_data = europal.make_dataset(fr_path, target_vocab)
             assert(len(source_data) == len(target_data))
-            test_data = [(s,t) for s, t in six.moves.zip(source_data, target_data)
+            test_data = [(s, t) for s, t
+                         in six.moves.zip(source_data, target_data)
                          if 0 < len(s) and 0 < len(t)]
 
-            source_ids = {word: index for index, word in enumerate(source_vocab)}
-            target_ids = {word: index for index, word in enumerate(target_vocab)}
+            source_ids = {word: index
+                          for index, word in enumerate(source_vocab)}
+            target_ids = {word: index
+                          for index, word in enumerate(target_vocab)}
         else:
             # target_data, source_data = None, None
             train_data, test_data = None, None
