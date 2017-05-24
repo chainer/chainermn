@@ -155,10 +155,7 @@ def convert(batch, device):
 
 
 class CalculateBleu(chainer.training.Extension):
-
-    trigger = 1, 'epoch'
-    priority = chainer.training.PRIORITY_WRITER
-
+    # priority = chainer.training.PRIORITY_WRITER
     def __init__(
             self, model, test_data, key, batch=100, device=-1, max_length=100):
         self.model = model
