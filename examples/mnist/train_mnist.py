@@ -10,6 +10,13 @@ from chainer.training import extensions
 
 import chainermn
 
+OptCommunicators = [
+    'hierarchical',
+    'flat',
+    'naive',
+    'single_node',
+    ]
+
 
 class MLP(chainer.Chain):
 
@@ -31,6 +38,8 @@ def main():
     parser = argparse.ArgumentParser(description='ChainerMN example: MNIST')
     parser.add_argument('--batchsize', '-b', type=int, default=100,
                         help='Number of images in each mini-batch')
+    parser.add_argument('--communicator', type=str, choices=OptCommunicators,
+                        default='hierarchical', help='Type of ChainerMN communicator')
     parser.add_argument('--epoch', '-e', type=int, default=20,
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', action='store_true',
@@ -44,17 +53,22 @@ def main():
     args = parser.parse_args()
 
     # Prepare ChainerMN communicator.
+
     if args.gpu:
-        comm = chainermn.create_communicator('hierarchical')
+        print('Communicator: {}'.format(args.communicator))
+        comm = chainermn.create_communicator(args.communicator)
         device = comm.intra_rank
     else:
+        if args.communicator != 'naive':
+            print('Warning: using naive communicator.')
         comm = chainermn.create_communicator('naive')
         device = -1
 
-    print('GPU: {}'.format(device))
-    print('# unit: {}'.format(args.unit))
-    print('# Minibatch-size: {}'.format(args.batchsize))
-    print('# epoch: {}'.format(args.epoch))
+    if comm.mpi_comm.rank == 0:
+        print('GPU: {}'.format(device))
+        print('# unit: {}'.format(args.unit))
+        print('# Minibatch-size: {}'.format(args.batchsize))
+        print('# epoch: {}'.format(args.epoch))
 
     model = L.Classifier(MLP(args.unit, 10))
     if device >= 0:
