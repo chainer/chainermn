@@ -2,6 +2,8 @@
 from __future__ import print_function
 
 import argparse
+import sys
+
 import chainer
 import chainer.functions as F
 import chainer.links as L
@@ -55,6 +57,10 @@ def main():
     # Prepare ChainerMN communicator.
 
     if args.gpu:
+        if args.communicator == 'naive':
+            sys.stderr.write("Error: 'naive' communicator "
+                             "does not support GPU.\n")
+            exit(-1)
         print('Communicator: {}'.format(args.communicator))
         comm = chainermn.create_communicator(args.communicator)
         device = comm.intra_rank
