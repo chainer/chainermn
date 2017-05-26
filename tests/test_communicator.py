@@ -88,6 +88,18 @@ class TestCommunicator(unittest.TestCase):
         self.assertEqual(self.communicator.size,
                          self.mpi_comm.Get_size())
 
+    def test_send_and_recv(self):
+        if self.communicator.size < 2:
+            raise nose.plugins.skip.SkipTest()
+
+        rank_next = (self.communicator.rank + 1) % self.communicator.size
+        rank_prev = (self.communicator.rank - 1) % self.communicator.size
+        data_send = self.communicator.rank * np.ones((10, 5))
+        self.communicator.send(data_send, dest=rank_next, tag=0)
+        data_recv = self.communicator.recv(source=rank_prev, tag=0)
+        chainer.testing.assert_allclose(
+            data_recv, rank_prev * np.ones((10, 5)))
+
     def check_broadcast_data(self, model):
         model.a.W.data[:] = self.communicator.rank
         model.b.W.data[:] = self.communicator.rank + 1

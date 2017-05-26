@@ -21,7 +21,7 @@ class CommunicatorBase(object):
 
     def send(self, array, dest, tag):
         shape = numpy.array(array.shape, dtype='int')
-        buf = _memory_utility.array_to_buffer_object(array)
+        buf = _memory_utility.array_to_buffer_object(array.astype('float32'))
         self.mpi_comm.Send([shape, mpi4py.MPI.INT], dest=dest, tag=tag)
         self.mpi_comm.Send(buf, dest=dest, tag=tag)
 
