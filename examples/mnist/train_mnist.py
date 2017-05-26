@@ -2,7 +2,6 @@
 from __future__ import print_function
 
 import argparse
-import sys
 
 import chainer
 import chainer.functions as F
@@ -11,13 +10,6 @@ from chainer import training
 from chainer.training import extensions
 
 import chainermn
-
-OptCommunicators = [
-    'hierarchical',
-    'flat',
-    'naive',
-    'single_node',
-]
 
 
 class MLP(chainer.Chain):
@@ -40,7 +32,7 @@ def main():
     parser = argparse.ArgumentParser(description='ChainerMN example: MNIST')
     parser.add_argument('--batchsize', '-b', type=int, default=100,
                         help='Number of images in each mini-batch')
-    parser.add_argument('--communicator', type=str, choices=OptCommunicators,
+    parser.add_argument('--communicator', type=str,
                         default='hierarchical', help='Type of ommunicator')
     parser.add_argument('--epoch', '-e', type=int, default=20,
                         help='Number of sweeps over the dataset to train')
@@ -58,15 +50,15 @@ def main():
 
     if args.gpu:
         if args.communicator == 'naive':
-            sys.stderr.write("Error: 'naive' communicator "
-                             "does not support GPU.\n")
+            print("Error: 'naive' communicator does not support GPU.\n")
             exit(-1)
-        print('Communicator: {}'.format(args.communicator))
+        print('Using {} communicator'.format(args.communicator))
         comm = chainermn.create_communicator(args.communicator)
         device = comm.intra_rank
     else:
         if args.communicator != 'naive':
-            print('Warning: using naive communicator.')
+            print('Warning: using naive communicator '
+                  'because only naive supports CPU-only execution')
         comm = chainermn.create_communicator('naive')
         device = -1
 
