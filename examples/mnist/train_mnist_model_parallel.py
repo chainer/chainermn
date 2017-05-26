@@ -20,9 +20,11 @@ class MLP0(chainer.Chain):
         )
         self.comm = comm
 
-    def __call__(self, x, t_dummy):  # `t_dummy` is necessary for receiving TupleDataset
+    def __call__(self, x, t_dummy):
+        # the argument `t_dummy` is necessary for receiving TupleDataset
         h1 = F.relu(self.l1(x))
-        return chainermn.functions.Send(self.comm, peer_rank=1, peer_tag=0, device=self._device_id)(h1)
+        return chainermn.functions.Send(
+            self.comm, peer_rank=1, peer_tag=0, device=self._device_id)(h1)
 
 
 class MLP1(chainer.Chain):
@@ -33,11 +35,12 @@ class MLP1(chainer.Chain):
         )
         self.comm = comm
 
-    def __call__(self, x_dummy):  # `x_dummy` is necessary for receiving TupleDataset
+    def __call__(self, x_dummy):
+        # the argument `x_dummy` is necessary for receiving TupleDataset
         h1 = chainermn.functions.Recv(
             self.comm, peer_rank=0, peer_tag=0, device=self._device_id)()
         h2 = F.relu(self.l2(h1))
-        return self.l3(h1)
+        return self.l3(h2)
 
 
 if __name__ == '__main__':
@@ -82,7 +85,7 @@ if __name__ == '__main__':
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
 
-    # Random seed must be fixed for distribute the same dataset over all machines.
+    # Random seed must be fixed to distribute the same dataset to all machines.
     # (This line must be executed after model initializations, somehow)
     np.random.seed(0)
 

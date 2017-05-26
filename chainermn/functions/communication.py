@@ -1,6 +1,5 @@
 import chainer
 from chainer import cuda
-from chainermn.communicators import _memory_utility
 
 
 class Send(chainer.Function):
