@@ -29,14 +29,25 @@ class TestCommunication(unittest.TestCase):
 
         rank_next = (self.communicator.rank + 1) % self.communicator.size
         rank_prev = (self.communicator.rank - 1) % self.communicator.size
+
+        # Send to the next-ranked node.
         self.send = chainermn.functions.Send(
             self.communicator, peer_rank=rank_next, peer_tag=0, device=device)
+
+        # Receive from the previous-ranked node.
         self.recv = chainermn.functions.Recv(
             self.communicator, peer_rank=rank_prev, peer_tag=0, device=device)
+
+        # Activation function.
         self.f = chainer.functions.sigmoid
+
+        # Evaluation function.
         self.evaluation = chainer.functions.mean_squared_error
+
+        # Input data.
         self.x = chainer.Variable(
             np.arange(10).reshape(1, 10).astype('float32') / 10)
+
         self.model = chainer.links.Linear(
             10, 10, initialW=self._init_w(self.communicator.rank))
         self.entire_model = [chainer.links.Linear(
