@@ -6,7 +6,7 @@ import chainer.testing
 import chainer.testing.attr
 import chainermn
 import chainermn.functions
-import numpy as np
+import numpy
 
 
 @chainer.testing.parameterize(
@@ -32,7 +32,7 @@ class TestCommunication(unittest.TestCase):
 
         # Send to the next-ranked node.
         self.send = chainermn.functions.Send(
-            self.communicator, peer_rank=rank_next, peer_tag=0, device=device)
+            self.communicator, peer_rank=rank_next, peer_tag=0)
 
         # Receive from the previous-ranked node.
         self.recv = chainermn.functions.Recv(
@@ -46,7 +46,7 @@ class TestCommunication(unittest.TestCase):
 
         # Input data.
         self.x = chainer.Variable(
-            np.arange(10).reshape(1, 10).astype('float32') / 10)
+            numpy.arange(10).reshape(1, 10).astype(numpy.float32) / 10)
 
         self.model = chainer.links.Linear(
             10, 10, initialW=self._init_w(self.communicator.rank))
@@ -61,7 +61,7 @@ class TestCommunication(unittest.TestCase):
                 model.to_gpu()
 
     def _init_w(self, l):
-        return 1.0 * np.arange(100).reshape(10, 10).astype('float32') \
+        return 1.0 * numpy.arange(100).reshape(10, 10).astype(numpy.float32) \
             / ((l + 1) * 100)
 
     def test_communication(self):

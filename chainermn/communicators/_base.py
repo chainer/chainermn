@@ -20,15 +20,16 @@ class CommunicatorBase(object):
         return self.mpi_comm.size
 
     def send(self, array, dest, tag):
-        shape = numpy.array(array.shape, dtype='int')
-        buf = _memory_utility.array_to_buffer_object(array.astype('float32'))
+        assert array.dtype == numpy.float32
+        shape = numpy.array(array.shape, dtype=numpy.int32)
+        buf = _memory_utility.array_to_buffer_object(array)
         self.mpi_comm.Send([shape, mpi4py.MPI.INT], dest=dest, tag=tag)
         self.mpi_comm.Send(buf, dest=dest, tag=tag)
 
     def recv(self, source, tag):
-        shape = numpy.empty(2, dtype='int')
+        shape = numpy.empty(2, dtype=numpy.int32)
         self.mpi_comm.Recv([shape, mpi4py.MPI.INT], source=source, tag=tag)
-        buf = numpy.empty(shape[0] * shape[1], dtype='float32')
+        buf = numpy.empty(shape.prod(), dtype=numpy.float32)
         self.mpi_comm.Recv(buf, source=source, tag=tag)
         return buf.reshape(shape)
 

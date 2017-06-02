@@ -3,11 +3,10 @@ from chainer import cuda
 
 
 class Send(chainer.Function):
-    def __init__(self, comm, peer_rank, peer_tag, device=-1):
+    def __init__(self, comm, peer_rank, peer_tag):
         self.comm = comm
         self.peer_rank = peer_rank
         self.peer_tag = peer_tag
-        self.device = device
 
     def forward(self, inputs):
         xp = cuda.get_array_module(*inputs)
