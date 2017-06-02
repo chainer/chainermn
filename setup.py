@@ -9,7 +9,7 @@ import sys
 
 install_requires = [
     'cffi',
-    'chainer >=1.23, !=2.0.0a1, !=2.0.0b1',
+    'chainer >=1.23',
     'cython',
     'mpi4py',
 ]
@@ -30,7 +30,7 @@ elif os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='chainermn',
-    version='1.0.0b1',
+    version='1.0.0b2',
     description='ChainerMN: Multi-node distributed training with Chainer',
     author='Takuya Akiba',
     author_email='akiba@preferred.jp',
