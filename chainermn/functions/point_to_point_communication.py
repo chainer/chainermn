@@ -1,6 +1,6 @@
 import chainer
-import chainer.utils
 from chainer import cuda
+import chainer.utils
 
 
 class Send(chainer.Function):

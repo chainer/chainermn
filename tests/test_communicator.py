@@ -94,7 +94,8 @@ class TestCommunicator(unittest.TestCase):
 
         rank_next = (self.communicator.rank + 1) % self.communicator.size
         rank_prev = (self.communicator.rank - 1) % self.communicator.size
-        data_send = self.communicator.rank * np.ones((shape)).astype(np.float32)
+        data_send = self.communicator.rank * \
+            np.ones((shape)).astype(np.float32)
         self.communicator.send(data_send, dest=rank_next, tag=0)
         data_recv = self.communicator.recv(source=rank_prev, tag=0)
         chainer.testing.assert_allclose(
