@@ -21,13 +21,17 @@ class CommunicatorBase(object):
 
     def send(self, array, dest, tag):
         assert array.dtype == numpy.float32
+        ndim = numpy.array([array.ndim], dtype=numpy.int32)
         shape = numpy.array(array.shape, dtype=numpy.int32)
         buf = _memory_utility.array_to_buffer_object(array)
+        self.mpi_comm.Send([ndim, mpi4py.MPI.INT], dest=dest, tag=tag)
         self.mpi_comm.Send([shape, mpi4py.MPI.INT], dest=dest, tag=tag)
         self.mpi_comm.Send(buf, dest=dest, tag=tag)
 
     def recv(self, source, tag):
-        shape = numpy.empty(2, dtype=numpy.int32)
+        ndim = numpy.empty(1, dtype=numpy.int32)
+        self.mpi_comm.Recv([ndim, mpi4py.MPI.INT], source=source, tag=tag)
+        shape = numpy.empty(ndim[0], dtype=numpy.int32)
         self.mpi_comm.Recv([shape, mpi4py.MPI.INT], source=source, tag=tag)
         buf = numpy.empty(shape.prod(), dtype=numpy.float32)
         self.mpi_comm.Recv(buf, source=source, tag=tag)
