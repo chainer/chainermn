@@ -13,7 +13,7 @@ import numpy
     {'gpu': True},
     {'gpu': False},
 )
-class TestCommunication(unittest.TestCase):
+class TestPointToPointCommunication(unittest.TestCase):
 
     def setUp(self):
         if self.gpu:
