@@ -9,7 +9,7 @@ import sys
 
 install_requires = [
     'cffi',
-    'chainer >=1.23',
+    'chainer >=1.23, !=2.0.0a1, !=2.0.0b1',
     'cython',
     'mpi4py',
 ]
