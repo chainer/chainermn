@@ -1,9 +1,11 @@
 import chainer
+import chainer.utils
 from chainer import cuda
 
 
 class Send(chainer.Function):
     def __init__(self, comm, peer_rank, peer_tag):
+        chainer.utils.experimental('chainermn.functions.Send')
         self.comm = comm
         self.peer_rank = peer_rank
         self.peer_tag = peer_tag
@@ -23,6 +25,7 @@ class Send(chainer.Function):
 
 class Recv(chainer.Function):
     def __init__(self, comm, peer_rank, peer_tag, device=-1):
+        chainer.utils.experimental('chainermn.functions.Recv')
         self.comm = comm
         self.peer_rank = peer_rank
         self.peer_tag = peer_tag

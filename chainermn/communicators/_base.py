@@ -1,6 +1,7 @@
 import mpi4py.MPI
 import numpy
 
+import chainer.utils
 from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
 from chainermn import nccl
@@ -20,6 +21,7 @@ class CommunicatorBase(object):
         return self.mpi_comm.size
 
     def send(self, array, dest, tag):
+        chainer.utils.experimental('chainermn.communicators.CommunicatorBase.send')
         assert array.dtype == numpy.float32
         ndim = numpy.array([array.ndim], dtype=numpy.int32)
         shape = numpy.array(array.shape, dtype=numpy.int32)
@@ -29,6 +31,7 @@ class CommunicatorBase(object):
         self.mpi_comm.Send(buf, dest=dest, tag=tag)
 
     def recv(self, source, tag):
+        chainer.utils.experimental('chainermn.communicators.CommunicatorBase.recv')
         ndim = numpy.empty(1, dtype=numpy.int32)
         self.mpi_comm.Recv([ndim, mpi4py.MPI.INT], source=source, tag=tag)
         shape = numpy.empty(ndim[0], dtype=numpy.int32)
