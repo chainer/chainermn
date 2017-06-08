@@ -65,7 +65,8 @@ def main():
         from mpi4py import MPI
         print('==========================================')
         print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
-        print('Rank 0 is using GPU {}'.format(device))
+        if args.gpu:
+            print('Using GPUs')
         print('Using {} communicator'.format(args.communicator))
         print('Num unit: {}'.format(args.unit))
         print('Num Minibatch-size: {}'.format(args.batchsize))
