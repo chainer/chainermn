@@ -8,6 +8,7 @@ import chainer.functions as F
 import chainer.links as L
 from chainer import training
 from chainer.training import extensions
+from mpi4py import MPI
 
 import chainermn
 
@@ -62,7 +63,6 @@ def main():
         device = -1
 
     if comm.mpi_comm.rank == 0:
-        from mpi4py import MPI
         print('==========================================')
         print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
         if args.gpu:
