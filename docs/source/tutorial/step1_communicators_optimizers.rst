@@ -74,7 +74,8 @@ but this message is harmless, and you can ignore it for now ::
   Warning: using naive communicator because only naive supports CPU-only execution
 
 
-If you have GPUs, you may also want to try::
+If you have multiple GPUs on the localhost, 4 for example, you
+may also want to try::
 
   $ mpiexec -n 4 python train_mnist.py --gpu
 
