@@ -8,6 +8,7 @@ import chainer.functions as F
 import chainer.links as L
 from chainer import training
 from chainer.training import extensions
+from mpi4py import MPI
 
 import chainermn
 
@@ -52,7 +53,6 @@ def main():
         if args.communicator == 'naive':
             print("Error: 'naive' communicator does not support GPU.\n")
             exit(-1)
-        print('Using {} communicator'.format(args.communicator))
         comm = chainermn.create_communicator(args.communicator)
         device = comm.intra_rank
     else:
@@ -63,10 +63,15 @@ def main():
         device = -1
 
     if comm.mpi_comm.rank == 0:
-        print('GPU: {}'.format(device))
-        print('# unit: {}'.format(args.unit))
-        print('# Minibatch-size: {}'.format(args.batchsize))
-        print('# epoch: {}'.format(args.epoch))
+        print('==========================================')
+        print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
+        if args.gpu:
+            print('Using GPUs')
+        print('Using {} communicator'.format(args.communicator))
+        print('Num unit: {}'.format(args.unit))
+        print('Num Minibatch-size: {}'.format(args.batchsize))
+        print('Num epoch: {}'.format(args.epoch))
+        print('==========================================')
 
     model = L.Classifier(MLP(args.unit, 10))
     if device >= 0:
