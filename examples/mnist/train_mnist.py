@@ -52,6 +52,7 @@ def main():
         if args.communicator == 'naive':
             print("Error: 'naive' communicator does not support GPU.\n")
             exit(-1)
+        print('Using {} communicator'.format(args.communicator))
         comm = chainermn.create_communicator(args.communicator)
         device = comm.intra_rank
     else:
@@ -62,15 +63,10 @@ def main():
         device = -1
 
     if comm.mpi_comm.rank == 0:
-        from mpi4py import MPI
-        print('==========================================')
-        print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
-        print('Rank 0 is using GPU {}'.format(device))
-        print('Using {} communicator'.format(args.communicator))
-        print('Num unit: {}'.format(args.unit))
-        print('Num Minibatch-size: {}'.format(args.batchsize))
-        print('Num epoch: {}'.format(args.epoch))
-        print('==========================================')
+        print('GPU: {}'.format(device))
+        print('# unit: {}'.format(args.unit))
+        print('# Minibatch-size: {}'.format(args.batchsize))
+        print('# epoch: {}'.format(args.epoch))
 
     model = L.Classifier(MLP(args.unit, 10))
     if device >= 0:
