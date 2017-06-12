@@ -21,6 +21,9 @@ class CommunicatorBase(object):
         return self.mpi_comm.size
 
     def send(self, array, dest, tag):
+        # This method relies on mpi4py fast communication optimized for
+        # numpy arrays, which discards any information attached to
+        # chainer.Variable objects. Please be sure.
         chainer.utils.experimental(
             'chainermn.communicators.CommunicatorBase.send')
         assert array.dtype == numpy.float32

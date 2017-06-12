@@ -92,14 +92,17 @@ class TestCommunicator(unittest.TestCase):
         if self.communicator.size < 2:
             raise nose.plugins.skip.SkipTest()
 
-        rank_next = (self.communicator.rank + 1) % self.communicator.size
-        rank_prev = (self.communicator.rank - 1) % self.communicator.size
-        data_send = self.communicator.rank * \
-            np.ones((shape)).astype(np.float32)
-        self.communicator.send(data_send, dest=rank_next, tag=0)
-        data_recv = self.communicator.recv(source=rank_prev, tag=0)
-        chainer.testing.assert_allclose(
-            data_recv, rank_prev * np.ones((shape)))
+        if self.communicator.rank > 0:
+            rank_prev = (self.communicator.rank - 1) % self.communicator.size
+            data_recv = self.communicator.recv(source=rank_prev, tag=0)
+            chainer.testing.assert_allclose(
+                data_recv, rank_prev * np.ones((shape)))
+
+        if self.communicator.rank < self.communicator.size - 1:
+            rank_next = (self.communicator.rank + 1) % self.communicator.size
+            data_send = self.communicator.rank * \
+                np.ones((shape)).astype(np.float32)
+            self.communicator.send(data_send, dest=rank_next, tag=0)
 
     def test_send_and_recv1(self):
         self.check_send_and_recv(50)
