@@ -2,7 +2,7 @@ import chainer.datasets
 import warnings
 
 
-def scatter_dataset(dataset, comm):
+def scatter_dataset(dataset, comm, shuffle=False):
     """Scatter the given dataset to the workers in the communicator.
 
     The dataset of worker 0 (i.e., the worker whose ``comm.rank`` is 0) is
@@ -27,6 +27,7 @@ def scatter_dataset(dataset, comm):
 
     # TODO(akiba): write why we do not use mpi_comm.scatter
     if comm.rank == 0:
+        # TODO(keisukefukuda)
         mine = None
         n_total_samples = len(dataset)
         n_sub_samples = (n_total_samples + comm.size - 1) // comm.size
