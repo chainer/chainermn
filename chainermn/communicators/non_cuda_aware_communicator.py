@@ -1,5 +1,6 @@
 import chainer.cuda
 import math
+import mpi4py
 
 from chainermn.communicators import _base
 from chainermn.communicators import _communication_utility
@@ -16,14 +17,17 @@ class NonCudaAwareCommunicator(_base.NodeAwareCommunicatorBase):
 
     def broadcast_data(self, model):
         for _, param in sorted(model.namedparams()):
-            data_xp = param.data
-            data_np = chainer.cuda.to_cpu(data_xp)
-            self.mpi_comm.Bcast(data_np)
-            data_xp[:] = data_np
+            data = param.data
+            tmp_cpu = chainer.cuda.to_cpu(data)
+            self.mpi_comm.Bcast(tmp_cpu)
+            tmp_gpu = chainer.cuda.to_gpu(tmp_cpu)
+            data[:] = tmp_gpu
 
     def allreduce_grad(self, model):
         for _, param in sorted(model.namedparams()):
-            data_xp = param.data
-            data_np = chainer.cuda.to_cpu(data_xp)
-            self.mpi_comm.Allreduce(data_np)
-            data_xp[:] = data_np
+            data = param.grad
+            tmp_cpu = chainer.cuda.to_cpu(data)
+            self.mpi_comm.Allreduce(mpi4py.MPI.IN_PLACE, tmp_cpu)
+            tmp_gpu = chainer.cuda.to_gpu(tmp_cpu)
+            data[:] = tmp_gpu
+            data /= self.size
