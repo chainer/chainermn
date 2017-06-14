@@ -20,6 +20,8 @@ from chainermn.communicators.single_node_communicator \
     import SingleNodeCommunicator
 from chainermn.communicators.two_dimensional_communicator \
     import TwoDimensionalCommunicator
+from chainermn.communicators.non_cuda_aware_communicator \
+    import NonCudaAwareCommunicator
 
 
 class ExampleModel(chainer.Chain):
@@ -61,6 +63,12 @@ class ExampleModel(chainer.Chain):
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': False,
+        'nccl': True,
+    }, {
+        'communicator_class': NonCudaAwareCommunicator,
+        'test_cpu': False,
+        'test_gpu': True,
+        'multi_node': True,
         'nccl': True,
     }
 )
