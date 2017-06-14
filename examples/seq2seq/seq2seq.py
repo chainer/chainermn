@@ -316,6 +316,8 @@ def main():
                           if 0 < len(s) < 50 and 0 < len(t) < 50]
             print('Filtered training data size: %d' % len(train_data))
 
+            import pdb; pdb.set_trace()
+
             en_path = os.path.join(args.input, 'dev', 'newstest2013.en')
             source_data = europal.make_dataset(en_path, source_vocab)
             fr_path = os.path.join(args.input, 'dev', 'newstest2013.fr')
@@ -365,6 +367,8 @@ def main():
     optimizer.setup(model)
 
     # Broadcast dataset
+    # Sanity check of train_data
+
     train_data = chainermn.scatter_dataset(train_data, comm)
     test_data_all = test_data  # NOQA
     test_data = chainermn.scatter_dataset(test_data, comm)
