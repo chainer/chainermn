@@ -1,11 +1,8 @@
 import chainer.cuda
-import math
 import mpi4py
 
 from chainermn.communicators import _base
-from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
-from chainermn import nccl
 
 
 class NonCudaAwareCommunicator(_base.NodeAwareCommunicatorBase):
