@@ -153,7 +153,10 @@ def main():
     # using InfiniBand and MultiprocessIterator. This is because processes
     # often crash when calling fork if they are using Infiniband.
     # (c.f., https://www.open-mpi.org/faq/?category=tuning#fork-warning )
-    multiprocessing.set_start_method('forkserver')
+    try:
+        multiprocessing.set_start_method('forkserver')
+    except AttributeError:
+        pass
     train_iter = chainer.iterators.MultiprocessIterator(
         train, args.batchsize, n_processes=args.loaderjob)
     val_iter = chainer.iterators.MultiprocessIterator(
