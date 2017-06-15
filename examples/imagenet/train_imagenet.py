@@ -5,7 +5,6 @@ import argparse
 import multiprocessing
 import random
 
-from mpi4py import MPI
 import numpy as np
 
 import chainer
@@ -131,7 +130,7 @@ def main():
 
     if comm.mpi_comm.rank == 0:
         print('==========================================')
-        print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
+        print('Num process (COMM_WORLD): {}'.format(comm.size))
         print('Using {} communicator'.format(args.communicator))
         print('Using {} arch'.format(args.arch))
         print('Num Minibatch-size: {}'.format(args.batchsize))
