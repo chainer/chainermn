@@ -38,8 +38,8 @@ class Recv(chainer.Function):
             # For backward compatibility.
             dummy_var = chainer.Variable(xp.array([]), volatile='auto')
         else:
-            # This dummy variable is necessary to backprop correctly in Chainer v2.
-            # This trick relies on the fact that chainer.Variable.requires_grad is
+            # This variable is necessary to backprop correctly in Chainer v2.
+            # This trick relies on the fact chainer.Variable.requires_grad is
             # True by default at Chainer v2.0.0.
             dummy_var = chainer.Variable(xp.array([]))
 
