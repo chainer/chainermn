@@ -32,6 +32,7 @@ class NonCudaAwareCommunicator(_base.NodeAwareCommunicatorBase):
         itemsize = 4
         n_elems_total = sum(param.grad.size for param in params)
         n_elems_per_node = int(math.ceil(n_elems_total / self.inter_size))
+        n_elems_buffer = n_elems_per_node * self.inter_size
         n_bytes_per_node = n_elems_per_node * itemsize
         n_bytes_buffer = n_bytes_per_node * self.inter_size
 
@@ -50,16 +51,26 @@ class NonCudaAwareCommunicator(_base.NodeAwareCommunicatorBase):
             self.cpu_buffer_a.assign(n_bytes_buffer)
             self.cpu_buffer_b.assign(n_bytes_buffer)
 
-            self.gpu_buffer_b.array(n_bytes_buffer).data.copy_to_host(
-                self.cpu_buffer_b.ptr(), n_bytes_buffer)
+            arr_b = self.gpu_buffer_b.array(n_elems_buffer)
+            arr_b.data.copy_to_host(self.cpu_buffer_b.ptr(), n_bytes_buffer)
 
-            self.inter_mpi_comm.Allreduce(
+            self.inter_mpi_comm.Alltoall(
                 [self.cpu_buffer_b.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT],
                 [self.cpu_buffer_a.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT])
 
-            arr = self.gpu_buffer_b.array(n_elems_total)
-            arr.data.copy_from_host(self.cpu_buffer_a.ptr(), n_bytes_buffer)
-            arr *= 1.0 / self.size
+            # Reduction in GPU
+            arr_a = self.gpu_buffer_a.array(n_elems_buffer)
+            arr_a.data.copy_from_host(self.cpu_buffer_a.ptr(), n_bytes_buffer)
+            arr_a = arr_a.reshape(self.inter_size, n_elems_per_node)
+            arr_a = arr_a.sum(axis=0)
+            arr_a *= 1.0 / self.size
+            arr_a.data.copy_to_host(self.cpu_buffer_a.ptr(), n_bytes_per_node)
+
+            self.inter_mpi_comm.Allgather(
+                [self.cpu_buffer_a.buffer(n_bytes_per_node), mpi4py.MPI.FLOAT],
+                [self.cpu_buffer_b.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT])
+
+            arr_b.data.copy_from_host(self.cpu_buffer_b.ptr(), n_bytes_buffer)
 
         # Intra-node bcast
         self.intra_nccl_comm.bcast(
