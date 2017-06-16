@@ -126,19 +126,22 @@ class TestCommunicator(unittest.TestCase):
         chainer.testing.assert_allclose(model.c.b.data, 2 * np.ones((5, )))
 
     def check_allreduce_grad(self, model):
-        model.a.W.grad[:] = self.communicator.rank
-        model.b.W.grad[:] = self.communicator.rank + 1
-        model.c.b.grad[:] = self.communicator.rank + 2
+        # We need to repeat twice for regressions on lazy initialization of
+        # sub communicators.
+        for _ in range(2):
+            model.a.W.grad[:] = self.communicator.rank
+            model.b.W.grad[:] = self.communicator.rank + 1
+            model.c.b.grad[:] = self.communicator.rank + 2
 
-        self.communicator.allreduce_grad(model)
-        base = (self.communicator.size - 1.0) / 2
+            self.communicator.allreduce_grad(model)
+            base = (self.communicator.size - 1.0) / 2
 
-        chainer.testing.assert_allclose(model.a.W.grad,
-                                        (base + 0) * np.ones((3, 2)))
-        chainer.testing.assert_allclose(model.b.W.grad,
-                                        (base + 1) * np.ones((4, 3)))
-        chainer.testing.assert_allclose(model.c.b.grad,
-                                        (base + 2) * np.ones((5, )))
+            chainer.testing.assert_allclose(model.a.W.grad,
+                                            (base + 0) * np.ones((3, 2)))
+            chainer.testing.assert_allclose(model.b.W.grad,
+                                            (base + 1) * np.ones((4, 3)))
+            chainer.testing.assert_allclose(model.c.b.grad,
+                                            (base + 2) * np.ones((5, )))
 
     def test_broadcast_data_cpu(self):
         if not self.test_cpu:

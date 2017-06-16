@@ -8,10 +8,14 @@ python:
   - "3.5.1"
 
 env:
-  - MPI="mpich-3.0.4"
-  - MPI="mpich-3.2"
-  - MPI="openmpi-1.6.5"
-  - MPI="openmpi-1.10.3"
+  - MPI="mpich-3.0.4"    CHAINER_VER="1.24"
+  - MPI="mpich-3.0.4"    CHAINER_VER="2"
+  - MPI="mpich-3.2"      CHAINER_VER="1.24"
+  - MPI="mpich-3.2"      CHAINER_VER="2"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="1.24"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="2"
+  - MPI="openmpi-1.10.3" CHAINER_VER="1.24"
+  - MPI="openmpi-1.10.3" CHAINER_VER="2"
   
 
 cache:
@@ -40,6 +44,7 @@ install:
   - pip install nose hacking mock
   - pip install autopep8
   - pip install cython mpi4py cffi
+  - pip install chainer==${CHAINER_VER}
   - python setup.py develop --no-nccl
 
 script:

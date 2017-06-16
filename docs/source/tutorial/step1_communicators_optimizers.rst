@@ -63,10 +63,21 @@ Run
 
 With the above two changes, your script is ready for distributed
 training.  Invoke your script with ``mpiexec`` or ``mpirun`` (see your
-MPI's manual for details).  The following is an example to execute the
+MPI's manual for details).  The following is an example of executing the
 training with four processes at localhost::
 
   $ mpiexec -n 4 python train_mnist.py
+
+In the non-GPU mode, you may see a warning like shown below, 
+but this message is harmless, and you can ignore it for now ::
+
+  Warning: using naive communicator because only naive supports CPU-only execution
+
+
+If you have multiple GPUs on the localhost, 4 for example, you
+may also want to try::
+
+  $ mpiexec -n 4 python train_mnist.py --gpu
 
 
 Multi-node execution

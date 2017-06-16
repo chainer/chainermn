@@ -2,11 +2,13 @@
 from __future__ import print_function
 
 import argparse
+
 import chainer
 import chainer.functions as F
 import chainer.links as L
 from chainer import training
 from chainer.training import extensions
+from mpi4py import MPI
 
 import chainermn
 
@@ -31,6 +33,8 @@ def main():
     parser = argparse.ArgumentParser(description='ChainerMN example: MNIST')
     parser.add_argument('--batchsize', '-b', type=int, default=100,
                         help='Number of images in each mini-batch')
+    parser.add_argument('--communicator', type=str,
+                        default='hierarchical', help='Type of communicator')
     parser.add_argument('--epoch', '-e', type=int, default=20,
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', action='store_true',
@@ -44,17 +48,30 @@ def main():
     args = parser.parse_args()
 
     # Prepare ChainerMN communicator.
+
     if args.gpu:
-        comm = chainermn.create_communicator('hierarchical')
+        if args.communicator == 'naive':
+            print("Error: 'naive' communicator does not support GPU.\n")
+            exit(-1)
+        comm = chainermn.create_communicator(args.communicator)
         device = comm.intra_rank
     else:
+        if args.communicator != 'naive':
+            print('Warning: using naive communicator '
+                  'because only naive supports CPU-only execution')
         comm = chainermn.create_communicator('naive')
         device = -1
 
-    print('GPU: {}'.format(device))
-    print('# unit: {}'.format(args.unit))
-    print('# Minibatch-size: {}'.format(args.batchsize))
-    print('# epoch: {}'.format(args.epoch))
+    if comm.mpi_comm.rank == 0:
+        print('==========================================')
+        print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
+        if args.gpu:
+            print('Using GPUs')
+        print('Using {} communicator'.format(args.communicator))
+        print('Num unit: {}'.format(args.unit))
+        print('Num Minibatch-size: {}'.format(args.batchsize))
+        print('Num epoch: {}'.format(args.epoch))
+        print('==========================================')
 
     model = L.Classifier(MLP(args.unit, 10))
     if device >= 0:

@@ -85,7 +85,7 @@ class NodeAwareCommunicatorBase(CommunicatorBase):
     def _init_comms(self):
         if self.inter_mpi_comm is not None:
             assert self.intra_mpi_comm is not None
-            assert self.intra_nccl_comm is not None
+            assert not self.use_nccl or self.intra_nccl_comm is not None
             return
 
         comms = _communication_utility.init_comms(

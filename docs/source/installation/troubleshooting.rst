@@ -185,12 +185,12 @@ configuration is ready.::
 
   OK (SKIP=10)
 
-Multi-node environmnet
+Multi-node environment
 -----------------------
 
 .. _ssh-and-envvars:
 
-Check SSH connection and enviornment variables
+Check SSH connection and environment variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To use ChainerMN on multiple hosts, you need to connect to computing hosts,
