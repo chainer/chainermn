@@ -32,11 +32,17 @@ class Recv(chainer.Function):
         self.device = device
 
     def __call__(self, *inputs):
-        # This dummy variable is necessary to backprop correctly in Chainer v2.
-        # This trick relies on the fact that chainer.Variable.requires_grad is
-        # True by default at Chainer v2.0.0.
         xp = cuda.get_array_module(*inputs)
-        dummy_var = chainer.Variable(xp.array([]))
+
+        if chainer.__version__.startswith('1.'):
+            # For backward compatibility.
+            dummy_var = chainer.Variable(xp.array([]), volatile='auto')
+        else:
+            # This dummy variable is necessary to backprop correctly in Chainer v2.
+            # This trick relies on the fact that chainer.Variable.requires_grad is
+            # True by default at Chainer v2.0.0.
+            dummy_var = chainer.Variable(xp.array([]))
+
         ret = super(Recv, self).__call__(dummy_var)
         return ret
 
