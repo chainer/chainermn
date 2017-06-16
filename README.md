@@ -5,7 +5,7 @@
 
 # ChainerMN: Distributed Deep Learning with Chainer
 
-[Documentation](https://chainermn.readthedocs.org) |
+[Documentation](https://chainermn.readthedocs.io/en/latest) |
 [Installation](https://chainermn.readthedocs.io/en/latest/installation/index.html) |
 [Examples](examples) |
 [Release Notes](https://github.com/pfnet/chainermn/releases)

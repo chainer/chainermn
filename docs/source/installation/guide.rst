@@ -97,6 +97,13 @@ We recommend to install ChainerMN via :command:`pip`::
 
   $ pip install chainermn
 
+NOTE: If you need :command:`sudo` to use pip, you should be careful
+about environment variables.  The :command:`sudo` command DOES NOT
+inherit the environment, and thus you need to specify the variables
+explicitly. ::
+
+  $ sudo CPATH=${CPATH} LIBRARY_PATH=${LIBRARY_PATH} pip install chainermn
+
 
 .. _install-from-source:
   
