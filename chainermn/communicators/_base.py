@@ -32,6 +32,9 @@ class CommunicatorBase(object):
         buf = _memory_utility.array_to_buffer_object(array)
         self.mpi_comm.Send([ndim, mpi4py.MPI.INT], dest=dest, tag=tag)
         self.mpi_comm.Send([shape, mpi4py.MPI.INT], dest=dest, tag=tag)
+
+        if chainer.cuda.get_array_module(array) is not numpy:
+            chainer.cuda.Stream.null.synchronize()
         self.mpi_comm.Send(buf, dest=dest, tag=tag)
 
     def recv(self, source, tag):
