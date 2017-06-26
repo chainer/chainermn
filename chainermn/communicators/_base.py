@@ -21,9 +21,19 @@ class CommunicatorBase(object):
         return self.mpi_comm.size
 
     def send(self, array, dest, tag):
-        # This method relies on mpi4py fast communication optimized for
-        # numpy arrays, which discards any information attached to
-        # chainer.Variable objects. Please be sure.
+        """A primitive feature of inter-process transmission.
+
+        This method sends numpy-array to target process.
+        This method relies on mpi4py fast communication optimized for
+        numpy arrays, which discards any information attached to
+        chainer.Variable objects. Please be sure.
+
+        Args:
+            array: numpy or cupy array object.
+            dest (int): Target process specifier.
+            tag (int): An optional message ID.
+
+        """
         chainer.utils.experimental(
             'chainermn.communicators.CommunicatorBase.send')
         assert array.dtype == numpy.float32
@@ -38,6 +48,19 @@ class CommunicatorBase(object):
         self.mpi_comm.Send(buf, dest=dest, tag=tag)
 
     def recv(self, source, tag):
+        """A primitive feature of inter-process transmission.
+
+        This method tries to receive numpy-array from target process.
+        This method relies on mpi4py fast communication optimized for
+        numpy arrays, which discards any information attached to
+        chainer.Variable objects. Please be sure.
+
+        Args:
+            source (int): Target process specifier.
+            tag (int): An optional message ID.
+
+        """
+
         chainer.utils.experimental(
             'chainermn.communicators.CommunicatorBase.recv')
         ndim = numpy.empty(1, dtype=numpy.int32)
