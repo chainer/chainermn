@@ -4,6 +4,7 @@ from __future__ import print_function
 import argparse
 import multiprocessing
 import random
+import sys
 
 import numpy as np
 
@@ -26,6 +27,15 @@ else:
     import models_v2.googlenetbn as googlenetbn
     import models_v2.nin as nin
     import models_v2.resnet50 as resnet50
+
+# Check Python version if it supports multiprocessing.set_start_method,
+# which was introduced in Python 3.4
+major, minor, _, _, _ = sys.version_info
+if major <= 2 or (major >= 3 and minor < 4):
+    sys.stderr.write("Error: ImageNet example uses chainer.iterators."
+                     "MultiprocessIterator,\n"
+                     "which works only PYthon >= 3.4.")
+    exit(-1)
 
 
 class PreprocessedDataset(chainer.dataset.DatasetMixin):
@@ -162,10 +172,7 @@ def main():
     # using InfiniBand and MultiprocessIterator. This is because processes
     # often crash when calling fork if they are using Infiniband.
     # (c.f., https://www.open-mpi.org/faq/?category=tuning#fork-warning )
-    try:
-        multiprocessing.set_start_method('forkserver')
-    except AttributeError:
-        pass
+    multiprocessing.set_start_method('forkserver')
     train_iter = chainer.iterators.MultiprocessIterator(
         train, args.batchsize, n_processes=args.loaderjob)
     val_iter = chainer.iterators.MultiprocessIterator(
