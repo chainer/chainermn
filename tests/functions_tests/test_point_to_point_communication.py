@@ -61,7 +61,8 @@ class TestPointToPointCommunication(unittest.TestCase):
         if self.communicator.rank == 0:
             # Input process.
             y = self.f(self.model(self.x))
-            err = chainermn.functions.send(y, self.communicator, self.rank_send)
+            err = chainermn.functions.send(
+                y, self.communicator, self.rank_send)
             err.backward()
             grad = self.model.W.grad
 
@@ -77,7 +78,8 @@ class TestPointToPointCommunication(unittest.TestCase):
 
         elif self.communicator.rank == self.communicator.size - 1:
             # Output process.
-            x = chainermn.functions.recv(self.communicator, self.rank_recv, device=self.device)
+            x = chainermn.functions.recv(
+                self.communicator, self.rank_recv, device=self.device)
             y = self.f(self.model(x))
             err = self.evaluation(y, self.x)
             err.backward()
@@ -92,7 +94,9 @@ class TestPointToPointCommunication(unittest.TestCase):
 
         else:
             # Intermediate processes.
-            x = chainermn.functions.recv(self.communicator, self.rank_recv, device=self.device)
+            x = chainermn.functions.recv(
+                self.communicator, self.rank_recv, device=self.device)
             y = self.f(self.model(x))
-            err = chainermn.functions.send(y, self.communicator, self.rank_send)
+            err = chainermn.functions.send(
+                y, self.communicator, self.rank_send)
             err.backward()
