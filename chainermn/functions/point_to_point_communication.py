@@ -65,7 +65,7 @@ class Recv(chainer.Function):
         return dummy_var
 
 
-def send(x, comm, rank, tag=0):
+def send(x, communicator, rank, tag=0):
     """Send elements to target process.
 
     This function returns a dummy variable only holding the computational
@@ -75,9 +75,9 @@ def send(x, comm, rank, tag=0):
 
     Args:
         x (Variable): Variable holding a matrix which you would like to send.
-        comm (chainer.communicators.CommunicatorBase): ChainerMN communicator.
-        rank (int): A number specifying target process.
-        tag (int): An optional message ID.
+        communicator (chainer.communicators.CommunicatorBase): ChainerMN communicator.
+        rank (int): Target process specifier.
+        tag (int): Optional message ID (MPI feature).
 
     Returns:
         ~chainer.Variable:
@@ -86,19 +86,19 @@ def send(x, comm, rank, tag=0):
             variable, it will try to receive gradients from the target process.
 
     """
-    return Send(comm, peer_rank=rank, peer_tag=tag)(x)
+    return Send(communicator, peer_rank=rank, peer_tag=tag)(x)
 
 
-def recv(comm, rank, tag=0, device=-1):
+def recv(communicator, rank, tag=0, device=-1):
     """Receive elements from target process.
 
     This function returns data received from target process. If ``backward()``
     is invoked, it will try to send gradients to the target process.
 
     Args:
-        comm (chainer.communicators.CommunicatorBase): ChainerMN communicator.
-        rank (int): A number specifying target process.
-        tag (int): An optional message ID.
+        communicator (chainer.communicators.CommunicatorBase): ChainerMN communicator.
+        rank (int): Target process specifier.
+        tag (int): Optional message ID (MPI feature).
         device (int): Target device specifier.
 
     Returns:
@@ -107,4 +107,4 @@ def recv(comm, rank, tag=0, device=-1):
             by this variable, it will send gradients to the target process.
 
     """
-    return Recv(comm, peer_rank=rank, peer_tag=tag, device=device)()
+    return Recv(communicator, peer_rank=rank, peer_tag=tag, device=device)()
