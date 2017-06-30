@@ -75,7 +75,8 @@ def send(x, communicator, rank, tag=0):
 
     Args:
         x (Variable): Variable holding a matrix which you would like to send.
-        communicator (chainer.communicators.CommunicatorBase): ChainerMN communicator.
+        communicator (chainer.communicators.CommunicatorBase):
+            ChainerMN communicator.
         rank (int): Target process specifier.
         tag (int): Optional message ID (MPI feature).
 
@@ -96,7 +97,8 @@ def recv(communicator, rank, tag=0, device=-1):
     is invoked, it will try to send gradients to the target process.
 
     Args:
-        communicator (chainer.communicators.CommunicatorBase): ChainerMN communicator.
+        communicator (chainer.communicators.CommunicatorBase):
+            ChainerMN communicator.
         rank (int): Target process specifier.
         tag (int): Optional message ID (MPI feature).
         device (int): Target device specifier.
