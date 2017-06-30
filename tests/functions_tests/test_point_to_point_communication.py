@@ -27,16 +27,8 @@ class TestPointToPointCommunication(unittest.TestCase):
         if self.communicator.size < 2:
             raise nose.plugins.skip.SkipTest()
 
-        rank_next = (self.communicator.rank + 1) % self.communicator.size
-        rank_prev = (self.communicator.rank - 1) % self.communicator.size
-
-        # Send to the next-ranked node.
-        self.send = chainermn.functions.Send(
-            self.communicator, peer_rank=rank_next, peer_tag=0)
-
-        # Receive from the previous-ranked node.
-        self.recv = chainermn.functions.Recv(
-            self.communicator, peer_rank=rank_prev, peer_tag=0, device=device)
+        self.rank_send = (self.communicator.rank + 1) % self.communicator.size
+        self.rank_recv = (self.communicator.rank - 1) % self.communicator.size
 
         # Activation function.
         self.f = chainer.functions.sigmoid
@@ -53,6 +45,7 @@ class TestPointToPointCommunication(unittest.TestCase):
         self.entire_model = [chainer.links.Linear(
             10, 10, initialW=self._init_w(l))
             for l in range(self.communicator.size)]
+        self.device = device
 
         if device >= 0:
             self.x.to_gpu()
@@ -68,7 +61,7 @@ class TestPointToPointCommunication(unittest.TestCase):
         if self.communicator.rank == 0:
             # Input process.
             y = self.f(self.model(self.x))
-            err = self.send(y)
+            err = chainermn.functions.send(y, self.communicator, self.rank_send)
             err.backward()
             grad = self.model.W.grad
 
@@ -84,7 +77,7 @@ class TestPointToPointCommunication(unittest.TestCase):
 
         elif self.communicator.rank == self.communicator.size - 1:
             # Output process.
-            x = self.recv()
+            x = chainermn.functions.recv(self.communicator, self.rank_recv, device=self.device)
             y = self.f(self.model(x))
             err = self.evaluation(y, self.x)
             err.backward()
@@ -99,7 +92,7 @@ class TestPointToPointCommunication(unittest.TestCase):
 
         else:
             # Intermediate processes.
-            x = self.recv()
+            x = chainermn.functions.recv(self.communicator, self.rank_recv, device=self.device)
             y = self.f(self.model(x))
-            err = self.send(y)
+            err = chainermn.functions.send(y, self.communicator, self.rank_send)
             err.backward()
