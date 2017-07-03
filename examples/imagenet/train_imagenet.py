@@ -31,10 +31,13 @@ else:
 # Check Python version if it supports multiprocessing.set_start_method,
 # which was introduced in Python 3.4
 major, minor, _, _, _ = sys.version_info
-if major <= 2 or (major >= 3 and minor < 4):
-    sys.stderr.write("Error: ImageNet example uses chainer.iterators."
-                     "MultiprocessIterator,\n"
-                     "which works only PYthon >= 3.4.")
+if major <= 2 or (major == 3 and minor < 4):
+    sys.stderr.write("Error: ImageNet example uses "
+                     "chainer.iterators.MultiprocessIterator, "
+                     "which works only with Python >= 3.4. "
+                     "For more details, see "
+                     "http://chainermn.readthedocs.io/en/master/"
+                     "tutorial/tips_faqs.html#using-multiprocessiterator")
     exit(-1)
 
 
