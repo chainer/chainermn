@@ -17,6 +17,13 @@ Optimizers and Evaluators
 .. autofunction:: create_multi_node_evaluator
 
 
+Point-to-Point Communications
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: chainermn.functions.send
+.. autofunction:: chainermn.functions.recv
+
+
 Dataset Utilities
 ~~~~~~~~~~~~~~~~~
 
