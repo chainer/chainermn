@@ -108,20 +108,21 @@ class Seq2seq(chainer.Chain):
     def translate(self, xs, max_length=100):
         batch = len(xs)
         with chainer.no_backprop_mode():
-            xs = [x[::-1] for x in xs]
-            exs = sequence_embed(self.embed_x, xs)
-            h, c, _ = self.encoder(None, None, exs, train=False)
-            ys = self.xp.zeros(batch, 'i')
-            result = []
-            for i in range(max_length):
-                eys = self.embed_y(ys)
-                eys = chainer.functions.split_axis(
-                    eys, batch, 0, force_tuple=True)
-                h, c, ys = self.decoder(h, c, eys, train=False)
-                cys = chainer.functions.concat(ys, axis=0)
-                wy = self.W(cys)
-                ys = self.xp.argmax(wy.data, axis=1).astype('i')
-                result.append(ys)
+            with chainer.using_config('train', False):
+                xs = [x[::-1] for x in xs]
+                exs = sequence_embed(self.embed_x, xs)
+                h, c, _ = self.encoder(None, None, exs)
+                ys = self.xp.zeros(batch, 'i')
+                result = []
+                for i in range(max_length):
+                    eys = self.embed_y(ys)
+                    eys = chainer.functions.split_axis(
+                        eys, batch, 0, force_tuple=True)
+                    h, c, ys = self.decoder(h, c, eys)
+                    cys = chainer.functions.concat(ys, axis=0)
+                    wy = self.W(cys)
+                    ys = self.xp.argmax(wy.data, axis=1).astype('i')
+                    result.append(ys)
 
         result = cuda.to_cpu(self.xp.stack(result).T)
 
@@ -316,7 +317,7 @@ def main():
                           if 0 < len(s) < 50 and 0 < len(t) < 50]
             print('Filtered training data size: %d' % len(train_data))
 
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
 
             en_path = os.path.join(args.input, 'dev', 'newstest2013.en')
             source_data = europal.make_dataset(en_path, source_vocab)
@@ -369,7 +370,26 @@ def main():
     # Broadcast dataset
     # Sanity check of train_data
 
-    train_data = chainermn.scatter_dataset(train_data, comm)
+    # Empirically, if the size of train_data goes beyond 14000000,
+    # the pickled size exceeds 4GB, which is a limit of data size
+    # that MPI can send in a single MPI_Send/MPI_Recv.
+    # Thus, we split train_data in a unit of 10000000 and send them
+    # separately and join later.
+
+    # Compute the # of scatter_dataset call
+    Nmax=1000000
+    if comm.rank == 0:
+        n_iter = int((len(train_data) + Nmax - 1) / Nmax)
+    else:
+        n_iter = 0
+    n_iter = comm.mpi_comm.bcast(n_iter, root=0)
+    recv_train_data = []
+    for i in range(0, n_iter):
+        beg = i * Nmax
+        end = (i+1) * Nmax
+        data = train_data[beg:end] if train_data is not None else None
+        recv_train_data += chainermn.scatter_dataset(data, comm)
+    train_data = recv_train_data
     test_data_all = test_data  # NOQA
     test_data = chainermn.scatter_dataset(test_data, comm)
 

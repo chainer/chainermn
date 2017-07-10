@@ -27,7 +27,7 @@ def split_sentence(s):
 
 def open_file(path):
     if path.endswith('.gz'):
-        return gzip.open(path, 'rt', 'utf-8')
+        return gzip.open(path, 'rt', encoding='utf-8')
     else:
         # Find gzipped version of the file
         gz = path + '.gz'
@@ -38,6 +38,7 @@ def open_file(path):
 
 
 def count_lines(path):
+    print(path)
     with open_file(path) as f:
         return sum([1 for _ in f])
 
