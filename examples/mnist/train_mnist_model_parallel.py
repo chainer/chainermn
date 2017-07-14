@@ -61,7 +61,7 @@ class MLP1(chainer.Chain):
         )
         self.comm = comm
 
-    def __call__(self, *_):
+    def __call__(self):
         h1 = chainermn.functions.recv(
             self.comm, rank=0, device=self._device_id)
         h2 = F.relu(self.l2(h1))
@@ -113,9 +113,9 @@ if __name__ == '__main__':
 
     train, test = chainer.datasets.get_mnist()
 
-#    if comm.rank == 1:
-#        train = chainermn.datasets.get_empty_dataset(train)
-#        test = chainermn.datasets.get_empty_dataset(test)
+    if comm.rank == 1:
+        train = chainermn.datasets.get_empty_dataset(train)
+        test = chainermn.datasets.get_empty_dataset(test)
 
     train_iter = chainer.iterators.SerialIterator(
         train, args.batchsize, shuffle=False)

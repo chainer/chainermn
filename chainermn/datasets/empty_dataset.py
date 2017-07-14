@@ -18,4 +18,4 @@ def get_empty_dataset(dataset):
         ~chainer.datasets.TransformDataset:
             Dataset consists of only patterns in the original one.
     """
-    return chainer.datasets.TransformDataset(dataset, lambda data: [None])
+    return chainer.datasets.TransformDataset(dataset, lambda data: ())
