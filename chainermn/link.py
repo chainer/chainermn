@@ -109,7 +109,9 @@ class MultiNodeChainGroup(chainer.ChainList):
     is invoked in forward computation according to the order they are added,
     and in backward computation according to the reversed order.
     """
+
     def __init__(self):
+        chainer.utils.experimental('chainermn.MultiNodeChainGroup')
         super(MultiNodeChainGroup, self).__init__()
 
     def __call__(self, x):
