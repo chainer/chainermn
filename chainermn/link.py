@@ -1,6 +1,7 @@
 import chainer
 import chainermn
 import chainermn.communicators
+import chainermn.functions
 
 
 class MultiNodeChain(chainer.Chain):
