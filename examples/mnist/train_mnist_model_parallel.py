@@ -41,6 +41,7 @@ class MLP0b(chainermn.MultiNodeChain):
 
 
 class MLP0(chainer.ChainList):
+    # Model on worker 0.
     def __init__(self, comm, n_out):
         super(MLP0, self).__init__()
         self.add_link(MLP0a(comm, n_out))
@@ -53,11 +54,12 @@ class MLP0(chainer.ChainList):
 
 
 class MLP1(chainermn.MultiNodeChain):
+    # Model on worker 1.
     def __init__(self, comm, n_units, n_out):
         super(MLP1, self).__init__(
             comm=comm,
-            rank_in=0,
-            rank_out=0,
+            rank_in=0,  # receive from worker 0
+            rank_out=0, # send back to worker 0
             l2=L.Linear(None, n_units),
             l3=L.Linear(None, n_out))
 
@@ -66,7 +68,7 @@ class MLP1(chainermn.MultiNodeChain):
         return self.l3(h1)
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(
         description='ChainerMN example: pipelined neural network')
     parser.add_argument('--batchsize', '-b', type=int, default=100,
@@ -89,16 +91,18 @@ if __name__ == '__main__':
         comm = chainermn.create_communicator('naive')
         device = -1
 
-    print('GPU: {}'.format(device))
-    print('# unit: {}'.format(args.unit))
-    print('# Minibatch-size: {}'.format(args.batchsize))
-    print('# epoch: {}'.format(args.epoch))
+    if comm.rank == 0:
+        print('==========================================')
+        if args.gpu:
+            print('Using GPUs')
+        print('Num unit: {}'.format(args.unit))
+        print('Num Minibatch-size: {}'.format(args.batchsize))
+        print('Num epoch: {}'.format(args.epoch))
+        print('==========================================')
 
     if comm.rank == 0:
-        # The former half of the model is placed in rank=0.
         model = L.Classifier(MLP0(comm, args.unit))
     elif comm.rank == 1:
-        # The latter half of the model is placed in rank=1.
         model = MLP1(comm, args.unit, 10)
 
     if device >= 0:
@@ -108,8 +112,8 @@ if __name__ == '__main__':
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
 
+    # Iterate dataset only on worker 0.
     train, test = chainer.datasets.get_mnist()
-
     if comm.rank == 1:
         train = chainermn.datasets.get_empty_dataset(train)
         test = chainermn.datasets.get_empty_dataset(test)
@@ -122,7 +126,8 @@ if __name__ == '__main__':
     updater = training.StandardUpdater(train_iter, optimizer, device=device)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
     trainer.extend(extensions.Evaluator(test_iter, model, device=device))
-
+    
+    # Some display and output extentions are necessary only for worker 0.
     if comm.rank == 0:
         trainer.extend(extensions.dump_graph('main/loss'))
         trainer.extend(extensions.LogReport())
@@ -132,3 +137,6 @@ if __name__ == '__main__':
         trainer.extend(extensions.ProgressBar())
 
     trainer.run()
+
+if __name__ == '__main__':
+    main()
