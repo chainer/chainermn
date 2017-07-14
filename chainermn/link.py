@@ -1,5 +1,6 @@
 import chainer
 import chainermn
+import chainermn.communicators
 
 
 class MultiNodeChain(chainer.Chain):
@@ -45,6 +46,9 @@ class MultiNodeChain(chainer.Chain):
 
         """
         chainer.utils.experimental('chainermn.MultiNodeChain')
+        assert isinstance(
+            comm, chainermn.communicators._base.CommunicatorBase), \
+            "comm must be ChainerMN communicator"
         super(MultiNodeChain, self).__init__(*args, **kwargs)
         self._comm = comm
         self._rank_in = rank_in
@@ -54,7 +58,8 @@ class MultiNodeChain(chainer.Chain):
         if self._rank_in is None:
             y = self.forward(*args)
         else:
-            assert len(args) <= 1
+            assert len(args) <= 1, \
+                "the number of backward pointer must be less than 1"
 
             if len(args) == 0:
                 x = chainermn.functions.recv(

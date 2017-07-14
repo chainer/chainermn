@@ -58,8 +58,8 @@ class MLP1(chainermn.MultiNodeChain):
     def __init__(self, comm, n_units, n_out):
         super(MLP1, self).__init__(
             comm=comm,
-            rank_in=0,  # receive from worker 0
-            rank_out=0, # send back to worker 0
+            rank_in=0,   # receive from worker 0
+            rank_out=0,  # send back to worker 0
             l2=L.Linear(None, n_units),
             l3=L.Linear(None, n_out))
 
@@ -126,7 +126,7 @@ def main():
     updater = training.StandardUpdater(train_iter, optimizer, device=device)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
     trainer.extend(extensions.Evaluator(test_iter, model, device=device))
-    
+
     # Some display and output extentions are necessary only for worker 0.
     if comm.rank == 0:
         trainer.extend(extensions.dump_graph('main/loss'))
