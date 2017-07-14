@@ -23,10 +23,13 @@ class MultiNodeChain(chainer.Chain):
     non-connected), you shuold first define each connected computational
     graph as one `MultiNodeChain` and use `chainermn.MultiNodeChainGroup` to
     combine them.
+
+    Unlike the original `chainer.Chain`, users must define forward
+    computation in `forward()`.
     """
 
     def __init__(self, comm, rank_in=None, rank_out=None, *args, **kwargs):
-        """ Initialization method of `MultiNodeChain`.
+        """Initialization method of `MultiNodeChain`.
 
         Args:
             comm (chainermn.communicators._base): ChainerMN communicator.
@@ -39,6 +42,7 @@ class MultiNodeChain(chainer.Chain):
                 MPI rank of the machine to which this model sends outputs.
                 The default value is `None`, which means this model would not
                 send outputs to the other machines.
+
         """
         chainer.utils.experimental('chainermn.MultiNodeChain')
         super(MultiNodeChain, self).__init__(*args, **kwargs)
@@ -77,5 +81,10 @@ class MultiNodeChain(chainer.Chain):
 
     def forward(self, *args):
         """Forward computation of the model.
+
+        Unlike the original `chainer.Chain`, please define forward computation
+        by overriding this method. This method is invoked in
+        `__call__`, together with `chainermn.functions.send`
+        and `chainermn.functions.recv` if needed.
         """
         raise NotImplementedError()
