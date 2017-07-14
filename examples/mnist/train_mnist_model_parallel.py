@@ -17,31 +17,30 @@ import chainermn.functions
 chainer.disable_experimental_feature_warning = True
 
 
-class MLP0a(chainer.Chain):
+class MLP0a(chainermn.MultiNodeChain):
     def __init__(self, comm, n_out):
         super(MLP0a, self).__init__(
-            l1=L.Linear(784, n_out),
-        )
-        self.comm = comm
+            comm=comm,
+            rank_in=None,
+            rank_out=1,
+            l1=L.Linear(784, n_out))
 
-    def __call__(self, x):
-        h1 = F.relu(self.l1(x))
-        return chainermn.functions.send(h1, self.comm, rank=1)
+    def forward(self, x):
+        return F.relu(self.l1(x))
 
 
-class MLP0b(chainer.Chain):
+class MLP0b(chainermn.MultiNodeChain):
     def __init__(self, comm):
-        super(MLP0b, self).__init__()
-        self.comm = comm
+        super(MLP0b, self).__init__(
+            comm=comm,
+            rank_in=1,
+            rank_out=None)
 
-    def __call__(self, pointer):
-        # TODO(tsutsumi): Can we erase `pointer`?
-        return chainermn.functions.recv_retain(
-            pointer, self.comm, rank=1, device=self._device_id)
+    def forward(self, y):
+        return y
 
 
 class MLP0(chainer.ChainList):
-
     def __init__(self, comm, n_out):
         super(MLP0, self).__init__()
         self.add_link(MLP0a(comm, n_out))
@@ -53,20 +52,18 @@ class MLP0(chainer.ChainList):
         return x
 
 
-class MLP1(chainer.Chain):
+class MLP1(chainermn.MultiNodeChain):
     def __init__(self, comm, n_units, n_out):
         super(MLP1, self).__init__(
+            comm=comm,
+            rank_in=0,
+            rank_out=0,
             l2=L.Linear(None, n_units),
-            l3=L.Linear(None, n_out),
-        )
-        self.comm = comm
+            l3=L.Linear(None, n_out))
 
-    def __call__(self):
-        h1 = chainermn.functions.recv(
-            self.comm, rank=0, device=self._device_id)
-        h2 = F.relu(self.l2(h1))
-        y = self.l3(h2)
-        return chainermn.functions.send(y, self.comm, rank=0)
+    def forward(self, h0):
+        h1 = F.relu(self.l2(h0))
+        return self.l3(h1)
 
 
 if __name__ == '__main__':
