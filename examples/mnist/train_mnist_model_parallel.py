@@ -40,17 +40,12 @@ class MLP0b(chainermn.MultiNodeChain):
         return y
 
 
-class MLP0(chainer.ChainList):
+class MLP0(chainermn.MultiNodeChainGroup):
     # Model on worker 0.
     def __init__(self, comm, n_out):
         super(MLP0, self).__init__()
         self.add_link(MLP0a(comm, n_out))
         self.add_link(MLP0b(comm))
-
-    def __call__(self, x):
-        for f in self.children():
-            x = f(x)
-        return x
 
 
 class MLP1(chainermn.MultiNodeChain):

@@ -26,7 +26,8 @@ class MultiNodeChain(chainer.Chain):
     combine them.
 
     Unlike the original `chainer.Chain`, users must define forward
-    computation in `forward()`.
+    computation in `forward()`, in which `chainermn.functions.send` or
+    `chainermn.functions.recv` are NOT EXPECTED to be invoked.
     """
 
     def __init__(self, comm, rank_in=None, rank_out=None, *args, **kwargs):
@@ -93,3 +94,28 @@ class MultiNodeChain(chainer.Chain):
         and `chainermn.functions.recv` if needed.
         """
         raise NotImplementedError()
+
+
+class MultiNodeChainGroup(chainer.ChainList):
+    """Combining multiple non-connected components of computational graph.
+
+    This class combines each `MultiNodeChain`, which represents one of the
+    non-connected component in compuational graph. In `__call__()`,
+    the returned object of `MultiNodeChain` (which represents pointer)
+    are passed to the next `MultiNodeChain`, in order to retain the
+    computational graph connected and make backprop work properly.
+
+    Users add each `MultiNodeChain` by `add_link()` method. Each chain
+    is invoked in forward computation according to the order they are added,
+    and in backward computation according to the reversed order.
+    """
+    def __init__(self):
+        super(MultiNodeChainGroup, self).__init__()
+
+    def __call__(self, x):
+        for f in self.children():
+            # Retain the pointer to previous component, connecting to
+            # the next component.
+            x = f(x)
+
+        return x
