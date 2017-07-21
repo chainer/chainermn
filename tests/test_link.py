@@ -86,7 +86,7 @@ class TestMultiNodeChain(unittest.TestCase):
                 Y = chainer.cuda.to_gpu(Y)
 
             for i in range(n):
-                err = model(X[i:i+1], Y[i:i+1])
+                err = model(X[i:i + 1], Y[i:i + 1])
                 err.backward()
         else:
             model = Cycle1(
