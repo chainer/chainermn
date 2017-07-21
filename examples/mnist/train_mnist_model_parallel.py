@@ -17,50 +17,47 @@ import chainermn.functions
 chainer.disable_experimental_feature_warning = True
 
 
-class MLP0a(chainermn.MultiNodeChain):
+class MLP0a(chainer.Chain):
     def __init__(self, comm, n_out):
         super(MLP0a, self).__init__(
-            comm=comm,
-            rank_in=None,
-            rank_out=1,
             l1=L.Linear(784, n_out))
 
-    def forward(self, x):
+    def __call__(self, x):
         return F.relu(self.l1(x))
 
 
-class MLP0b(chainermn.MultiNodeChain):
+class MLP0b(chainer.Chain):
     def __init__(self, comm):
-        super(MLP0b, self).__init__(
-            comm=comm,
-            rank_in=1,
-            rank_out=None)
+        super(MLP0b, self).__init__()
 
-    def forward(self, y):
+    def __call__(self, y):
         return y
 
 
 class MLP0(chainermn.MultiNodeChainGroup):
     # Model on worker 0.
     def __init__(self, comm, n_out):
-        super(MLP0, self).__init__()
-        self.add_link(MLP0a(comm, n_out))
-        self.add_link(MLP0b(comm))
+        super(MLP0, self).__init__(comm=comm)
+        self.add_link(MLP0a(comm, n_out), rank_in=None, rank_out=1)
+        self.add_link(MLP0b(comm), rank_in=1, rank_out=None)
 
 
-class MLP1(chainermn.MultiNodeChain):
-    # Model on worker 1.
-    def __init__(self, comm, n_units, n_out):
-        super(MLP1, self).__init__(
-            comm=comm,
-            rank_in=0,   # receive from worker 0
-            rank_out=0,  # send back to worker 0
+class MLP1_sub(chainer.Chain):
+    def __init__(self, n_units, n_out):
+        super(MLP1_sub, self).__init__(
             l2=L.Linear(None, n_units),
             l3=L.Linear(None, n_out))
 
-    def forward(self, h0):
+    def __call__(self, h0):
         h1 = F.relu(self.l2(h0))
         return self.l3(h1)
+
+
+class MLP1(chainermn.MultiNodeChainGroup):
+    # Model on worker 1.
+    def __init__(self, comm, n_units, n_out):
+        super(MLP1, self).__init__(comm=comm)
+        self.add_link(MLP1_sub(n_units, n_out), rank_in=0, rank_out=0)
 
 
 def main():
