@@ -35,6 +35,13 @@ class Cycle0(chainermn.MultiNodeChainGroup):
         self.add_link(Cycle0out(size), rank_in=rank_prev, rank_out=None)
 
 
+class Cycle0rev(chainermn.MultiNodeChainGroup):
+    def __init__(self, size, comm, rank_prev, rank_next):
+        super(Cycle0rev, self).__init__(comm=comm)
+        self.add_link(Cycle0out(size), rank_in=rank_prev, rank_out=None)
+        self.add_link(Cycle0in(size), rank_in=None, rank_out=rank_next)
+
+
 class Cycle1inst(chainer.Chain):
     def __init__(self, size):
         super(Cycle1inst, self).__init__(
@@ -97,3 +104,24 @@ class TestMultiNodeChain(unittest.TestCase):
             for i in range(n):
                 err = model()
                 err.backward()
+
+    def test_cross_forward(self):
+        n, d = 100, 10
+        X = np.random.randn(n, d).astype(np.float32)
+        Y = (np.random.rand(n) * 2).astype(np.int32)
+
+        if self.communicator.rank == 0:
+            model = L.Classifier(Cycle0(
+                d, self.communicator, self.rank_next, self.rank_prev))
+        else:
+            model = L.Classifier(Cycle0rev(
+                d, self.communicator, self.rank_next, self.rank_prev))
+
+        if self.gpu:
+            model.to_gpu()
+            X = chainer.cuda.to_gpu(X)
+            Y = chainer.cuda.to_gpu(Y)
+
+        for i in range(n):
+            err = model(X[i:i + 1], Y[i:i + 1])
+            err.backward()

@@ -42,9 +42,9 @@ class MLP0(chainermn.MultiNodeChainGroup):
         self.add_link(MLP0b(comm), rank_in=1, rank_out=None)
 
 
-class MLP1_sub(chainer.Chain):
+class MLP1inst(chainer.Chain):
     def __init__(self, n_units, n_out):
-        super(MLP1_sub, self).__init__(
+        super(MLP1inst, self).__init__(
             l2=L.Linear(None, n_units),
             l3=L.Linear(None, n_out))
 
@@ -57,7 +57,7 @@ class MLP1(chainermn.MultiNodeChainGroup):
     # Model on worker 1.
     def __init__(self, comm, n_units, n_out):
         super(MLP1, self).__init__(comm=comm)
-        self.add_link(MLP1_sub(n_units, n_out), rank_in=0, rank_out=0)
+        self.add_link(MLP1inst(n_units, n_out), rank_in=0, rank_out=0)
 
 
 def main():

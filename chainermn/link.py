@@ -2,6 +2,7 @@ import chainer
 import chainermn
 import chainermn.communicators
 import chainermn.functions
+import chainermn.functions.point_to_point_communication
 
 
 class MultiNodeChainGroup(chainer.ChainList):
@@ -30,14 +31,16 @@ class MultiNodeChainGroup(chainer.ChainList):
 
     def __call__(self, *inputs):
         x = None
+        y = None
         backward_pointer = None
-        n_layers = len(self._children)
 
         for i, (f, (rank_in, rank_out)) in \
                 enumerate(zip(self._children, self._rank_inouts)):
             if rank_in is None:
                 x = f(*inputs)
+
             if rank_in is not None:
+                # Preprocess: receiving inputs from the other machine.
                 if i == 0:
                     x = chainermn.functions.recv(
                         self._comm,
@@ -52,14 +55,33 @@ class MultiNodeChainGroup(chainer.ChainList):
                         rank=rank_in,
                         device=self._device_id)
 
+                # Actual forward.
                 x = f(x)
 
             if rank_out is None:
-                assert i == n_layers - 1, (i, n_layers - 1)
-                y = x
+                # TODO(tsutsumi) is this assertion appropriate?
+                assert y is None
+                y = x  # model output
+                backward_pointer = y
             else:
-                backward_pointer = chainermn.functions.send(
-                    x, self._comm, rank=rank_out)
-                y = backward_pointer
+                if y is None:
+                    backward_pointer = chainermn.functions.send(
+                        x, self._comm, rank=rank_out)
+                else:
+                    backward_pointer = chainermn.functions.send_retain(
+                        x,
+                        backward_pointer=y,
+                        communicator=self._comm,
+                        rank=rank_out)
 
-        return y
+        # Return.
+        if y is backward_pointer:
+            # The last layer returns model output.
+            return y
+        elif y is not None:
+            # The intermediate layer returns model output.
+            return chainermn.functions.point_to_point_communication.merge(
+                backward_pointer, y.data)
+        else:
+            # Do not have any model output.
+            return backward_pointer
