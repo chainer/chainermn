@@ -26,6 +26,17 @@ class MultiNodeChainGroup(chainer.ChainList):
         self._rank_inouts = []
 
     def add_link(self, link, rank_in=None, rank_out=None):
+        """Register one connected link with its inout rank.
+
+        Args:
+            link (chainer.Link): The link object to be registered.
+            rank_in (int or list):
+                Ranks from which it receives data. If None is specified,
+                the model does not receive from any machines.
+            rank_out (int or list):
+                Ranks to which it sends data. If None is specified,
+                the model will not send to any machine.
+        """
         super(MultiNodeChainGroup, self).add_link(link)
         self._rank_inouts.append((rank_in, rank_out))
 
@@ -38,22 +49,42 @@ class MultiNodeChainGroup(chainer.ChainList):
                 enumerate(zip(self._children, self._rank_inouts)):
             if rank_in is None:
                 x = f(*inputs)
-
-            if rank_in is not None:
+            else:
                 # Preprocess: receiving inputs from the other machine.
+                if isinstance(rank_in, int):
+                    rank_in = [rank_in]
+
                 if i == 0:
-                    x = chainermn.functions.recv(
-                        self._comm,
-                        rank=rank_in,
-                        device=self._device_id)
+                    for (j, _rank_in) in enumerate(rank_in):
+                        _x = chainermn.functions.recv(
+                            self._comm,
+                            rank=_rank_in,
+                            device=self._device_id)
+                        if j == 0:
+                            x = _x
+                        else:
+                            x += _x
                 else:
                     # TODO(tsutsumi) is this assertion appropriate?
                     assert backward_pointer is not None
+
                     x = chainermn.functions.recv_retain(
                         backward_pointer,
                         self._comm,
-                        rank=rank_in,
+                        rank=rank_in[0],
                         device=self._device_id)
+
+                    backward_pointer = None
+
+                    for _rank_in in rank_in[1:]:
+                        x += chainermn.functions.recv(
+                            self._comm,
+                            rank=_rank_in,
+                            device=self._device_id)
+
+                # Reduce.
+                if len(rank_in) > 1:
+                    x /= len(rank_in)
 
                 # Actual forward.
                 x = f(x)
@@ -64,15 +95,21 @@ class MultiNodeChainGroup(chainer.ChainList):
                 y = x  # model output
                 backward_pointer = y
             else:
-                if y is None:
-                    backward_pointer = chainermn.functions.send(
-                        x, self._comm, rank=rank_out)
+                if isinstance(rank_out, int):
+                    rank_out = [rank_out]
+
+                if backward_pointer is None:
+                    for (j, _rank_out) in enumerate(rank_out):
+                        if j == 0:
+                            backward_pointer = chainermn.functions.send(
+                                x, self._comm, _rank_out)
+                        else:
+                            backward_pointer = chainermn.functions.send_retain(
+                                x, backward_pointer, self._comm, _rank_out)
                 else:
-                    backward_pointer = chainermn.functions.send_retain(
-                        x,
-                        backward_pointer=y,
-                        communicator=self._comm,
-                        rank=rank_out)
+                    for _rank_out in rank_out:
+                        backward_pointer = chainermn.functions.send_retain(
+                            x, backward_pointer, self._comm, _rank_out)
 
         # Return.
         if y is backward_pointer:
