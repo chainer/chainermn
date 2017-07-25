@@ -82,10 +82,6 @@ class MultiNodeChainGroup(chainer.ChainList):
                             rank=_rank_in,
                             device=self._device_id)
 
-                # Reduce.
-                if len(rank_in) > 1:
-                    x /= len(rank_in)
-
                 # Actual forward.
                 x = f(x)
 
