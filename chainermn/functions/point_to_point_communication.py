@@ -102,7 +102,7 @@ class Merge(chainer.Function):
             return grad_outputs
 
 
-def send(x, communicator, rank, tag=0):
+def send(x, communicator, rank, backward_pointer=None, tag=0):
     """Send elements to target process.
 
     This function returns a dummy variable only holding the computational
@@ -110,11 +110,17 @@ def send(x, communicator, rank, tag=0):
     try to receive gradients from the target process and send them back
     to the parent nodes.
 
+    If you define non-connected computational graph on one machine,
+    you have to use `backward_pointer` to specify the output of previous
+    computational graph component. Otherwise `backward()` does not work well.
+
     Args:
         x (Variable): Variable holding a matrix which you would like to send.
         communicator (chainer.communicators.CommunicatorBase):
             ChainerMN communicator.
         rank (int): Target process specifier.
+        backward_pointer (chainer.Variable):
+            Pointer to the other non-connected component.
         tag (int): Optional message ID (MPI feature).
 
     Returns:
@@ -126,52 +132,32 @@ def send(x, communicator, rank, tag=0):
 
     """
     chainer.utils.experimental('chainermn.functions.send')
-    return Send(communicator, peer_rank=rank, peer_tag=tag)(x)
+
+    if backward_pointer is None:
+        return Send(communicator, peer_rank=rank, peer_tag=tag)(x)
+    else:
+        return Send(
+            communicator,
+            peer_rank=rank,
+            peer_tag=tag)(x, backward_pointer)
 
 
-def send_retain(x, backward_pointer, communicator, rank, tag=0):
-    """Send elements to target process.
-
-    The basic feature is as same as `chainermn.send()`. You should use
-    this function instead when the computational graph is non-connected.
-    In model-parallel case, models are sometimes non-connected graph,
-    where `backward()` will not be invoked if `send()` is used.
-
-    Args:
-        x (Variable): Variable holding a matrix which you would like to send.
-        backward_pointer (chainer.Variable):
-            Pointer to the other non-connected component.
-        communicator (chainer.communicators.CommunicatorBase):
-            ChainerMN communicator.
-        rank (int): Target process specifier.
-        tag (int): Optional message ID (MPI feature).
-
-    Returns:
-        ~chainer.Variable:
-            A dummy variable with no actual data, only holding the
-            computational graph. We call this backward_pointer.
-            If ``backward()`` is invoked by backward_pointer,
-            it will try to receive gradients from the target process.
-
-    """
-
-    chainer.utils.experimental('chainermn.functions.send_retain')
-    return Send(
-        communicator,
-        peer_rank=rank,
-        peer_tag=tag)(x, backward_pointer)
-
-
-def recv(communicator, rank, tag=0, device=-1):
+def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
     """Receive elements from target process.
 
     This function returns data received from target process. If ``backward()``
     is invoked, it will try to send gradients to the target process.
 
+    If you define non-connected computational graph on one machine,
+    you have to use `backward_pointer` to specify the output of previous
+    computational graph component. Otherwise `backward()` does not work well.
+
     Args:
         communicator (chainer.communicators.CommunicatorBase):
             ChainerMN communicator.
         rank (int): Target process specifier.
+        backward_pointer (chainer.Variable):
+            Pointer to the other non-connected component.
         tag (int): Optional message ID (MPI feature).
         device (int): Target device specifier.
 
@@ -182,38 +168,18 @@ def recv(communicator, rank, tag=0, device=-1):
 
     """
     chainer.utils.experimental('chainermn.functions.recv')
-    return Recv(communicator, peer_rank=rank, peer_tag=tag, device=device)()
-
-
-def recv_retain(backward_pointer, communicator, rank, tag=0, device=-1):
-    """Receive elements from target process.
-
-    The basic feature is as same as `chainermn.recv()`. You should use
-    this function instead when the computational graph is non-connected.
-    In model-parallel case, models are sometimes non-connected graph,
-    where `backward()` will not be invoked if `recv()` is used.
-
-    Args:
-        backward_pointer (chainer.Variable):
-            Pointer to the other non-connected component.
-        communicator (chainer.communicators.CommunicatorBase):
-            ChainerMN communicator.
-        rank (int): Target process specifier.
-        tag (int): Optional message ID (MPI feature).
-        device (int): Target device specifier.
-
-    Returns:
-        ~chainer.Variable:
-            Data received from target process. If ``backward()`` is invoked
-            by this variable, it will send gradients to the target process.
-
-    """
-    chainer.utils.experimental('chainermn.functions.recv_retain')
-    return Recv(
-        communicator,
-        peer_rank=rank,
-        peer_tag=tag,
-        device=device)(backward_pointer)
+    if backward_pointer is None:
+        return Recv(
+            communicator,
+            peer_rank=rank,
+            peer_tag=tag,
+            device=device)()
+    else:
+        return Recv(
+            communicator,
+            peer_rank=rank,
+            peer_tag=tag,
+            device=device)(backward_pointer)
 
 
 def merge(backward_pointer, model_output):

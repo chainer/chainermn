@@ -38,81 +38,57 @@ class MultiNodeChainGroup(chainer.ChainList):
                 the model will not send to any machine.
         """
         super(MultiNodeChainGroup, self).add_link(link)
+        if isinstance(rank_in, int):
+            rank_in = [rank_in]
+        if isinstance(rank_out, int):
+            rank_out = [rank_out]
         self._rank_inouts.append((rank_in, rank_out))
 
     def __call__(self, *inputs):
-        x = None
         y = None
         backward_pointer = None
 
-        for i, (f, (rank_in, rank_out)) in \
-                enumerate(zip(self._children, self._rank_inouts)):
+        for f, (rank_in, rank_out) in zip(self._children, self._rank_inouts):
+            x = None
+
             if rank_in is None:
                 x = f(*inputs)
             else:
                 # Preprocess: receiving inputs from the other machine.
-                if isinstance(rank_in, int):
-                    rank_in = [rank_in]
-
-                if i == 0:
-                    for (j, _rank_in) in enumerate(rank_in):
-                        _x = chainermn.functions.recv(
-                            self._comm,
-                            rank=_rank_in,
-                            device=self._device_id)
-                        if j == 0:
-                            x = _x
-                        else:
-                            x += _x
-                else:
-                    # TODO(tsutsumi) is this assertion appropriate?
-                    assert backward_pointer is not None
-
-                    x = chainermn.functions.recv_retain(
-                        backward_pointer,
+                for _rank_in in rank_in:
+                    _x = chainermn.functions.recv(
                         self._comm,
-                        rank=rank_in[0],
+                        rank=_rank_in,
+                        backward_pointer=backward_pointer,
                         device=self._device_id)
 
-                    backward_pointer = None
+                    x = _x if x is None else x + _x
 
-                    for _rank_in in rank_in[1:]:
-                        x += chainermn.functions.recv(
-                            self._comm,
-                            rank=_rank_in,
-                            device=self._device_id)
+                    # Prevent "double-backwarding," i.e., backprop
+                    # the same edge more than twice.
+                    backward_pointer = None
 
                 # Actual forward.
                 x = f(x)
 
             if rank_out is None:
-                # TODO(tsutsumi) is this assertion appropriate?
-                assert y is None
+                assert y is None, "MultiNodeChainGroup cannot have more than "\
+                    "two computational graph component whose rank_out is None"
                 y = x  # model output
                 backward_pointer = y
             else:
-                if isinstance(rank_out, int):
-                    rank_out = [rank_out]
-
-                if backward_pointer is None:
-                    for (j, _rank_out) in enumerate(rank_out):
-                        if j == 0:
-                            backward_pointer = chainermn.functions.send(
-                                x, self._comm, _rank_out)
-                        else:
-                            backward_pointer = chainermn.functions.send_retain(
-                                x, backward_pointer, self._comm, _rank_out)
-                else:
-                    for _rank_out in rank_out:
-                        backward_pointer = chainermn.functions.send_retain(
-                            x, backward_pointer, self._comm, _rank_out)
+                for _rank_out in rank_out:
+                    backward_pointer = chainermn.functions.send(
+                        x, self._comm,
+                        rank=_rank_out,
+                        backward_pointer=backward_pointer)
 
         # Return.
         if y is backward_pointer:
-            # The last layer returns model output.
+            # The last computational graph component returns model output.
             return y
         elif y is not None:
-            # The intermediate layer returns model output.
+            # The intermediate graph component returns model output.
             return chainermn.functions.point_to_point_communication.merge(
                 backward_pointer, y.data)
         else:

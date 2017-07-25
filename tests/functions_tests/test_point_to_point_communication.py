@@ -111,8 +111,10 @@ class TestPointToPointCommunication(unittest.TestCase):
                 y, self.communicator, self.rank_send)
 
             # Unless recv_retain, backprop would stop here.
-            x = chainermn.functions.recv_retain(
-                ptr, self.communicator, self.rank_recv, device=self.device)
+            x = chainermn.functions.recv(
+                self.communicator, self.rank_recv,
+                backward_pointer=ptr,
+                device=self.device)
             err = self.evaluation(x, t)
             err.backward()
 
