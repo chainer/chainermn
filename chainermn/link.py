@@ -62,7 +62,7 @@ class MultiNodeChainGroup(chainer.ChainList):
                         backward_pointer=backward_pointer,
                         device=self._device_id)
 
-                    # Guarantee the backward pass to the previous graph
+                    # Guarantee the backward path to the previous graph
                     # component to be executed in the last to avoid dead-lock.
                     if backward_pointer is not None and _x.creator is not None:
                         _x.creator.rank = -1
