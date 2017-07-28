@@ -110,9 +110,11 @@ def send(x, communicator, rank, backward_pointer=None, tag=0):
     try to receive gradients from the target process and send them back
     to the parent nodes.
 
-    If you define non-connected computational graph on one machine,
-    you have to use `backward_pointer` to specify the output of previous
-    computational graph component. Otherwise `backward()` does not work well.
+    .. note::
+        If you define non-connected computational graph on one machine,
+        you have to use ``backward_pointer`` to specify the output of
+        previous computational graph component.
+        Otherwise ``backward()`` does not work well.
 
     Args:
         x (Variable): Variable holding a matrix which you would like to send.
@@ -148,9 +150,11 @@ def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
     This function returns data received from target process. If ``backward()``
     is invoked, it will try to send gradients to the target process.
 
-    If you define non-connected computational graph on one machine,
-    you have to use `backward_pointer` to specify the output of previous
-    computational graph component. Otherwise `backward()` does not work well.
+    .. note::
+        If you define non-connected computational graph on one machine,
+        you have to use ``backward_pointer`` to specify the output of
+        previous computational graph component.
+        Otherwise ``backward()`` does not work well.
 
     Args:
         communicator (chainer.communicators.CommunicatorBase):

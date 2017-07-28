@@ -8,15 +8,99 @@ import chainermn.functions.point_to_point_communication
 class MultiNodeChainGroup(chainer.ChainList):
     """Combining multiple non-connected components of computational graph.
 
-    This class combines each `MultiNodeChain`, which represents one of the
-    non-connected component in compuational graph. In `__call__()`,
-    the returned object of `MultiNodeChain` (which represents pointer)
-    are passed to the next `MultiNodeChain`, in order to retain the
+    This class combines each ``chainer.Chain``, which represents one of the
+    non-connected component in compuational graph. In ``__call__()``,
+    the returned object of ``chainer.Chain`` (which represents pointer)
+    are passed to the next ``chainer.Chain``, in order to retain the
     computational graph connected and make backprop work properly.
 
-    Users add each `MultiNodeChain` by `add_link()` method. Each chain
+    Users add each ``chainer.Chain`` by ``add_link()`` method. Each chain
     is invoked in forward computation according to the order they are added,
     and in backward computation according to the reversed order.
+
+    .. admonition:: Example
+
+        This is a simple example of the model which sends its outputs to
+        rank=1 machine::
+
+            import chainer
+            import chainer.functions as F
+            import chainermn
+
+
+            class SimpleModelInst(chainer.Chain):
+
+                def __init__(self, n_in, n_hidden, n_out):
+                    super(SimpleModelInst, self).__init__(
+                        l1=L.Linear(n_in, n_hidden),
+                        l2=L.Linear(n_hidden, n_out))
+
+                def __call__(self, x):
+                    h1 = F.relu(self.l1(x))
+                    return self.l2(h1)
+
+
+            class SimpleModel(chainermn.MultiNodeChainGroup):
+
+                def __init__(self, comm, n_in, n_hidden, n_out):
+                    super(SimpleModel, self).__init__(comm)
+                    self.add_link(
+                        SimpleModelInst(n_in, n_hidden, n_out),
+                        rank_in=None,
+                        rank_out=1)
+
+    .. admonition:: Example
+
+        This is the other example of two models interacting each other::
+
+            import chainer
+            import chainer.functions as F
+            import chainermn
+
+
+            class MLP(chainer.Chain):
+
+                def __init__(self, n_in, n_hidden, n_out):
+                    super(MLP, self).__init__(
+                        l1=L.Linear(n_in, n_hidden),
+                        l2=L.Linear(n_hidden, n_hidden),
+                        l3=L.Linear(n_hidden, n_out))
+
+                def __call__(self, x):
+                    h1 = F.relu(self.l1(x))
+                    h2 = F.relu(self.l2(h1))
+                    return self.l3(h2)
+
+
+            class Model0(chainermn.MultiNodeChainGroup):
+
+                def __init__(self, comm):
+                    super(Model0, self).__init__(comm)
+                    self.add_link(
+                        MLP(10000, 5000, 2000),
+                        rank_in=None,
+                        rank_out=1)
+                    self.add_link(
+                        MLP(100, 50, 10),
+                        rank_in=1,
+                        rank_out=None)
+
+
+            class Model1(chainermn.MultiNodeChainGroup):
+
+                def __init__(self, comm):
+                    super(Model1, self).__init__(comm)
+                    self.add_link(MLP(2000, 500, 100), rank_in=0, rank_out=0)
+
+
+        ``Model0`` is expected to be on rank=0, and ``Model1`` is expected to
+        be on rank=1. The first ``MLP`` in ``Model0`` will send its outputs
+        to ``Model1``, then ``MLP`` in ``Model1`` will receive it and send
+        its outputs to the second ``MLP`` in ``Model0``.
+
+    Args:
+        comm (chainermn.communicators._base.CommunicatorBase):
+            ChainerMN communicator.
     """
 
     def __init__(self, comm):

@@ -10,6 +10,13 @@ Communicators
 .. autofunction:: create_communicator
 
 
+Links
+~~~~~
+
+.. autoclass:: MultiNodeChainGroup
+    :members: add_link
+
+
 Optimizers and Evaluators
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -28,3 +35,4 @@ Dataset Utilities
 ~~~~~~~~~~~~~~~~~
 
 .. autofunction:: scatter_dataset
+.. autofunction:: chainermn.datasets.get_empty_dataset
