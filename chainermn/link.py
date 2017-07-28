@@ -126,6 +126,12 @@ class MultiNodeChainGroup(chainer.ChainList):
             rank_in = [rank_in]
         if isinstance(rank_out, int):
             rank_out = [rank_out]
+
+        assert rank_in is None or not self._comm.rank in rank_in,\
+            "cannot specify self rank for rank_in"
+        assert rank_out is None or not self._comm.rank in rank_out,\
+            "cannot specify self rank for rank_out"
+
         self._rank_inouts.append((rank_in, rank_out))
 
     def __call__(self, *inputs):

@@ -66,9 +66,9 @@ class BranchInst(chainer.Chain):
         return self.f(x)
 
 
-class BranchParent(chainermn.MultiNodeChainGroup):
+class BranchParent1(chainermn.MultiNodeChainGroup):
     def __init__(self, size, comm, rank_children):
-        super(BranchParent, self).__init__(comm=comm)
+        super(BranchParent1, self).__init__(comm=comm)
         self.add_link(BranchInst(size), rank_in=None, rank_out=rank_children)
         self.add_link(BranchInst(size), rank_in=rank_children, rank_out=None)
 
@@ -151,14 +151,14 @@ class TestMultiNodeChain(unittest.TestCase):
             err = model(X[i:i + 1], Y[i:i + 1])
             err.backward()
 
-    def test_branching_model(self):
+    def check_branching_model(self, parent_model):
         n, d = 100, 10
         X = np.random.randn(n, d).astype(np.float32)
         Y = (np.random.rand(n) * 2).astype(np.int32)
 
         if self.communicator.rank == 0:
             rank_children = [rank for rank in range(1, self.communicator.size)]
-            model = L.Classifier(BranchParent(
+            model = L.Classifier(parent_model(
                 d, self.communicator, rank_children))
             if self.gpu:
                 model.to_gpu()
@@ -176,3 +176,6 @@ class TestMultiNodeChain(unittest.TestCase):
             for i in range(n):
                 err = model()
                 err.backward()
+
+    def test_branching_model1(self):
+        self.check_branching_model(BranchParent1)
