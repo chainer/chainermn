@@ -57,6 +57,31 @@ class Cycle1(chainermn.MultiNodeChainGroup):
         self.add_link(Cycle1inst(size), rank_in=rank_prev, rank_out=rank_next)
 
 
+class BranchInst(chainer.Chain):
+    def __init__(self, size):
+        super(BranchInst, self).__init__(
+            f=L.Linear(size, size))
+
+    def __call__(self, x):
+        return self.f(x)
+
+
+class BranchParent(chainermn.MultiNodeChainGroup):
+    def __init__(self, size, comm, rank_children):
+        super(BranchParent, self).__init__(comm=comm)
+        self.add_link(BranchInst(size), rank_in=None, rank_out=rank_children)
+        self.add_link(BranchInst(size), rank_in=rank_children, rank_out=None)
+
+
+class BranchChild(chainermn.MultiNodeChainGroup):
+    def __init__(self, size, comm, rank_parent):
+        super(BranchChild, self).__init__(comm=comm)
+        self.add_link(
+            BranchInst(size),
+            rank_in=rank_parent,
+            rank_out=rank_parent)
+
+
 @chainer.testing.parameterize(
     {'gpu': True},
     {'gpu': False},
@@ -78,7 +103,7 @@ class TestMultiNodeChain(unittest.TestCase):
         self.rank_next = (self.communicator.rank + 1) % self.communicator.size
         self.rank_prev = (self.communicator.rank - 1) % self.communicator.size
 
-    def test_cycle_forward(self):
+    def test_cycle_model(self):
         n, d = 100, 10
 
         if self.communicator.rank == 0:
@@ -105,7 +130,7 @@ class TestMultiNodeChain(unittest.TestCase):
                 err = model()
                 err.backward()
 
-    def test_cross_forward(self):
+    def test_cross_model(self):
         n, d = 100, 10
         X = np.random.randn(n, d).astype(np.float32)
         Y = (np.random.rand(n) * 2).astype(np.int32)
@@ -125,3 +150,29 @@ class TestMultiNodeChain(unittest.TestCase):
         for i in range(n):
             err = model(X[i:i + 1], Y[i:i + 1])
             err.backward()
+
+    def test_branching_model(self):
+        n, d = 100, 10
+        X = np.random.randn(n, d).astype(np.float32)
+        Y = (np.random.rand(n) * 2).astype(np.int32)
+
+        if self.communicator.rank == 0:
+            rank_children = [rank for rank in range(1, self.communicator.size)]
+            model = L.Classifier(BranchParent(
+                d, self.communicator, rank_children))
+            if self.gpu:
+                model.to_gpu()
+                X = chainer.cuda.to_gpu(X)
+                Y = chainer.cuda.to_gpu(Y)
+
+            for i in range(n):
+                err = model(X[i:i + 1], Y[i:i + 1])
+                err.backward()
+        else:
+            model = BranchChild(d, self.communicator, 0)
+            if self.gpu:
+                model.to_gpu()
+
+            for i in range(n):
+                err = model()
+                err.backward()
