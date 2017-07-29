@@ -1,5 +1,6 @@
-import numpy as np
 import unittest
+
+import numpy as np
 
 from chainermn.datasets import create_empty_dataset
 
