@@ -1,13 +1,14 @@
+import copy
 import nose.plugins.skip
 import unittest
 
 import chainer
 import chainer.testing
 import chainer.testing.attr
+import numpy
+
 import chainermn
 import chainermn.functions
-import copy
-import numpy
 
 
 @chainer.testing.parameterize(

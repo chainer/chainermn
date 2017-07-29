@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import argparse
+
 import chainer
 import chainer.cuda
 import chainer.functions as F
