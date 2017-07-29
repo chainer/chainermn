@@ -13,7 +13,7 @@ Communicators
 Links
 ~~~~~
 
-.. autoclass:: MultiNodeChainGroup
+.. autoclass:: MultiNodeChainList
     :members: add_link
 
 
@@ -35,4 +35,4 @@ Dataset Utilities
 ~~~~~~~~~~~~~~~~~
 
 .. autofunction:: scatter_dataset
-.. autofunction:: chainermn.datasets.get_empty_dataset
+.. autofunction:: chainermn.datasets.create_empty_dataset

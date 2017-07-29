@@ -5,7 +5,7 @@ import chainermn.functions
 import chainermn.functions.point_to_point_communication
 
 
-class MultiNodeChainGroup(chainer.ChainList):
+class MultiNodeChainList(chainer.ChainList):
     """Combining multiple non-connected components of computational graph.
 
     This class combines each ``chainer.Chain``, which represents one of the
@@ -28,10 +28,10 @@ class MultiNodeChainGroup(chainer.ChainList):
             import chainermn
 
 
-            class SimpleModelInst(chainer.Chain):
+            class SimpleModelSub(chainer.Chain):
 
                 def __init__(self, n_in, n_hidden, n_out):
-                    super(SimpleModelInst, self).__init__(
+                    super(SimpleModelSub, self).__init__(
                         l1=L.Linear(n_in, n_hidden),
                         l2=L.Linear(n_hidden, n_out))
 
@@ -40,12 +40,12 @@ class MultiNodeChainGroup(chainer.ChainList):
                     return self.l2(h1)
 
 
-            class SimpleModel(chainermn.MultiNodeChainGroup):
+            class SimpleModel(chainermn.MultiNodeChainList):
 
                 def __init__(self, comm, n_in, n_hidden, n_out):
                     super(SimpleModel, self).__init__(comm)
                     self.add_link(
-                        SimpleModelInst(n_in, n_hidden, n_out),
+                        SimpleModelSub(n_in, n_hidden, n_out),
                         rank_in=None,
                         rank_out=1)
 
@@ -72,7 +72,7 @@ class MultiNodeChainGroup(chainer.ChainList):
                     return self.l3(h2)
 
 
-            class Model0(chainermn.MultiNodeChainGroup):
+            class Model0(chainermn.MultiNodeChainList):
 
                 def __init__(self, comm):
                     super(Model0, self).__init__(comm)
@@ -86,7 +86,7 @@ class MultiNodeChainGroup(chainer.ChainList):
                         rank_out=None)
 
 
-            class Model1(chainermn.MultiNodeChainGroup):
+            class Model1(chainermn.MultiNodeChainList):
 
                 def __init__(self, comm):
                     super(Model1, self).__init__(comm)
@@ -104,8 +104,8 @@ class MultiNodeChainGroup(chainer.ChainList):
     """
 
     def __init__(self, comm):
-        chainer.utils.experimental('chainermn.MultiNodeChainGroup')
-        super(MultiNodeChainGroup, self).__init__()
+        chainer.utils.experimental('chainermn.MultiNodeChainList')
+        super(MultiNodeChainList, self).__init__()
         self._comm = comm
         self._rank_inouts = []
 
@@ -121,7 +121,7 @@ class MultiNodeChainGroup(chainer.ChainList):
                 Ranks to which it sends data. If None is specified,
                 the model will not send to any machine.
         """
-        super(MultiNodeChainGroup, self).add_link(link)
+        super(MultiNodeChainList, self).add_link(link)
         if isinstance(rank_in, int):
             rank_in = [rank_in]
         if isinstance(rank_out, int):
@@ -167,7 +167,7 @@ class MultiNodeChainGroup(chainer.ChainList):
                 x = f(x)
 
             if rank_out is None:
-                assert y is None, "MultiNodeChainGroup cannot have more than "\
+                assert y is None, "MultiNodeChainList cannot have more than "\
                     "two computational graph component whose rank_out is None"
                 y = x  # model output
                 backward_pointer = y

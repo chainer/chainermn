@@ -17,34 +17,34 @@ import chainermn.functions
 chainer.disable_experimental_feature_warning = True
 
 
-class MLP0a(chainer.Chain):
+class MLP0SubA(chainer.Chain):
     def __init__(self, comm, n_out):
-        super(MLP0a, self).__init__(
+        super(MLP0SubA, self).__init__(
             l1=L.Linear(784, n_out))
 
     def __call__(self, x):
         return F.relu(self.l1(x))
 
 
-class MLP0b(chainer.Chain):
+class MLP0SubB(chainer.Chain):
     def __init__(self, comm):
-        super(MLP0b, self).__init__()
+        super(MLP0SubB, self).__init__()
 
     def __call__(self, y):
         return y
 
 
-class MLP0(chainermn.MultiNodeChainGroup):
+class MLP0(chainermn.MultiNodeChainList):
     # Model on worker 0.
     def __init__(self, comm, n_out):
         super(MLP0, self).__init__(comm=comm)
-        self.add_link(MLP0a(comm, n_out), rank_in=None, rank_out=1)
-        self.add_link(MLP0b(comm), rank_in=1, rank_out=None)
+        self.add_link(MLP0SubA(comm, n_out), rank_in=None, rank_out=1)
+        self.add_link(MLP0SubB(comm), rank_in=1, rank_out=None)
 
 
-class MLP1inst(chainer.Chain):
+class MLP1Sub(chainer.Chain):
     def __init__(self, n_units, n_out):
-        super(MLP1inst, self).__init__(
+        super(MLP1Sub, self).__init__(
             l2=L.Linear(None, n_units),
             l3=L.Linear(None, n_out))
 
@@ -53,11 +53,11 @@ class MLP1inst(chainer.Chain):
         return self.l3(h1)
 
 
-class MLP1(chainermn.MultiNodeChainGroup):
+class MLP1(chainermn.MultiNodeChainList):
     # Model on worker 1.
     def __init__(self, comm, n_units, n_out):
         super(MLP1, self).__init__(comm=comm)
-        self.add_link(MLP1inst(n_units, n_out), rank_in=0, rank_out=0)
+        self.add_link(MLP1Sub(n_units, n_out), rank_in=0, rank_out=0)
 
 
 def main():
@@ -107,8 +107,8 @@ def main():
     # Iterate dataset only on worker 0.
     train, test = chainer.datasets.get_mnist()
     if comm.rank == 1:
-        train = chainermn.datasets.get_empty_dataset(train)
-        test = chainermn.datasets.get_empty_dataset(test)
+        train = chainermn.datasets.create_empty_dataset(train)
+        test = chainermn.datasets.create_empty_dataset(test)
 
     train_iter = chainer.iterators.SerialIterator(
         train, args.batchsize, shuffle=False)

@@ -28,14 +28,14 @@ class Cycle0out(chainer.Chain):
         return self.f(h)
 
 
-class Cycle0(chainermn.MultiNodeChainGroup):
+class Cycle0(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_prev, rank_next):
         super(Cycle0, self).__init__(comm=comm)
         self.add_link(Cycle0in(size), rank_in=None, rank_out=rank_next)
         self.add_link(Cycle0out(size), rank_in=rank_prev, rank_out=None)
 
 
-class Cycle0rev(chainermn.MultiNodeChainGroup):
+class Cycle0rev(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_prev, rank_next):
         super(Cycle0rev, self).__init__(comm=comm)
         self.add_link(Cycle0out(size), rank_in=rank_prev, rank_out=None)
@@ -51,7 +51,7 @@ class Cycle1inst(chainer.Chain):
         return self.f(h)
 
 
-class Cycle1(chainermn.MultiNodeChainGroup):
+class Cycle1(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_prev, rank_next):
         super(Cycle1, self).__init__(comm=comm)
         self.add_link(Cycle1inst(size), rank_in=rank_prev, rank_out=rank_next)
@@ -66,14 +66,14 @@ class BranchInst(chainer.Chain):
         return self.f(x)
 
 
-class BranchParent1(chainermn.MultiNodeChainGroup):
+class BranchParent1(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_children):
         super(BranchParent1, self).__init__(comm=comm)
         self.add_link(BranchInst(size), rank_in=None, rank_out=rank_children)
         self.add_link(BranchInst(size), rank_in=rank_children, rank_out=None)
 
 
-class BranchChild(chainermn.MultiNodeChainGroup):
+class BranchChild(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_parent):
         super(BranchChild, self).__init__(comm=comm)
         self.add_link(
@@ -130,7 +130,7 @@ class TestMultiNodeChain(unittest.TestCase):
                 err = model()
                 err.backward()
 
-    def test_cross_model(self):
+    def test_crossing_model(self):
         n, d = 100, 10
         X = np.random.randn(n, d).astype(np.float32)
         Y = (np.random.rand(n) * 2).astype(np.int32)

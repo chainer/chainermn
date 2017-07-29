@@ -1,7 +1,7 @@
 import chainer
 
 
-def get_empty_dataset(dataset):
+def create_empty_dataset(dataset):
     """Creates an empty dataset for models with no inputs and outputs.
 
     This function generates an empty dataset, i.e., ``__getitem__()`` only
