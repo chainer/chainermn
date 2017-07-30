@@ -3,6 +3,7 @@ import unittest
 
 import chainer
 import chainer.cuda
+import chainer.functions as F
 import chainer.links as L
 import chainer.testing
 import chainer.testing.attr
@@ -57,27 +58,39 @@ class Cycle1(chainermn.MultiNodeChainList):
         self.add_link(Cycle1inst(size), rank_in=rank_prev, rank_out=rank_next)
 
 
-class BranchInst(chainer.Chain):
+class BranchInstA(chainer.Chain):
     def __init__(self, size):
-        super(BranchInst, self).__init__(
+        super(BranchInstA, self).__init__(
             f=L.Linear(size, size))
 
     def __call__(self, x):
         return self.f(x)
 
 
+class BranchInstB(chainer.Chain):
+    def __init__(self, size):
+        super(BranchInstB, self).__init__(
+            f=L.Linear(size, size))
+
+    def __call__(self, *xs):
+        x = xs[0]
+        for _x in xs[1:]:
+            x = x + _x
+        return self.f(x)
+
+
 class BranchParent1(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_children):
         super(BranchParent1, self).__init__(comm=comm)
-        self.add_link(BranchInst(size), rank_in=None, rank_out=rank_children)
-        self.add_link(BranchInst(size), rank_in=rank_children, rank_out=None)
+        self.add_link(BranchInstA(size), rank_in=None, rank_out=rank_children)
+        self.add_link(BranchInstB(size), rank_in=rank_children, rank_out=None)
 
 
 class BranchChild(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_parent):
         super(BranchChild, self).__init__(comm=comm)
         self.add_link(
-            BranchInst(size),
+            BranchInstA(size),
             rank_in=rank_parent,
             rank_out=rank_parent)
 
