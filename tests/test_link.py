@@ -3,7 +3,6 @@ import unittest
 
 import chainer
 import chainer.cuda
-import chainer.functions as F
 import chainer.links as L
 import chainer.testing
 import chainer.testing.attr
