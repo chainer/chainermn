@@ -145,6 +145,7 @@ class MultiNodeChainList(chainer.ChainList):
                 x = f(*inputs)
             else:
                 # Preprocess: receiving inputs from the other machine.
+                x = []
                 for _rank_in in rank_in:
                     _x = chainermn.functions.recv(
                         self._comm,
@@ -157,14 +158,14 @@ class MultiNodeChainList(chainer.ChainList):
                     if backward_pointer is not None and _x.creator is not None:
                         _x.creator.rank = -1
 
-                    x = _x if x is None else x + _x
+                    x.append(_x)
 
                     # Prevent "double-backwarding," i.e., backprop
                     # the same edge more than twice.
                     backward_pointer = None
 
                 # Actual forward.
-                x = f(x)
+                x = f(*tuple(x))
 
             if rank_out is None:
                 assert y is None, "MultiNodeChainList cannot have more than "\
