@@ -185,8 +185,8 @@ class MultiNodeChainList(chainer.ChainList):
             return y
         elif y is not None:
             # The intermediate graph component returns model output.
-            return chainermn.functions.point_to_point_communication.merge(
-                backward_pointer, y.data)
+            return chainermn.functions.point_to_point_communication.\
+                pseudo_connect(backward_pointer, y.data)
         else:
             # Do not have any model output.
             return backward_pointer

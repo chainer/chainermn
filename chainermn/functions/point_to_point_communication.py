@@ -81,8 +81,8 @@ class Recv(chainer.Function):
         return dummy_var
 
 
-class Merge(chainer.Function):
-    """Merge a variable with backward pointer."""
+class PseudoConnect(chainer.Function):
+    """Connect a variable with backward pointer."""
 
     def __init__(self, actual_value):
         self._actual_value = actual_value
@@ -186,8 +186,8 @@ def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
             device=device)(backward_pointer)
 
 
-def merge(backward_pointer, model_output):
-    """Merge model output with backward_pointer.
+def pseudo_connect(backward_pointer, model_output):
+    """Connect independent connected graph component with actual model output.
 
     In model-parallel framework, models sometimes have many non-connected
     components. When some additional components follow model outputs,
@@ -204,5 +204,5 @@ def merge(backward_pointer, model_output):
         ~chainer.Variable:
             Model outputs combined with backward pointer.
     """
-    chainer.utils.experimental('chainermn.functions.merge')
-    return Merge(model_output)(backward_pointer)
+    chainer.utils.experimental('chainermn.functions.pseudo_connect')
+    return PseudoConnect(model_output)(backward_pointer)
