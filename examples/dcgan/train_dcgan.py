@@ -121,22 +121,24 @@ def main():
         device=device)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
 
-    snapshot_interval = (args.snapshot_interval, 'iteration')
-    display_interval = (args.display_interval, 'iteration')
-    trainer.extend(
-        extensions.snapshot(filename='snapshot_iter_{.updater.iteration}.npz'),
-        trigger=snapshot_interval)
-    trainer.extend(extensions.snapshot_object(
-        gen, 'gen_iter_{.updater.iteration}.npz'), trigger=snapshot_interval)
-    trainer.extend(extensions.snapshot_object(
-        dis, 'dis_iter_{.updater.iteration}.npz'), trigger=snapshot_interval)
-
     # Some display and output extensions are necessary only for one worker.
     # (Otherwise, there would just be repeated outputs.)
     if comm.rank == 0:
+        snapshot_interval = (args.snapshot_interval, 'iteration')
+        display_interval = (args.display_interval, 'iteration')
+        trainer.extend(
+            extensions.snapshot(
+                filename='snapshot_iter_{.updater.iteration}.npz'),
+            trigger=snapshot_interval)
+        trainer.extend(extensions.snapshot_object(
+            gen, 'gen_iter_{.updater.iteration}.npz'),
+            trigger=snapshot_interval)
+        trainer.extend(extensions.snapshot_object(
+            dis, 'dis_iter_{.updater.iteration}.npz'),
+            trigger=snapshot_interval)
         trainer.extend(extensions.LogReport(trigger=display_interval))
         trainer.extend(extensions.PrintReport([
-            'epoch', 'iteration', 'gen/loss', 'dis/loss',
+            'epoch', 'iteration', 'gen/loss', 'dis/loss', 'elapsed_time',
         ]), trigger=display_interval)
         trainer.extend(extensions.ProgressBar(update_interval=10))
         trainer.extend(
