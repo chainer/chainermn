@@ -18,7 +18,7 @@ import chainermn
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Chainer example: DCGAN')
+    parser = argparse.ArgumentParser(description='ChainerMN example: DCGAN')
     parser.add_argument('--batchsize', '-b', type=int, default=50,
                         help='Number of images in each mini-batch')
     parser.add_argument('--communicator', type=str,
