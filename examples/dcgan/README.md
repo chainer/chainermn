@@ -8,7 +8,8 @@ You can use your own dataset by specifying `--dataset` argument to the directory
 The model assumes the resolution of an input image is 32x32.
 If you want to use another image resolution, you need to change the network architecture in net.py.
 
-Below is an example learning result using cifar-10 dataset after 200 epoch.
+Below is an example learning result using cifar-10 dataset after 200 epoch, 
+where the model is trained using 4 GPUs with minibatch size 50 for each process.
 
 ![example result](https://raw.githubusercontent.com/pfnet/chainermn/master/examples/dcgan/example_image.png)
 
