@@ -1,7 +1,7 @@
 # DCGAN
 
 This is an example implementation of DCGAN (https://arxiv.org/abs/1511.06434) 
-trained with multi-GPU using `chainermn`.
+trained on multi-GPU using `chainermn`.
 
 This code uses Cifar-10 dataset by default.
 You can use your own dataset by specifying `--dataset` argument to the directory consisting of image files for training.
@@ -10,7 +10,7 @@ If you want to use another image resolution, you need to change the network arch
 
 Below is an example learning result using cifar-10 dataset after 200 epoch.
 
-![example result](https://raw.githubusercontent.com/pfnet/chainer/master/examples/dcgan/example_image.png)
+![example result](https://raw.githubusercontent.com/pfnet/chainermn/master/examples/dcgan/example_image.png)
 
 ## How to run the code
 
