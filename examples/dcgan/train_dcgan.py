@@ -80,17 +80,17 @@ def main():
         dis.to_gpu()
 
     # Setup an optimizer
-    def make_optimizer(model, alpha=0.0002, beta1=0.5):
-        optimizer = chainer.optimizers.Adam(alpha=alpha, beta1=beta1)
+    def make_optimizer(model, comm, alpha=0.0002, beta1=0.5):
+        # Create a multi node optimizer from a standard Chainer optimizer.
+        optimizer = chainermn.create_multi_node_optimizer(
+            chainer.optimizers.Adam(alpha=alpha, beta1=beta1), comm)
         optimizer.setup(model)
         optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001), 'hook_dec')
         return optimizer
 
-    # Create a multi node optimizer from a standard Chainer optimizer.
-    opt_gen = chainermn.create_multi_node_optimizer(
-        make_optimizer(gen), comm)
-    opt_dis = chainermn.create_multi_node_optimizer(
-        make_optimizer(dis), comm)
+    num_process = MPI.COMM_WORLD.Get_size()
+    opt_gen = make_optimizer(gen, comm, alpha=0.0002 * num_process)
+    opt_dis = make_optimizer(dis, comm, alpha=0.0002 * num_process)
 
     # Split and distribute the dataset. Only worker 0 loads the whole dataset.
     # Datasets of worker 0 are evenly split and distributed to all workers.
