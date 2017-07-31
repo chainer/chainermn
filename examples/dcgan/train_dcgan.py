@@ -88,9 +88,8 @@ def main():
         optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001), 'hook_dec')
         return optimizer
 
-    num_process = MPI.COMM_WORLD.Get_size()
-    opt_gen = make_optimizer(gen, comm, alpha=0.0002 * num_process)
-    opt_dis = make_optimizer(dis, comm, alpha=0.0002 * num_process)
+    opt_gen = make_optimizer(gen, comm)
+    opt_dis = make_optimizer(dis, comm)
 
     # Split and distribute the dataset. Only worker 0 loads the whole dataset.
     # Datasets of worker 0 are evenly split and distributed to all workers.
