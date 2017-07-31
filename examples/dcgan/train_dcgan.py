@@ -7,21 +7,26 @@ import os
 import chainer
 from chainer import training
 from chainer.training import extensions
+from mpi4py import MPI
 
 from net import Discriminator
 from net import Generator
 from updater import DCGANUpdater
 from visualize import out_generated_image
 
+import chainermn
+
 
 def main():
     parser = argparse.ArgumentParser(description='Chainer example: DCGAN')
     parser.add_argument('--batchsize', '-b', type=int, default=50,
                         help='Number of images in each mini-batch')
+    parser.add_argument('--communicator', type=str,
+                        default='hierarchical', help='Type of communicator')
     parser.add_argument('--epoch', '-e', type=int, default=1000,
                         help='Number of sweeps over the dataset to train')
-    parser.add_argument('--gpu', '-g', type=int, default=-1,
-                        help='GPU ID (negative value indicates CPU)')
+    parser.add_argument('--gpu', '-g', action='store_true',
+                        help='Use GPU')
     parser.add_argument('--dataset', '-i', default='',
                         help='Directory of image files.  Default is cifar-10.')
     parser.add_argument('--out', '-o', default='result',
@@ -38,19 +43,39 @@ def main():
                         help='Interval of displaying log to console')
     args = parser.parse_args()
 
-    print('GPU: {}'.format(args.gpu))
-    print('# Minibatch-size: {}'.format(args.batchsize))
-    print('# n_hidden: {}'.format(args.n_hidden))
-    print('# epoch: {}'.format(args.epoch))
-    print('')
+    # Prepare ChainerMN communicator.
+
+    if args.gpu:
+        if args.communicator == 'naive':
+            print("Error: 'naive' communicator does not support GPU.\n")
+            exit(-1)
+        comm = chainermn.create_communicator(args.communicator)
+        device = comm.intra_rank
+    else:
+        if args.communicator != 'naive':
+            print('Warning: using naive communicator '
+                  'because only naive supports CPU-only execution')
+        comm = chainermn.create_communicator('naive')
+        device = -1
+
+    if comm.mpi_comm.rank == 0:
+        print('==========================================')
+        print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
+        if args.gpu:
+            print('Using GPUs')
+        print('Using {} communicator'.format(args.communicator))
+        print('Num hidden unit: {}'.format(args.n_hidden))
+        print('Num Minibatch-size: {}'.format(args.batchsize))
+        print('Num epoch: {}'.format(args.epoch))
+        print('==========================================')
 
     # Set up a neural network to train
     gen = Generator(n_hidden=args.n_hidden)
     dis = Discriminator()
 
-    if args.gpu >= 0:
+    if device >= 0:
         # Make a specified GPU current
-        chainer.cuda.get_device_from_id(args.gpu).use()
+        chainer.cuda.get_device_from_id(device).use()
         gen.to_gpu()  # Copy the model to the GPU
         dis.to_gpu()
 
@@ -60,19 +85,30 @@ def main():
         optimizer.setup(model)
         optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001), 'hook_dec')
         return optimizer
-    opt_gen = make_optimizer(gen)
-    opt_dis = make_optimizer(dis)
 
-    if args.dataset == '':
-        # Load the CIFAR10 dataset if args.dataset is not specified
-        train, _ = chainer.datasets.get_cifar10(withlabel=False, scale=255.)
+    # Create a multi node optimizer from a standard Chainer optimizer.
+    opt_gen = chainermn.create_multi_node_optimizer(
+        make_optimizer(gen), comm)
+    opt_dis = chainermn.create_multi_node_optimizer(
+        make_optimizer(dis), comm)
+
+    # Split and distribute the dataset. Only worker 0 loads the whole dataset.
+    # Datasets of worker 0 are evenly split and distributed to all workers.
+    if comm.rank == 0:
+        if args.dataset == '':
+            # Load the CIFAR10 dataset if args.dataset is not specified
+            train, _ = chainer.datasets.get_cifar10(withlabel=False, scale=255.)
+        else:
+            all_files = os.listdir(args.dataset)
+            image_files = [f for f in all_files if ('png' in f or 'jpg' in f)]
+            print('{} contains {} image files'
+                  .format(args.dataset, len(image_files)))
+            train = chainer.datasets\
+                .ImageDataset(paths=image_files, root=args.dataset)
     else:
-        all_files = os.listdir(args.dataset)
-        image_files = [f for f in all_files if ('png' in f or 'jpg' in f)]
-        print('{} contains {} image files'
-              .format(args.dataset, len(image_files)))
-        train = chainer.datasets\
-            .ImageDataset(paths=image_files, root=args.dataset)
+        train = None
+
+    train = chainermn.scatter_dataset(train, comm)
 
     train_iter = chainer.iterators.SerialIterator(train, args.batchsize)
 
@@ -82,7 +118,7 @@ def main():
         iterator=train_iter,
         optimizer={
             'gen': opt_gen, 'dis': opt_dis},
-        device=args.gpu)
+        device=device)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
 
     snapshot_interval = (args.snapshot_interval, 'iteration')
@@ -94,11 +130,16 @@ def main():
         gen, 'gen_iter_{.updater.iteration}.npz'), trigger=snapshot_interval)
     trainer.extend(extensions.snapshot_object(
         dis, 'dis_iter_{.updater.iteration}.npz'), trigger=snapshot_interval)
-    trainer.extend(extensions.LogReport(trigger=display_interval))
-    trainer.extend(extensions.PrintReport([
-        'epoch', 'iteration', 'gen/loss', 'dis/loss',
-    ]), trigger=display_interval)
-    trainer.extend(extensions.ProgressBar(update_interval=10))
+
+    # Some display and output extensions are necessary only for one worker.
+    # (Otherwise, there would just be repeated outputs.)
+    if comm.rank == 0:
+        trainer.extend(extensions.LogReport(trigger=display_interval))
+        trainer.extend(extensions.PrintReport([
+            'epoch', 'iteration', 'gen/loss', 'dis/loss',
+        ]), trigger=display_interval)
+        trainer.extend(extensions.ProgressBar(update_interval=10))
+
     trainer.extend(
         out_generated_image(
             gen, dis,
