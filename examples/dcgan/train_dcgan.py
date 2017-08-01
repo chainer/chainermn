@@ -96,7 +96,8 @@ def main():
     if comm.rank == 0:
         if args.dataset == '':
             # Load the CIFAR10 dataset if args.dataset is not specified
-            train, _ = chainer.datasets.get_cifar10(withlabel=False, scale=255.)
+            train, _ = chainer.datasets.get_cifar10(withlabel=False,
+                                                    scale=255.)
         else:
             all_files = os.listdir(args.dataset)
             image_files = [f for f in all_files if ('png' in f or 'jpg' in f)]
