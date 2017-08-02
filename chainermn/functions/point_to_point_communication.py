@@ -14,10 +14,10 @@ class Send(chainer.Function):
 
     def forward(self, inputs):
         xp = cuda.get_array_module(*inputs)
-        # Note: inputs[1] might contain backward_pointer.
+        # Note: inputs[1] might contain delegate_variable.
         x = inputs[0]
         self.comm.send(x, self.peer_rank, self.peer_tag)
-        # Return an empty variable, which serves as "backward_pointer."
+        # Return an empty variable, which serves as "delegate_variable."
         return xp.array([], dtype=xp.float32),
 
     def backward(self, inputs, grad_outputs):
@@ -25,10 +25,10 @@ class Send(chainer.Function):
         with cuda.get_device_from_array(*inputs):
             gy = self.comm.recv(self.peer_rank, self.peer_tag)
             if len(inputs) > 1:
-                # Dummy grad for backward_pointer.
+                # Dummy grad for delegate_variable.
                 # This grad will not be used, only for silencing type checker.
-                grad_backward_pointer = inputs[1]
-                return xp.array(gy), grad_backward_pointer
+                grad_delegate_variable = inputs[1]
+                return xp.array(gy), grad_delegate_variable
             else:
                 return xp.array(gy),
 
@@ -82,24 +82,24 @@ class Recv(chainer.Function):
 
 
 class PseudoConnect(chainer.Function):
-    """Connect a variable with backward pointer."""
+    """Connect a variable with delegating variable."""
 
     def forward(self, inputs):
-        backward_pointer = inputs[0]
+        delegate_variable = inputs[0]
         actual_variables = inputs[1:]
         return actual_variables
 
     def backward(self, inputs, grad_outputs):
-        backward_pointer = inputs[0]
+        delegate_variable = inputs[0]
         actual_variables = inputs[1:]
         xp = cuda.get_array_module(*inputs)
 
-        # backward_pointer do not need backward gradients, instead sending
+        # delegate_variable do not need backward gradients, instead sending
         # back dummy grads in order to take consistency of shapes of grads.
-        grad_backward_pointer = xp.zeros_like(backward_pointer)
+        grad_delegate_variable = xp.zeros_like(delegate_variable)
 
         # grad_outputs corresponds to grads of actual_variables.
-        return tuple([grad_backward_pointer] + list(grad_outputs))
+        return tuple([grad_delegate_variable] + list(grad_outputs))
 
 def send(x, communicator, rank, tag=0):
     """Send elements to target process.
@@ -119,8 +119,8 @@ def send(x, communicator, rank, tag=0):
     Returns:
         ~chainer.Variable:
             A dummy variable with no actual data, only holding the
-            computational graph. We call this backward_pointer.
-            If ``backward()`` is invoked by backward_pointer,
+            computational graph. We call this ``delegate_variable``.
+            If ``backward()`` is invoked by delegate_variable,
             it will try to receive gradients from the target process.
 
     """
@@ -128,7 +128,7 @@ def send(x, communicator, rank, tag=0):
     return Send(communicator, peer_rank=rank, peer_tag=tag)(x)
 
 
-def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
+def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
     """Receive elements from target process.
 
     This function returns data received from target process. If ``backward()``
@@ -136,7 +136,7 @@ def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
 
     .. note::
         If you define non-connected computational graph on one machine,
-        you have to use ``backward_pointer`` to specify the output of
+        you have to use ``delegate_variable`` to specify the output of
         previous computational graph component.
         Otherwise ``backward()`` does not work well.
 
@@ -144,7 +144,7 @@ def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
         communicator (chainer.communicators.CommunicatorBase):
             ChainerMN communicator.
         rank (int): Target process specifier.
-        backward_pointer (chainer.Variable):
+        delegate_variable (chainer.Variable):
             Pointer to the other non-connected component.
         tag (int): Optional message ID (MPI feature).
         device (int): Target device specifier.
@@ -156,7 +156,7 @@ def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
 
     """
     chainer.utils.experimental('chainermn.functions.recv')
-    if backward_pointer is None:
+    if delegate_variable is None:
         return Recv(
             communicator,
             peer_rank=rank,
@@ -167,10 +167,10 @@ def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
             communicator,
             peer_rank=rank,
             peer_tag=tag,
-            device=device)(backward_pointer)
+            device=device)(delegate_variable)
 
 
-def pseudo_connect(backward_pointer, *actual_variables):
+def pseudo_connect(delegate_variable, *actual_variables):
     """Connect independent connected graph component.
 
     In model-parallel framework, models sometimes have many non-connected
@@ -179,14 +179,14 @@ def pseudo_connect(backward_pointer, *actual_variables):
     Otherwise backprop does not work well, got stuck into dead lock.
 
     Args:
-        backward_pointer (chainer.Variable):
+        delegate_variable (chainer.Variable):
             Pointer to the previous non-connected graph component.
         actual_variables (tuple of chainer.Variable):
-            Actual values which ``backward_pointer`` imitate.
+            Actual values which ``delegate_variable`` imitate.
 
     Returns:
         ~chainer.Variable:
-            A variable with the given values combined with backward pointer.
+            A variable with the given values combined with delegating variable.
     """
     chainer.utils.experimental('chainermn.functions.pseudo_connect')
-    return PseudoConnect()(backward_pointer, *actual_variables)
+    return PseudoConnect()(delegate_variable, *actual_variables)
