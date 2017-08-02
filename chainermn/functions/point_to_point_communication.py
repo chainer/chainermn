@@ -85,13 +85,13 @@ class PseudoConnect(chainer.Function):
     """Connect a variable with delegating variable."""
 
     def forward(self, inputs):
-        delegate_variable = inputs[0]
+        # delegate_variable = inputs[0]
         actual_variables = inputs[1:]
         return actual_variables
 
     def backward(self, inputs, grad_outputs):
         delegate_variable = inputs[0]
-        actual_variables = inputs[1:]
+        # actual_variables = inputs[1:]
         xp = cuda.get_array_module(*inputs)
 
         # delegate_variable do not need backward gradients, instead sending
@@ -100,6 +100,7 @@ class PseudoConnect(chainer.Function):
 
         # grad_outputs corresponds to grads of actual_variables.
         return tuple([grad_delegate_variable] + list(grad_outputs))
+
 
 def send(x, communicator, rank, tag=0):
     """Send elements to target process.
