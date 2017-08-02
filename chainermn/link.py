@@ -194,7 +194,7 @@ class MultiNodeChainList(chainer.ChainList):
                         # we must guarantee backwards of each send to be
                         # called in the reversed order.
                         x = chainermn.functions.point_to_point_communication\
-                            .pseudo_connect(backward_pointer, x.data)
+                            .pseudo_connect(backward_pointer, x)
                         backward_pointer = chainermn.functions.send(
                             x, self._comm,
                             rank=_rank_out)
@@ -206,7 +206,7 @@ class MultiNodeChainList(chainer.ChainList):
         elif y is not None:
             # The intermediate graph component returns model output.
             return chainermn.functions.point_to_point_communication\
-                .pseudo_connect(backward_pointer, y.data)
+                .pseudo_connect(backward_pointer, y)
         else:
             # Do not have any model output.
             return backward_pointer

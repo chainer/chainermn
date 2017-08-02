@@ -84,17 +84,22 @@ class Recv(chainer.Function):
 class PseudoConnect(chainer.Function):
     """Connect a variable with backward pointer."""
 
-    def __init__(self, actual_values):
-        self._actual_values = actual_values
-
     def forward(self, inputs):
-        return self._actual_values
+        backward_pointer = inputs[0]
+        actual_variables = inputs[1:]
+        return actual_variables
 
     def backward(self, inputs, grad_outputs):
-        # Inputs of PseudoConnect (i.e., backward_pointer) do not need
-        # backward gradients, instead taking consistency of shapes of grads.
-        return inputs
+        backward_pointer = inputs[0]
+        actual_variables = inputs[1:]
+        xp = cuda.get_array_module(*inputs)
 
+        # backward_pointer do not need backward gradients, instead sending
+        # back dummy grads in order to take consistency of shapes of grads.
+        grad_backward_pointer = xp.zeros_like(backward_pointer)
+
+        # grad_outputs corresponds to grads of actual_variables.
+        return tuple([grad_backward_pointer] + list(grad_outputs))
 
 def send(x, communicator, rank, tag=0):
     """Send elements to target process.
@@ -165,7 +170,7 @@ def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
             device=device)(backward_pointer)
 
 
-def pseudo_connect(backward_pointer, *actual_values):
+def pseudo_connect(backward_pointer, *actual_variables):
     """Connect independent connected graph component.
 
     In model-parallel framework, models sometimes have many non-connected
@@ -176,7 +181,7 @@ def pseudo_connect(backward_pointer, *actual_values):
     Args:
         backward_pointer (chainer.Variable):
             Pointer to the previous non-connected graph component.
-        actual_values (tuple of numpy.ndarray):
+        actual_variables (tuple of chainer.Variable):
             Actual values which ``backward_pointer`` imitate.
 
     Returns:
@@ -184,4 +189,4 @@ def pseudo_connect(backward_pointer, *actual_values):
             A variable with the given values combined with backward pointer.
     """
     chainer.utils.experimental('chainermn.functions.pseudo_connect')
-    return PseudoConnect(actual_values)(backward_pointer)
+    return PseudoConnect()(backward_pointer, *actual_variables)
