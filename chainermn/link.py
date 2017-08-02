@@ -138,14 +138,24 @@ class MultiNodeChainList(chainer.ChainList):
         y = None
         backward_pointer = None
 
-        for f, (rank_in, rank_out) in zip(self._children, self._rank_inouts):
+        for i_comp, (f, (rank_in, rank_out)) in \
+                enumerate(zip(self._children, self._rank_inouts)):
             x = None
 
-            if rank_in is None:
-                x = f(*inputs)
-            else:
-                # Preprocess: receiving inputs from the other machine.
-                x = []
+            if rank_in is None:  # Use inputs.
+                if i_comp == 0:
+                    x = f(*inputs)
+                else:
+                    # If the graph component is not the first one,
+                    # backprop to the previous graph component must be
+                    # guaranteed.
+                    x = chainermn.functions.point_to_point_communication\
+                        .pseudo_connect(backward_pointer, *inputs)
+                    x = f(x)
+
+            else:  # Receive inputs from the other machines.
+                # Preprocess: receiving inputs from the other machines.
+                xs = []
                 for _rank_in in rank_in:
                     _x = chainermn.functions.recv(
                         self._comm,
@@ -158,26 +168,36 @@ class MultiNodeChainList(chainer.ChainList):
                     if backward_pointer is not None and _x.creator is not None:
                         _x.creator.rank = -1
 
-                    x.append(_x)
+                    xs.append(_x)
 
                     # Prevent "double-backwarding," i.e., backprop
                     # the same edge more than twice.
                     backward_pointer = None
 
                 # Actual forward.
-                x = f(*tuple(x))
+                x = f(*tuple(xs))
 
-            if rank_out is None:
+            if rank_out is None:  # Return outputs.
                 assert y is None, "MultiNodeChainList cannot have more than "\
                     "two computational graph component whose rank_out is None"
                 y = x  # model output
                 backward_pointer = y
-            else:
-                for _rank_out in rank_out:
-                    backward_pointer = chainermn.functions.send(
-                        x, self._comm,
-                        rank=_rank_out,
-                        backward_pointer=backward_pointer)
+
+            else:  # Send outputs to the other machines.
+                for i_comp, _rank_out in enumerate(rank_out):
+                    if i_comp == 0:
+                        backward_pointer = chainermn.functions.send(
+                            x, self._comm,
+                            rank=_rank_out)
+                    else:
+                        # If the model has multiple targets for send,
+                        # we must guarantee backwards of each send to be
+                        # called in the reversed order.
+                        x = chainermn.functions.point_to_point_communication\
+                            .pseudo_connect(backward_pointer, x.data)
+                        backward_pointer = chainermn.functions.send(
+                            x, self._comm,
+                            rank=_rank_out)
 
         # Return.
         if y is backward_pointer:
@@ -185,8 +205,8 @@ class MultiNodeChainList(chainer.ChainList):
             return y
         elif y is not None:
             # The intermediate graph component returns model output.
-            return chainermn.functions.point_to_point_communication.\
-                pseudo_connect(backward_pointer, y.data)
+            return chainermn.functions.point_to_point_communication\
+                .pseudo_connect(backward_pointer, y.data)
         else:
             # Do not have any model output.
             return backward_pointer

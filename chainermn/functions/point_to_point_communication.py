@@ -84,25 +84,19 @@ class Recv(chainer.Function):
 class PseudoConnect(chainer.Function):
     """Connect a variable with backward pointer."""
 
-    def __init__(self, actual_value):
-        self._actual_value = actual_value
+    def __init__(self, actual_values):
+        self._actual_values = actual_values
 
     def forward(self, inputs):
-        return self._actual_value,
+        return self._actual_values
 
     def backward(self, inputs, grad_outputs):
-        x, = inputs
-        if x.shape == (0, ):
-            # In case of actual_value != backward_pointer:
-            # This dumy grad is needed in order to silencing type checker.
-            dummy_grad = x
-            return dummy_grad,
-        else:
-            # In case of actual_value == backward_pointer:
-            return grad_outputs
+        # Inputs of PseudoConnect (i.e., backward_pointer) do not need
+        # backward gradients, instead taking consistency of shapes of grads.
+        return inputs
 
 
-def send(x, communicator, rank, backward_pointer=None, tag=0):
+def send(x, communicator, rank, tag=0):
     """Send elements to target process.
 
     This function returns a dummy variable only holding the computational
@@ -110,19 +104,11 @@ def send(x, communicator, rank, backward_pointer=None, tag=0):
     try to receive gradients from the target process and send them back
     to the parent nodes.
 
-    .. note::
-        If you define non-connected computational graph on one machine,
-        you have to use ``backward_pointer`` to specify the output of
-        previous computational graph component.
-        Otherwise ``backward()`` does not work well.
-
     Args:
         x (Variable): Variable holding a matrix which you would like to send.
         communicator (chainer.communicators.CommunicatorBase):
             ChainerMN communicator.
         rank (int): Target process specifier.
-        backward_pointer (chainer.Variable):
-            Pointer to the other non-connected component.
         tag (int): Optional message ID (MPI feature).
 
     Returns:
@@ -134,14 +120,7 @@ def send(x, communicator, rank, backward_pointer=None, tag=0):
 
     """
     chainer.utils.experimental('chainermn.functions.send')
-
-    if backward_pointer is None:
-        return Send(communicator, peer_rank=rank, peer_tag=tag)(x)
-    else:
-        return Send(
-            communicator,
-            peer_rank=rank,
-            peer_tag=tag)(x, backward_pointer)
+    return Send(communicator, peer_rank=rank, peer_tag=tag)(x)
 
 
 def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
@@ -186,8 +165,8 @@ def recv(communicator, rank, backward_pointer=None, tag=0, device=-1):
             device=device)(backward_pointer)
 
 
-def pseudo_connect(backward_pointer, model_output):
-    """Connect independent connected graph component with actual model output.
+def pseudo_connect(backward_pointer, *actual_values):
+    """Connect independent connected graph component.
 
     In model-parallel framework, models sometimes have many non-connected
     components. When some additional components follow model outputs,
@@ -196,13 +175,13 @@ def pseudo_connect(backward_pointer, model_output):
 
     Args:
         backward_pointer (chainer.Variable):
-            Pointer to the other non-connected component.
-        model_output (numpy.ndarray):
-            Actual value of the model outputs.
+            Pointer to the previous non-connected graph component.
+        actual_values (tuple of numpy.ndarray):
+            Actual values which ``backward_pointer`` imitate.
 
     Returns:
         ~chainer.Variable:
-            Model outputs combined with backward pointer.
+            A variable with the given values combined with backward pointer.
     """
     chainer.utils.experimental('chainermn.functions.pseudo_connect')
-    return PseudoConnect(model_output)(backward_pointer)
+    return PseudoConnect(actual_values)(backward_pointer)
