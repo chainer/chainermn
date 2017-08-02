@@ -155,10 +155,10 @@ class TestMultiNodeChain(unittest.TestCase):
         Y = (np.random.rand(n) * 2).astype(np.int32)
 
         if self.communicator.rank == 0:
-            model = L.Classifier(Cycle0(
+            model = L.Classifier(Cross0(
                 d, self.communicator, self.rank_next, self.rank_prev))
         else:
-            model = L.Classifier(Cycle0rev(
+            model = L.Classifier(Cross1(
                 d, self.communicator, self.rank_next, self.rank_prev))
 
         if self.gpu:
