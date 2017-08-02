@@ -38,7 +38,7 @@ Please refer to the [installation guide](https://chainermn.readthedocs.io/en/lat
 You can invoke MNIST example with four workers by the following command:
 
 ```
-mpiexec -n 4 python examples/mnist/train_mnist_data_parallel.py
+mpiexec -n 4 python examples/mnist/train_mnist.py
 ```
 
 * **[Chainer Tutorial](http://docs.chainer.org/en/latest/tutorial/index.html)** --- If you are new to Chainer, we recommend to start from this.
