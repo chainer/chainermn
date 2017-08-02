@@ -57,18 +57,18 @@ class Cycle1(chainermn.MultiNodeChainList):
         self.add_link(Cycle1inst(size), rank_in=rank_prev, rank_out=rank_next)
 
 
-class BranchInstA(chainer.Chain):
+class BranchSubA(chainer.Chain):
     def __init__(self, size):
-        super(BranchInstA, self).__init__(
+        super(BranchSubA, self).__init__(
             f=L.Linear(size, size))
 
     def __call__(self, x):
         return self.f(x)
 
 
-class BranchInstB(chainer.Chain):
+class BranchSubB(chainer.Chain):
     def __init__(self, size):
-        super(BranchInstB, self).__init__(
+        super(BranchSubB, self).__init__(
             f=L.Linear(size, size))
 
     def __call__(self, *xs):
@@ -81,15 +81,15 @@ class BranchInstB(chainer.Chain):
 class BranchParent1(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_children):
         super(BranchParent1, self).__init__(comm=comm)
-        self.add_link(BranchInstA(size), rank_in=None, rank_out=rank_children)
-        self.add_link(BranchInstB(size), rank_in=rank_children, rank_out=None)
+        self.add_link(BranchSubA(size), rank_in=None, rank_out=rank_children)
+        self.add_link(BranchSubB(size), rank_in=rank_children, rank_out=None)
 
 
 class BranchChild(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_parent):
         super(BranchChild, self).__init__(comm=comm)
         self.add_link(
-            BranchInstA(size),
+            BranchSubA(size),
             rank_in=rank_parent,
             rank_out=rank_parent)
 
