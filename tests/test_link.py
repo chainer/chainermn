@@ -10,18 +10,18 @@ import chainermn
 import numpy as np
 
 
-class Cycle0in(chainer.Chain):
+class Cycle0SubA(chainer.Chain):
     def __init__(self, size):
-        super(Cycle0in, self).__init__(
+        super(Cycle0SubA, self).__init__(
             f=L.Linear(size, size))
 
     def __call__(self, x):
         return self.f(x)
 
 
-class Cycle0out(chainer.Chain):
+class Cycle0SubB(chainer.Chain):
     def __init__(self, size):
-        super(Cycle0out, self).__init__(
+        super(Cycle0SubB, self).__init__(
             f=L.Linear(size, 2))
 
     def __call__(self, h):
@@ -31,20 +31,13 @@ class Cycle0out(chainer.Chain):
 class Cycle0(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_prev, rank_next):
         super(Cycle0, self).__init__(comm=comm)
-        self.add_link(Cycle0in(size), rank_in=None, rank_out=rank_next)
-        self.add_link(Cycle0out(size), rank_in=rank_prev, rank_out=None)
+        self.add_link(Cycle0SubA(size), rank_in=None, rank_out=rank_next)
+        self.add_link(Cycle0SubB(size), rank_in=rank_prev, rank_out=None)
 
 
-class Cycle0rev(chainermn.MultiNodeChainList):
-    def __init__(self, size, comm, rank_prev, rank_next):
-        super(Cycle0rev, self).__init__(comm=comm)
-        self.add_link(Cycle0out(size), rank_in=rank_prev, rank_out=None)
-        self.add_link(Cycle0in(size), rank_in=None, rank_out=rank_next)
-
-
-class Cycle1inst(chainer.Chain):
+class Cycle1Sub(chainer.Chain):
     def __init__(self, size):
-        super(Cycle1inst, self).__init__(
+        super(Cycle1Sub, self).__init__(
             f=L.Linear(size, size))
 
     def __call__(self, h):
@@ -54,7 +47,21 @@ class Cycle1inst(chainer.Chain):
 class Cycle1(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_prev, rank_next):
         super(Cycle1, self).__init__(comm=comm)
-        self.add_link(Cycle1inst(size), rank_in=rank_prev, rank_out=rank_next)
+        self.add_link(Cycle1Sub(size), rank_in=rank_prev, rank_out=rank_next)
+
+
+class Cross0(chainermn.MultiNodeChainList):
+    def __init__(self, size, comm, rank_prev, rank_next):
+        super(Cross0, self).__init__(comm=comm)
+        self.add_link(Cycle0SubA(size), rank_in=None, rank_out=rank_next)
+        self.add_link(Cycle0SubB(size), rank_in=rank_prev, rank_out=None)
+
+
+class Cross1(chainermn.MultiNodeChainList):
+    def __init__(self, size, comm, rank_prev, rank_next):
+        super(Cross1, self).__init__(comm=comm)
+        self.add_link(Cycle0SubB(size), rank_in=rank_prev, rank_out=None)
+        self.add_link(Cycle0SubA(size), rank_in=None, rank_out=rank_next)
 
 
 class BranchSubA(chainer.Chain):
