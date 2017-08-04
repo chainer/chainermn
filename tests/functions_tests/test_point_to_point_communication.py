@@ -1,12 +1,14 @@
+import copy
 import nose.plugins.skip
 import unittest
 
 import chainer
 import chainer.testing
 import chainer.testing.attr
+import numpy
+
 import chainermn
 import chainermn.functions
-import numpy
 
 
 @chainer.testing.parameterize(
@@ -91,6 +93,34 @@ class TestPointToPointCommunication(unittest.TestCase):
             y_expect = x_
 
             chainer.testing.assert_allclose(y.data, y_expect.data)
+
+        else:
+            # Intermediate processes.
+            x = chainermn.functions.recv(
+                self.communicator, self.rank_recv, device=self.device)
+            y = self.f(self.model(x))
+            err = chainermn.functions.send(
+                y, self.communicator, self.rank_send)
+            err.backward()
+
+    def test_retain(self):
+        if self.communicator.rank == 0:
+            # Starting process.
+            t = copy.copy(self.x)
+            y = self.f(self.model(self.x))
+            dlg = chainermn.functions.send(
+                y, self.communicator, self.rank_send)
+
+            # Unless delegate_variable is used, backprop would stop here.
+            x = chainermn.functions.recv(
+                self.communicator, self.rank_recv,
+                delegate_variable=dlg,
+                device=self.device)
+            err = self.evaluation(x, t)
+            err.backward()
+
+            # self.x.grad is None if backprop stops in the middle.
+            self.assertIsNotNone(self.x.grad)
 
         else:
             # Intermediate processes.

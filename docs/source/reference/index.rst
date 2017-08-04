@@ -10,6 +10,13 @@ Communicators
 .. autofunction:: create_communicator
 
 
+Links
+~~~~~
+
+.. autoclass:: MultiNodeChainList
+    :members: add_link
+
+
 Optimizers and Evaluators
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -17,14 +24,16 @@ Optimizers and Evaluators
 .. autofunction:: create_multi_node_evaluator
 
 
-Point-to-Point Communications
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Multi Node Utility Functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autofunction:: chainermn.functions.send
 .. autofunction:: chainermn.functions.recv
+.. autofunction:: chainermn.functions.pseudo_connect
 
 
 Dataset Utilities
 ~~~~~~~~~~~~~~~~~
 
 .. autofunction:: scatter_dataset
+.. autofunction:: chainermn.datasets.create_empty_dataset
