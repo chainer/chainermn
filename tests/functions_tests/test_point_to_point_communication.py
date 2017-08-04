@@ -108,13 +108,13 @@ class TestPointToPointCommunication(unittest.TestCase):
             # Starting process.
             t = copy.copy(self.x)
             y = self.f(self.model(self.x))
-            ptr = chainermn.functions.send(
+            dlg = chainermn.functions.send(
                 y, self.communicator, self.rank_send)
 
-            # Unless recv_retain, backprop would stop here.
+            # Unless delegate_variable is used, backprop would stop here.
             x = chainermn.functions.recv(
                 self.communicator, self.rank_recv,
-                delegate_variable=ptr,
+                delegate_variable=dlg,
                 device=self.device)
             err = self.evaluation(x, t)
             err.backward()
