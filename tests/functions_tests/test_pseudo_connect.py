@@ -7,7 +7,8 @@ from chainer import cuda
 from chainer import gradient_check
 from chainer import testing
 from chainer.testing import attr
-import chainermn.functions.pseudo_connect
+import chainermn.functions
+from chainermn.functions.pseudo_connect import PseudoConnect
 
 
 @testing.parameterize(*testing.product({
@@ -31,8 +32,7 @@ class TestPseudoConnect(unittest.TestCase):
         delegate_variable = chainer.Variable(delegate_data)
         x = tuple([chainer.Variable(data) for data in x_data])
 
-        y = chainermn.functions.pseudo_connect\
-            .pseudo_connect(delegate_variable, *x)
+        y = chainermn.functions.pseudo_connect(delegate_variable, *x)
         if isinstance(y, tuple):
             for _y in y:
                 self.assertEqual(_y.data.dtype, self.dtype)
@@ -55,7 +55,7 @@ class TestPseudoConnect(unittest.TestCase):
 
     def check_backward(self, delegate_data, x_data, y_grad):
         gradient_check.check_backward(
-            chainermn.functions.pseudo_connect.PseudoConnect(),
+            PseudoConnect(),
             (delegate_data, ) + x_data, y_grad,
             dtype=numpy.float64)
 

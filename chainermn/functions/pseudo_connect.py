@@ -42,6 +42,5 @@ def pseudo_connect(delegate_variable, *actual_variables):
         ~chainer.Variable:
             A variable with the given values combined with delegating variable.
     """
-    chainer.utils\
-        .experimental('chainermn.functions.pseudo_connect.pseudo_connect')
+    chainer.utils.experimental('chainermn.functions.pseudo_connect')
     return PseudoConnect()(delegate_variable, *actual_variables)
