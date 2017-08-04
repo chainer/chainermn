@@ -1,6 +1,3 @@
-import chainer
-
-
 def create_empty_dataset(dataset):
     """Creates an empty dataset for models with no inputs and outputs.
 

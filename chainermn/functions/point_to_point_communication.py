@@ -99,9 +99,8 @@ def send(x, communicator, rank, tag=0):
     Returns:
         ~chainer.Variable:
             A dummy variable with no actual data, only holding the
-            computational graph. We call this ``delegate_variable``.
-            If ``backward()`` is invoked by delegate_variable,
-            it will try to receive gradients from the target process.
+            computational graph. Please refer
+            ``chainermn.functions.pseudo_connect`` for detail.
 
     """
     chainer.utils.experimental('chainermn.functions.send')
@@ -119,6 +118,7 @@ def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
         you have to use ``delegate_variable`` to specify the output of
         previous computational graph component.
         Otherwise ``backward()`` does not work well.
+        Please refer ``chainermn.functions.pseudo_connect`` for detail.
 
     Args:
         communicator (chainer.communicators.CommunicatorBase):
