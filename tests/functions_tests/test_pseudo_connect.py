@@ -1,4 +1,3 @@
-import copy
 import unittest
 
 import numpy
@@ -16,7 +15,7 @@ import chainermn.functions.pseudo_connect
     'shape_delegate': [(3, 2), ()],
     'dtype': [numpy.float16, numpy.float32, numpy.float64],
 }))
-class TestClip(unittest.TestCase):
+class TestPseudoConnect(unittest.TestCase):
 
     def setUp(self):
         self.delegate = numpy.random.uniform(-1, 1, self.shape_delegate)\
@@ -37,8 +36,7 @@ class TestClip(unittest.TestCase):
         if isinstance(y, tuple):
             for _y in y:
                 self.assertEqual(_y.data.dtype, self.dtype)
-            y_expect = copy.copy(self.x)
-            for _y_expect, _y in zip(y_expect, y):
+            for _y_expect, _y in zip(self.x, y):
                 testing.assert_allclose(_y_expect.data, _y.data)
 
         else:
