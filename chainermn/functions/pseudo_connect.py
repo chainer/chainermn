@@ -51,9 +51,9 @@ def pseudo_connect(delegate_variable, *actual_variables):
                 def __init__(self, comm):
                     super(NonConnectedGraph, self).__init__(comm)
                     self.add_link(NonConnectedGraphSubA(), \
-                        rank_in=3, rank_out=1)
+rank_in=3, rank_out=1)
                     self.add_link(NonConnectedGraphSubB(), \
-                        rank_in=1, rank_out=2)
+rank_in=1, rank_out=2)
 
         This model consists of two components: at first,
         ``NonConnectedGraphSubA`` receives inputs from rank=3 process and
@@ -89,9 +89,9 @@ def pseudo_connect(delegate_variable, *actual_variables):
                 def __init__(self, comm):
                     super(NonConnectedGraph2, self).__init__(comm)
                     self.add_link(NonConnectedGraphSubA(), \
-                        rank_in=1, rank_out=None)
+rank_in=1, rank_out=None)
                     self.add_link(NonConnectedGraphSubB(), \
-                        rank_in=None, rank_out=1)
+rank_in=None, rank_out=1)
 
         This model first receives inputs from rank=1 process and make model
         outputs (specified by ``rank_out=None``) in ``NonConnectedGraphSubA``.
@@ -118,7 +118,7 @@ def pseudo_connect(delegate_variable, *actual_variables):
 
         ``pseudo_connect`` should also be used in some pathological cases,
         for example, where multiple ``chainermn.functions.send`` occurs
-          sequentially.
+        sequentially.
 
     Args:
         delegate_variable (chainer.Variable):
