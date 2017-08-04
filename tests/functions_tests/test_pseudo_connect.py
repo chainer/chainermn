@@ -36,13 +36,14 @@ class TestPseudoConnect(unittest.TestCase):
         if isinstance(y, tuple):
             for _y in y:
                 self.assertEqual(_y.data.dtype, self.dtype)
-            for _y_expect, _y in zip(self.x, y):
-                testing.assert_allclose(_y_expect.data, _y.data)
+            for _x, _y in zip(self.x, y):
+                y_expect = _x.copy()
+                testing.assert_allclose(y_expect, _y.data)
 
         else:
             self.assertEqual(y.data.dtype, self.dtype)
             y_expect = self.x[0].copy()
-            testing.assert_allclose(y_expect.data, y.data)
+            testing.assert_allclose(y_expect, y.data)
 
     def test_forward_cpu(self):
         self.check_forward(self.delegate, self.x)
