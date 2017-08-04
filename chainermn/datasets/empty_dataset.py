@@ -12,10 +12,10 @@ def create_empty_dataset(dataset):
     ``chainermn.functions.send()``.
 
     Args:
-        dataset(chainer.datasets.TupleDataset): Dataset to convert.
+        dataset: Dataset to convert.
 
     Returns:
         ~chainer.datasets.TransformDataset:
             Dataset consists of only patterns in the original one.
     """
-    return chainer.datasets.TransformDataset(dataset, lambda data: ())
+    return [()] * len(dataset)
