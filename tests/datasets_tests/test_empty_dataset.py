@@ -14,7 +14,7 @@ class TestEmptyDataset(unittest.TestCase):
         empty_dataset = create_empty_dataset(original_dataset)
         self.assertEqual(len(original_dataset), len(empty_dataset))
         for i in range(len(original_dataset)):
-            self.assertEqual((), empty_dataset.get_example(i))
+            self.assertEqual((), empty_dataset[i])
 
     def test_scatter_dataset(self):
         n = 10
