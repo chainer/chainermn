@@ -114,7 +114,7 @@ def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
     is invoked, it will try to send gradients to the target process.
 
     .. note::
-        If you define non-connected computational graph on one machine,
+        If you define non-connected computational graph on one process,
         you have to use ``delegate_variable`` to specify the output of
         previous computational graph component.
         Otherwise ``backward()`` does not work well.

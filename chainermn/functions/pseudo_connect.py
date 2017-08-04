@@ -4,7 +4,7 @@ import chainer.utils
 
 
 class PseudoConnect(chainer.Function):
-    """Connect a variable with delegating variable."""
+    """Connect a variable to a delegating variable."""
 
     def forward(self, inputs):
         # delegate_variable = inputs[0]
