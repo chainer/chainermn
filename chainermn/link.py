@@ -2,7 +2,7 @@ import chainer
 import chainermn
 import chainermn.communicators
 import chainermn.functions
-import chainermn.functions.point_to_point_communication
+import chainermn.functions.pseudo_connect
 
 
 class MultiNodeChainList(chainer.ChainList):
@@ -149,7 +149,7 @@ class MultiNodeChainList(chainer.ChainList):
                     # If the graph component is not the first one,
                     # backprop to the previous graph component must be
                     # guaranteed.
-                    x = chainermn.functions.point_to_point_communication\
+                    x = chainermn.functions.pseudo_connect\
                         .pseudo_connect(delegate_variable, *inputs)
                     x = f(x)
 
@@ -194,7 +194,7 @@ class MultiNodeChainList(chainer.ChainList):
                         # If the model has multiple targets for send,
                         # we must guarantee backwards of each send to be
                         # called in the reversed order.
-                        x = chainermn.functions.point_to_point_communication\
+                        x = chainermn.functions.pseudo_connect\
                             .pseudo_connect(delegate_variable, x)
                         delegate_variable = chainermn.functions.send(
                             x, self._comm,
@@ -206,7 +206,7 @@ class MultiNodeChainList(chainer.ChainList):
             return y
         elif y is not None:
             # The intermediate graph component returns model output.
-            return chainermn.functions.point_to_point_communication\
+            return chainermn.functions.pseudo_connect\
                 .pseudo_connect(delegate_variable, y)
         else:
             # Do not have any model output.
