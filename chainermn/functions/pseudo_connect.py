@@ -27,6 +27,12 @@ class PseudoConnect(chainer.Function):
 def pseudo_connect(delegate_variable, *actual_variables):
     """Connect independent connected graph component.
 
+    This function is implemented to return received arguments directly,
+    except the first ``delegate_variable``.
+    In backward computation, it returns received gradients directly,
+    adding a zero grad corresponding to ``delegate_variable``.
+    The detail of ``delegate_variable`` is described in the following notes.
+
     .. note::
         In model-parallel framework, models on each process might have many
         non-connected components. Here we call a given graph non-connected
