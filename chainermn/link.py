@@ -1,3 +1,5 @@
+import queue
+
 import chainer
 import chainermn
 import chainermn.communicators
@@ -126,14 +128,10 @@ class MultiNodeChainList(chainer.ChainList):
         if isinstance(rank_out, int):
             rank_out = [rank_out]
 
-        assert rank_in is None or self._comm.rank not in rank_in,\
-            "cannot specify self rank for rank_in"
-        assert rank_out is None or self._comm.rank not in rank_out,\
-            "cannot specify self rank for rank_out"
-
         self._rank_inouts.append((rank_in, rank_out))
 
     def __call__(self, *inputs):
+        comm_queue = queue.Queue()
         y = None
         delegate_variable = None
 
@@ -157,11 +155,17 @@ class MultiNodeChainList(chainer.ChainList):
                 # Preprocess: receiving inputs from the other machines.
                 xs = []
                 for _rank_in in rank_in:
-                    _x = chainermn.functions.recv(
-                        self._comm,
-                        rank=_rank_in,
-                        delegate_variable=delegate_variable,
-                        device=self._device_id)
+                    if _rank_in == self._comm.rank:
+                        # Receive inputs from itself.
+                        _x = chainermn.functions.pseudo_connect(
+                            delegate_variable,
+                            comm_queue.get())
+                    else:
+                        _x = chainermn.functions.recv(
+                            self._comm,
+                            rank=_rank_in,
+                            delegate_variable=delegate_variable,
+                            device=self._device_id)
 
                     # Guarantee the backward path to the previous graph
                     # component to be executed in the last to avoid dead-lock.
@@ -186,7 +190,11 @@ class MultiNodeChainList(chainer.ChainList):
 
             else:  # Send outputs to the other machines.
                 for i_comp, _rank_out in enumerate(rank_out):
-                    if i_comp == 0:
+                    if _rank_out == self._comm.rank:
+                        # Send outputs to itself.
+                        comm_queue.put(x)
+                        delegate_variable = x
+                    elif i_comp == 0:
                         delegate_variable = chainermn.functions.send(
                             x, self._comm,
                             rank=_rank_out)
