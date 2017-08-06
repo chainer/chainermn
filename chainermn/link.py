@@ -157,9 +157,12 @@ class MultiNodeChainList(chainer.ChainList):
                 for _rank_in in rank_in:
                     if _rank_in == self._comm.rank:
                         # Receive inputs from itself.
-                        _x = chainermn.functions.pseudo_connect(
-                            delegate_variable,
-                            comm_queue.get())
+                        if delegate_variable is None:
+                            _x = comm_queue.get()
+                        else:
+                            _x = chainermn.functions.pseudo_connect(
+                                delegate_variable,
+                                comm_queue.get())
                     else:
                         _x = chainermn.functions.recv(
                             self._comm,
@@ -193,7 +196,6 @@ class MultiNodeChainList(chainer.ChainList):
                     if _rank_out == self._comm.rank:
                         # Send outputs to itself.
                         comm_queue.put(x)
-                        delegate_variable = x
                     elif i_comp == 0:
                         delegate_variable = chainermn.functions.send(
                             x, self._comm,
@@ -202,9 +204,10 @@ class MultiNodeChainList(chainer.ChainList):
                         # If the model has multiple targets for send,
                         # we must guarantee backwards of each send to be
                         # called in the reversed order.
-                        x = chainermn.functions.pseudo_connect(
-                            delegate_variable,
-                            x)
+                        if delegate_variable is not None:
+                            x = chainermn.functions.pseudo_connect(
+                                delegate_variable,
+                                x)
                         delegate_variable = chainermn.functions.send(
                             x, self._comm,
                             rank=_rank_out)

@@ -77,8 +77,14 @@ class Recv(chainer.Function):
         xp = cuda.get_array_module(*inputs)
         gw, = grad_outputs
         self.comm.send(gw, self.peer_rank, self.peer_tag)
-        dummy_var = xp.array([[]], dtype=xp.float32)
-        return dummy_var
+
+        if inputs == ():
+            dummy_var = xp.array([], dtype=xp.float32)
+        else:
+            var, = inputs
+            dummy_var = xp.zeros(var.shape, dtype=xp.float32)
+
+        return dummy_var,
 
 
 def send(x, communicator, rank, tag=0):

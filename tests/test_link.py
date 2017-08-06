@@ -101,6 +101,15 @@ class BranchParent2(chainermn.MultiNodeChainList):
         self.add_link(BranchSubB(size), rank_in=ranks, rank_out=None)
 
 
+class BranchParent3(chainermn.MultiNodeChainList):
+    def __init__(self, size, comm, rank_children):
+        super(BranchParent3, self).__init__(comm=comm)
+        ranks = rank_children + [0]
+        self.add_link(BranchSubA(size), rank_in=None, rank_out=ranks)
+        self.add_link(BranchSubA(size), rank_in=0, rank_out=0)
+        self.add_link(BranchSubB(size), rank_in=ranks, rank_out=None)
+
+
 class BranchChild(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_parent):
         super(BranchChild, self).__init__(comm=comm)
@@ -210,3 +219,6 @@ class TestMultiNodeChain(unittest.TestCase):
 
     def test_branching_model2(self):
         self.check_branching_model(BranchParent2)
+
+    def test_branching_model3(self):
+        self.check_branching_model(BranchParent3)
