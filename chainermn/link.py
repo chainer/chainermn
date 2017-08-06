@@ -1,4 +1,4 @@
-import queue
+from six.moves import queue
 
 import chainer
 import chainermn
