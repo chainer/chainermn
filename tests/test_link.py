@@ -129,6 +129,33 @@ class BranchChild(chainermn.MultiNodeChainList):
             rank_out=rank_parent)
 
 
+class TwistFirst(chainermn.MultiNodeChainList):
+    def __init__(self, size, comm, rank_next):
+        super(TwistFirst, self).__init__(comm=comm)
+        self.add_link(BranchSubA(size), rank_in=None, rank_out=rank_next)
+        self.add_link(BranchSubA(size), rank_in=rank_next, rank_out=None)
+
+
+class Twist(chainermn.MultiNodeChainList):
+    def __init__(self, size, comm, rank_prev, rank_next):
+        super(Twist, self).__init__(comm=comm)
+        self.add_link(BranchSubA(size), rank_in=rank_prev, rank_out=comm.rank)
+        self.add_link(BranchSubA(size), rank_in=None, rank_out=rank_prev)
+        self.add_link(BranchSubA(size), rank_in=None, rank_out=rank_next)
+        self.add_link(BranchSubA(size), rank_in=rank_next, rank_out=comm.rank)
+        self.add_link(
+            BranchSubB(size),
+            rank_in=[comm.rank, comm.rank],
+            rank_out=None)
+
+
+class TwistLast(chainermn.MultiNodeChainList):
+    def __init__(self, size, comm, rank_prev):
+        super(TwistLast, self).__init__(comm=comm)
+        self.add_link(BranchSubA(size), rank_in=rank_prev, rank_out=None)
+        self.add_link(BranchSubA(size), rank_in=None, rank_out=rank_prev)
+
+
 @chainer.testing.parameterize(
     {'gpu': True},
     {'gpu': False},
@@ -235,3 +262,27 @@ class TestMultiNodeChain(unittest.TestCase):
 
     def test_branching_model4(self):
         self.check_branching_model(BranchParent4)
+
+    def test_twisting_model(self):
+        n, d = 100, 10
+        X = np.random.randn(n, d).astype(np.float32)
+        Y = (np.random.rand(n) * 2).astype(np.int32)
+
+        if self.communicator.rank == 0:
+            model = L.Classifier(
+                TwistFirst(d, self.communicator, self.rank_next))
+        elif self.communicator.rank == self.communicator.size - 1:
+            model = L.Classifier(
+                TwistLast(d, self.communicator, self.rank_prev))
+        else:
+            model = L.Classifier(Twist(
+                d, self.communicator, self.rank_prev, self.rank_next))
+
+        if self.gpu:
+            model.to_gpu()
+            X = chainer.cuda.to_gpu(X)
+            Y = chainer.cuda.to_gpu(Y)
+
+        for i in range(n):
+            err = model(X[i:i + 1], Y[i:i + 1])
+            err.backward()

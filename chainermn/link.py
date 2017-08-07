@@ -170,17 +170,15 @@ class MultiNodeChainList(chainer.ChainList):
                             delegate_variable=delegate_variable,
                             device=self._device_id)
 
-                    # Guarantee the backward path to the previous graph
-                    # component to be executed in the last to avoid dead-lock.
-                    if delegate_variable is not None \
-                            and _x.creator is not None:
-                        _x.creator.rank = -1
-
                     xs.append(_x)
 
-                    # Prevent "double-backwarding," i.e., backprop
-                    # the same edge more than twice.
-                    delegate_variable = None
+                    # Guarantee the backward path to the previous graph
+                    # component to be executed in the last to avoid dead-lock.
+                    delegate_variable = _x
+
+                # Prevent "double-backwarding," i.e., backprop
+                # the same edge more than twice.
+                delegate_variable = None
 
                 # Actual forward.
                 x = f(*tuple(xs))
@@ -195,7 +193,12 @@ class MultiNodeChainList(chainer.ChainList):
                 for i_comp, _rank_out in enumerate(rank_out):
                     if _rank_out == self._comm.rank:
                         # Send outputs to itself.
+                        if delegate_variable is not None:
+                            x = chainermn.functions.pseudo_connect(
+                                delegate_variable,
+                                x)
                         comm_queue.put(x)
+                        delegate_variable = x
                     elif i_comp == 0:
                         delegate_variable = chainermn.functions.send(
                             x, self._comm,
