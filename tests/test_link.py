@@ -95,28 +95,28 @@ class BranchParent1(chainermn.MultiNodeChainList):
 class BranchParent2(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_children):
         super(BranchParent2, self).__init__(comm=comm)
-        ranks = [0] + rank_children
+        ranks = [comm.rank] + rank_children
         self.add_link(BranchSubA(size), rank_in=None, rank_out=ranks)
-        self.add_link(BranchSubA(size), rank_in=0, rank_out=0)
+        self.add_link(BranchSubA(size), rank_in=comm.rank, rank_out=comm.rank)
         self.add_link(BranchSubB(size), rank_in=ranks, rank_out=None)
 
 
 class BranchParent3(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_children):
         super(BranchParent3, self).__init__(comm=comm)
-        ranks = rank_children + [0]
+        ranks = rank_children + [comm.rank]
         self.add_link(BranchSubA(size), rank_in=None, rank_out=ranks)
-        self.add_link(BranchSubA(size), rank_in=0, rank_out=0)
+        self.add_link(BranchSubA(size), rank_in=comm.rank, rank_out=comm.rank)
         self.add_link(BranchSubB(size), rank_in=ranks, rank_out=None)
 
 
 class BranchParent4(chainermn.MultiNodeChainList):
     def __init__(self, size, comm, rank_children):
         super(BranchParent4, self).__init__(comm=comm)
-        ranks = rank_children + [0]
+        ranks = rank_children + [comm.rank]
         ranks = ranks[1:] + ranks[0:1]
         self.add_link(BranchSubA(size), rank_in=None, rank_out=ranks)
-        self.add_link(BranchSubA(size), rank_in=0, rank_out=0)
+        self.add_link(BranchSubA(size), rank_in=comm.rank, rank_out=comm.rank)
         self.add_link(BranchSubB(size), rank_in=ranks, rank_out=None)
 
 
