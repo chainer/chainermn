@@ -12,6 +12,12 @@ class Send(chainer.Function):
         self.peer_rank = peer_rank
         self.peer_tag = peer_tag
 
+    @property
+    def label(self):
+        return "{} (peer_rank: {})".format(
+            self.__class__.__name__,
+            self.peer_rank)
+
     def forward(self, inputs):
         xp = cuda.get_array_module(*inputs)
         # Note: inputs[1] might contain delegate_variable.
@@ -60,11 +66,18 @@ class Recv(chainer.Function):
                 # in Chainer v2.0.0.
                 dummy_var = chainer.Variable(xp.array([], dtype=xp.float32))
 
+            dummy_var.name = 'dummy_var'
             return super(Recv, self).__call__(dummy_var)
 
         else:
             # Used for retaining computational graph.
             return super(Recv, self).__call__(*inputs)
+
+    @property
+    def label(self):
+        return "{} (peer_rank: {})".format(
+            self.__class__.__name__,
+            self.peer_rank)
 
     def forward(self, inputs):
         x = self.comm.recv(self.peer_rank, self.peer_tag)
@@ -111,7 +124,9 @@ def send(x, communicator, rank, tag=0):
     """
     chainer.utils.experimental('chainermn.functions.send')
     assert rank != communicator.rank
-    return Send(communicator, peer_rank=rank, peer_tag=tag)(x)
+    delegate_variable = Send(communicator, peer_rank=rank, peer_tag=tag)(x)
+    delegate_variable.name = 'delegate_variable'
+    return delegate_variable
 
 
 def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
@@ -151,6 +166,7 @@ def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
             peer_tag=tag,
             device=device)()
     else:
+        delegate_variable.name = 'delegate_variable'
         return Recv(
             communicator,
             peer_rank=rank,

@@ -110,10 +110,10 @@ rank_in=None, rank_out=1)
         ``pseudo_connect`` should be used.
 
         ``pseudo_connect`` takes two arguments. The first one
-        ``delegate_varaible`` is what we explained in above note. In this
+        ``delegate_variable`` is what we explained in above note. In this
         case, returned value of ``NonConnectedGraphSubB`` corresponds to
-        ``delegate_varaible``. The second one ``actual_variables`` is
-        "what we want ``delegate_varaible`` to imitate". In
+        ``delegate_variable``. The second one ``actual_variables`` is
+        "what we want ``delegate_variable`` to imitate". In
         ``NonConnectedGraph2``, we obtain returned value of
         ``NonConnectedGraphSubB`` as the model outputs, but what we actually
         want is returned value of ``NonConnectedGraphSubA``. At the same time
