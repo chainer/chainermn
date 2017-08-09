@@ -133,7 +133,7 @@ class MultiNodeChainList(chainer.ChainList):
                 if _rank_out is None:
                     raise ValueError(
                         'MultiNodeChainList cannot have more than two '
-                        'computational graph component whose rank_out is None'
+                        'computational graph component whose rank_out is None')
 
         self._rank_inouts.append((rank_in, rank_out))
 
