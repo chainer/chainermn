@@ -110,7 +110,12 @@ def send(x, communicator, rank, tag=0):
 
     """
     chainer.utils.experimental('chainermn.functions.send')
-    assert rank != communicator.rank
+
+    if rank == communicator.rank:
+        raise ValueError(
+            'rank must be different from communicator rank, '
+            'otherwise deadlock occurs')
+
     return Send(communicator, peer_rank=rank, peer_tag=tag)(x)
 
 
@@ -143,7 +148,12 @@ def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
 
     """
     chainer.utils.experimental('chainermn.functions.recv')
-    assert rank != communicator.rank
+
+    if rank == communicator.rank:
+        raise ValueError(
+            'rank must be different from communicator rank, '
+            'otherwise deadlock occurs')
+
     if delegate_variable is None:
         return Recv(
             communicator,
