@@ -128,6 +128,13 @@ class MultiNodeChainList(chainer.ChainList):
         if isinstance(rank_out, int):
             rank_out = [rank_out]
 
+        if rank_out is None:
+            for _, _rank_out in self._rank_inouts:
+                if _rank_out is None:
+                    raise ValueError(
+                        'MultiNodeChainList cannot have more than two '
+                        'computational graph component whose rank_out is None'
+
         self._rank_inouts.append((rank_in, rank_out))
 
     def __call__(self, *inputs):
