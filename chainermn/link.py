@@ -176,8 +176,7 @@ class MultiNodeChainList(chainer.ChainList):
                     # component to be executed in the last to avoid dead-lock.
                     delegate_variable = _x
 
-                # Prevent "double-backwarding," i.e., backprop
-                # the same edge more than twice.
+                # Guarantee backprop on the same edge exactly once.
                 delegate_variable = None
 
                 # Actual forward.
