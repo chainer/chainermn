@@ -21,12 +21,3 @@ cpdef enum:
     NCCL_FLOAT = 7
     NCCL_FLOAT64 = 8
     NCCL_DOUBLE = 8
-
-    NCCL_CHAR_v1 = 0
-    NCCL_INT_v1 = 1
-    NCCL_HALF_v1 = 2
-    NCCL_FLOAT_v1 = 3
-    NCCL_DOUBLE_v1 = 4
-    NCCL_INT64_v1 = 5
-    NCCL_UINT64_v1 = 6
-    NCCL_INVALID_TYPE_v1 = 7

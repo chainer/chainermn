@@ -46,7 +46,7 @@ def init_comms(mpi_comm, intra_rank, intra_size, inter_rank, use_nccl=True):
 
     if use_nccl:
         from chainermn import nccl
-        nccl_comm_id = intra_mpi_comm.bcast(nccl.NcclCommunicatorId())
+        nccl_comm_id = intra_mpi_comm.bcast(nccl.get_unique_id())
         intra_nccl_comm = nccl.NcclCommunicator(
             intra_size, nccl_comm_id, intra_rank)
         return intra_mpi_comm, inter_mpi_comm, intra_nccl_comm
