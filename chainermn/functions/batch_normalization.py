@@ -30,7 +30,8 @@ def _xhat(x, mean, std, expander):
 class MultiNodeBatchNormalizationFunction(function.Function):
 
     def __init__(self, comm, eps=2e-5, mean=None, var=None, decay=0.9):
-        chainer.utils.experimental('chainermn.functions.MultiNodeBatchNormalizationFunction')
+        chainer.utils.experimental(
+            'chainermn.functions.MultiNodeBatchNormalizationFunction')
 
         self.comm = comm
         self.running_mean = mean

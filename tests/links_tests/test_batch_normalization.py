@@ -1,20 +1,12 @@
-import unittest
-
-import mpi4py.MPI
-import numpy as np
-
-from chainermn.communicators.naive_communicator import NaiveCommunicator
-
-import copy
-import nose.plugins.skip
-import unittest
-
 import chainer
 import chainer.testing
 import chainer.testing.attr
+import mpi4py.MPI
 import numpy
+import unittest
 
 import chainermn
+from chainermn.communicators.naive_communicator import NaiveCommunicator
 import chainermn.links
 
 
@@ -64,17 +56,24 @@ class TestDataset(unittest.TestCase):
         local_batchsize = 10
         global_batchsize = 10 * comm.size
         ndim = 3
-        np.random.seed(71)
-        x = np.random.random((global_batchsize, ndim)).astype(np.float32)
-        y = np.random.randint(0, 1, size=global_batchsize, dtype=np.int32)
-        x_local = comm.mpi_comm.scatter(x.reshape(comm.size, local_batchsize, ndim))
-        y_local = comm.mpi_comm.scatter(y.reshape(comm.size, local_batchsize))
-        print(x.shape, y.shape, x_local.shape, y_local.shape)
+        numpy.random.seed(71)
+        x = numpy.random.random(
+            (global_batchsize, ndim)).astype(numpy.float32)
+        y = numpy.random.randint(
+            0, 1, size=global_batchsize, dtype=numpy.int32)
+        x_local = comm.mpi_comm.scatter(
+            x.reshape(comm.size, local_batchsize, ndim))
+        y_local = comm.mpi_comm.scatter(
+            y.reshape(comm.size, local_batchsize))
 
-        m1 = chainer.links.Classifier(ModelNormalBN())       # Single Normal
-        m2 = chainer.links.Classifier(ModelNormalBN())       # Distributed Normal
-        m3 = chainer.links.Classifier(ModelDistributedBN(comm))  # Distributed BN
-        m4 = chainer.links.Classifier(ModelDistributedBN(comm))  # Sequential Normal
+        cls = chainer.links.Classifier
+        m1 = cls(ModelNormalBN())           # Single worker
+        m2 = cls(ModelNormalBN())           # Multi worker, Ghost BN
+        m3 = cls(ModelDistributedBN(comm))  # Single worker, MNBN
+        m4 = cls(ModelDistributedBN(comm))  # Multi worker, MNBN
+        # NOTE: m1, m3 and m4 should behave in the same way.
+        # m2 may be different.
+
         m2.copyparams(m1)
         m3.copyparams(m1)
         m4.copyparams(m1)
@@ -108,6 +107,8 @@ class TestDataset(unittest.TestCase):
                 assert(p3[0] == name)
                 assert(p4[0] == name)
 
-                # TODO: check p1[1].grad != p2[1].grad (to confirm that this test is valid)
                 chainer.testing.assert_allclose(p1[1].grad, p3[1].grad)
                 chainer.testing.assert_allclose(p1[1].grad, p4[1].grad)
+
+                # TODO: check p1[1].grad != p2[1].grad
+                # (to confirm that this test is valid)
