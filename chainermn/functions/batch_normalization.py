@@ -119,7 +119,8 @@ class MultiNodeBatchNormalizationFunction(function.Function):
             tmp = xp.empty(gamma.size * 2, dtype=x.dtype)
             x.mean(axis=axis, out=tmp[:gamma.size])
             xp.square(x).mean(axis=axis, out=tmp[gamma.size:])
-            chainer.cuda.Stream.null.synchronize()
+            if xp is not numpy:
+                chainer.cuda.Stream.null.synchronize()
             mpi_comm.Allreduce(
                 self.mpi4py_module.IN_PLACE,
                 self.memory_utility_module.array_to_buffer_object(tmp))
@@ -199,7 +200,8 @@ class MultiNodeBatchNormalizationFunction(function.Function):
         tmp = xp.empty(gamma.size * 2, dtype=x.dtype)
         gy.sum(axis=axis, out=tmp[:gamma.size])
         (gy * self.x_hat).sum(axis=axis, out=tmp[gamma.size:])
-        chainer.cuda.Stream.null.synchronize()
+        if xp is not numpy:
+            chainer.cuda.Stream.null.synchronize()
         mpi_comm.Allreduce(
             self.mpi4py_module.IN_PLACE,
             self.memory_utility_module.array_to_buffer_object(tmp))
