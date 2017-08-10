@@ -77,8 +77,14 @@ class Recv(chainer.Function):
         xp = cuda.get_array_module(*inputs)
         gw, = grad_outputs
         self.comm.send(gw, self.peer_rank, self.peer_tag)
-        dummy_var = xp.array([[]], dtype=xp.float32)
-        return dummy_var
+
+        if inputs == ():
+            dummy_var = xp.array([], dtype=xp.float32)
+        else:
+            var, = inputs
+            dummy_var = xp.zeros(var.shape, dtype=xp.float32)
+
+        return dummy_var,
 
 
 def send(x, communicator, rank, tag=0):
@@ -104,6 +110,12 @@ def send(x, communicator, rank, tag=0):
 
     """
     chainer.utils.experimental('chainermn.functions.send')
+
+    if rank == communicator.rank:
+        raise ValueError(
+            'rank must be different from communicator rank, '
+            'otherwise deadlock occurs')
+
     return Send(communicator, peer_rank=rank, peer_tag=tag)(x)
 
 
@@ -136,6 +148,12 @@ def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
 
     """
     chainer.utils.experimental('chainermn.functions.recv')
+
+    if rank == communicator.rank:
+        raise ValueError(
+            'rank must be different from communicator rank, '
+            'otherwise deadlock occurs')
+
     if delegate_variable is None:
         return Recv(
             communicator,
