@@ -45,7 +45,6 @@ class NcclCommunicator(_base.CommunicatorBase):
         if self.use_nccl:
             self.inter_nccl_comm = comms[3]
 
-
     def broadcast_data(self, model):
         _communication_utility.broadcast_naive(self.mpi_comm, model)
 
@@ -64,9 +63,10 @@ class NcclCommunicator(_base.CommunicatorBase):
         self.gpu_buffer_b.assign(n_bytes_buffer)
         _memory_utility.pack_params(
             params, itemsize, 'grad', self.gpu_buffer_a)
-        
-        self.inter_nccl_comm.allreduce(self.gpu_buffer_a.ptr(), self.gpu_buffer_b.ptr(), n_elems_total,
-                                 nccl.NCCL_FLOAT, nccl.NCCL_SUM, stream.ptr)
+        self.inter_nccl_comm.allreduce(self.gpu_buffer_a.ptr(),
+                                       self.gpu_buffer_b.ptr(), n_elems_total,
+                                       nccl.NCCL_FLOAT, nccl.NCCL_SUM,
+                                       stream.ptr)
         stream.synchronize()
         ret = self.gpu_buffer_b.array(n_elems_total) * (1.0 / self.size)
         self.gpu_buffer_b.from_device(ret, n_bytes_buffer)

@@ -36,52 +36,54 @@ cdef extern from "chainermn_nccl.h":
 
     ncclResult_t ncclCommUserRank(const ncclComm_t comm, int* rank)
 
-    ncclResult_t _ncclAllReduce(const void* sendbuff, void* recvbuff, size_t count,
-                               ncclDataType_t datatype, ncclRedOp_t op,
-                               ncclComm_t comm, Stream stream) nogil
+    ncclResult_t _ncclAllReduce(const void* sendbuff, void* recvbuff,
+                                size_t count, ncclDataType_t datatype,
+                                ncclRedOp_t op, ncclComm_t comm,
+                                Stream stream) nogil
 
-    ncclResult_t _ncclReduce(const void* sendbuff, void* recvbuff, size_t count,
-                            ncclDataType_t datatype, ncclRedOp_t op, int root,
-                            ncclComm_t comm, Stream stream) nogil
+    ncclResult_t _ncclReduce(const void* sendbuff, void* recvbuff,
+                             size_t count, ncclDataType_t datatype,
+                             ncclRedOp_t op, int root, ncclComm_t comm,
+                             Stream stream) nogil
 
     ncclResult_t _ncclBcast(void* buff, size_t count, ncclDataType_t datatype,
-                           int root, ncclComm_t comm, Stream stream) nogil
+                            int root, ncclComm_t comm, Stream stream) nogil
 
     ncclResult_t _ncclReduceScatter(const void* sendbuff,
-                                   void* recvbuff, size_t recvcount,
-                                   ncclDataType_t datatype, ncclRedOp_t op,
-                                   ncclComm_t comm, Stream stream) nogil
+                                    void* recvbuff, size_t recvcount,
+                                    ncclDataType_t datatype, ncclRedOp_t op,
+                                    ncclComm_t comm, Stream stream) nogil
 
     ncclResult_t _ncclAllGather(const void* sendbuff, void* recvbuff,
-                               size_t count, ncclDataType_t datatype,
-                               ncclComm_t comm, Stream stream) nogil
+                                size_t count, ncclDataType_t datatype,
+                                ncclComm_t comm, Stream stream) nogil
     int NCCL_VERSION
 
 cdef dict STATUS_v1 = {
-     0: 'NCCL_ERROR_SUCCESS',
-     1: 'NCCL_ERROR_UNHANDLED_CUDA_ERROR',
-     2: 'NCCL_ERROR_SYSTEM_ERROR',
-     3: 'NCCL_ERROR_INTERNAL_ERROR',
-     4: 'NCCL_ERROR_INVALID_DEVICE_POINTER',
-     5: 'NCCL_ERROR_INVALID_RANK',
-     6: 'NCCL_ERROR_UNSUPPORTED_DEVICE_COUNT',
-     7: 'NCCL_ERROR_DEVICE_NOT_FOUND',
-     8: 'NCCL_ERROR_INVALID_DEVICE_INDEX',
-     9: 'NCCL_ERROR_LIB_WRAPPER_NOT_SET',
-     10: 'NCCL_ERROR_CUDA_MALLOC_FAILED',
-     11: 'NCCL_ERROR_RANK_MISMATCH',
-     12: 'NCCL_ERROR_INVALID_ARGUMENT',
-     13: 'NCCL_ERROR_INVALID_TYPE',
-     14: 'NCCL_ERROR_INVALID_OPERATION',
+    0: 'NCCL_ERROR_SUCCESS',
+    1: 'NCCL_ERROR_UNHANDLED_CUDA_ERROR',
+    2: 'NCCL_ERROR_SYSTEM_ERROR',
+    3: 'NCCL_ERROR_INTERNAL_ERROR',
+    4: 'NCCL_ERROR_INVALID_DEVICE_POINTER',
+    5: 'NCCL_ERROR_INVALID_RANK',
+    6: 'NCCL_ERROR_UNSUPPORTED_DEVICE_COUNT',
+    7: 'NCCL_ERROR_DEVICE_NOT_FOUND',
+    8: 'NCCL_ERROR_INVALID_DEVICE_INDEX',
+    9: 'NCCL_ERROR_LIB_WRAPPER_NOT_SET',
+    10: 'NCCL_ERROR_CUDA_MALLOC_FAILED',
+    11: 'NCCL_ERROR_RANK_MISMATCH',
+    12: 'NCCL_ERROR_INVALID_ARGUMENT',
+    13: 'NCCL_ERROR_INVALID_TYPE',
+    14: 'NCCL_ERROR_INVALID_OPERATION',
 }
 
 cdef dict STATUS = {
-     0: 'NCCL_ERROR_SUCCESS',
-     1: 'NCCL_ERROR_UNHANDLED_CUDA_ERROR',
-     2: 'NCCL_ERROR_SYSTEM_ERROR',
-     3: 'NCCL_ERROR_INTERNAL_ERROR',
-     4: 'NCCL_ERROR_INVALID_ARGUMENT',
-     5: 'NCCL_ERROR_INVALID_USAGE',
+    0: 'NCCL_ERROR_SUCCESS',
+    1: 'NCCL_ERROR_UNHANDLED_CUDA_ERROR',
+    2: 'NCCL_ERROR_SYSTEM_ERROR',
+    3: 'NCCL_ERROR_INTERNAL_ERROR',
+    4: 'NCCL_ERROR_INVALID_ARGUMENT',
+    5: 'NCCL_ERROR_INVALID_USAGE',
 }
 
 
@@ -102,16 +104,16 @@ cpdef inline check_status(ncclResult_t status):
 
 
 def get_version():
-     return NCCL_VERSION
+    return NCCL_VERSION
 
 
 def get_unique_id():
-     cdef ncclUniqueId uniqueId
-     status = ncclGetUniqueId(&uniqueId)
-     check_status(status)
-     ret = tuple([<char>uniqueId.internal[i]
-                  for i in range(NCCL_UNIQUE_ID_BYTES)])
-     return ret
+    cdef ncclUniqueId uniqueId
+    status = ncclGetUniqueId(&uniqueId)
+    check_status(status)
+    ret = tuple([<char>uniqueId.internal[i]
+                 for i in range(NCCL_UNIQUE_ID_BYTES)])
+    return ret
 
 
 cdef struct CommInfo:
@@ -163,8 +165,8 @@ class NcclCommunicator(object):
         cdef CommInfo _ci = self.ci
         with nogil:
             status = _ncclReduce(<void*> sendbuf, <void*> recvbuf, count,
-                                <ncclDataType_t> datatype, <ncclRedOp_t> op,
-                                root, <ncclComm_t>_ci.ptr, <Stream> stream)
+                                 <ncclDataType_t> datatype, <ncclRedOp_t> op,
+                                 root, <ncclComm_t>_ci.ptr, <Stream> stream)
         check_status(status)
 
     def bcast(self, size_t buf, int count, int datatype, int root,
@@ -190,7 +192,7 @@ class NcclCommunicator(object):
                   size_t recvbuf, size_t stream):
         cdef CommInfo _ci = self.ci
         with nogil:
-            status = _ncclAllGather(
-                <void*>sendbuf, <void*>recvbuf, count, <ncclDataType_t>datatype,
-                <ncclComm_t>_ci.ptr, <Stream>stream)
+            status = _ncclAllGather(<void*>sendbuf, <void*>recvbuf,
+                                    count, <ncclDataType_t>datatype,
+                                    <ncclComm_t>_ci.ptr, <Stream>stream)
         check_status(status)

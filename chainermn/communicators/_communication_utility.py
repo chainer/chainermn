@@ -48,7 +48,7 @@ def init_comms(mpi_comm, intra_rank, intra_size, inter_rank, use_nccl=True):
         intra_nccl_comm_id = intra_mpi_comm.bcast(nccl.get_unique_id())
         intra_nccl_comm = nccl.NcclCommunicator(
             intra_size, intra_nccl_comm_id, intra_rank)
-        if nccl.get_version() >= 2000 :
+        if nccl.get_version() >= 2000:
             inter_nccl_comm_id = mpi_comm.bcast(nccl.get_unique_id())
             inter_nccl_comm = nccl.NcclCommunicator(
                 mpi_comm.size, inter_nccl_comm_id, mpi_comm.rank)

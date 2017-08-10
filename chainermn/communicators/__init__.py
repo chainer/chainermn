@@ -17,6 +17,7 @@ def create_communicator(
     two_dimensional     OK  Required Each node has multiple NICs or HCAs
     single_node         OK  Required Single node with multiple GPUs
     flat                OK           N/A
+    nccl                OK  Required N/A
     =============== === === ======== =======================================
 
     Args:
@@ -72,7 +73,6 @@ def create_communicator(
         else:
             raise ValueError(
                 'NcclCommunicator is only supported on NCCL 2.0+')
-            
 
     elif communicator_name == 'dummy':
         from chainermn.communicators.dummy_communicator \
