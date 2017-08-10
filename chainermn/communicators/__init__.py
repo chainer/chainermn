@@ -63,6 +63,17 @@ def create_communicator(
             import NonCudaAwareCommunicator
         return NonCudaAwareCommunicator(mpi_comm=mpi_comm)
 
+    elif communicator_name == 'nccl':
+        import chainermn.nccl
+        if chainermn.nccl.get_version() >= 2000:
+            from chainermn.communicators.nccl_communicator \
+                import NcclCommunicator
+            return NcclCommunicator(mpi_comm=mpi_comm)
+        else:
+            raise ValueError(
+                'NcclCommunicator is only supported on NCCL 2.0+')
+            
+
     elif communicator_name == 'dummy':
         from chainermn.communicators.dummy_communicator \
             import DummyCommunicator

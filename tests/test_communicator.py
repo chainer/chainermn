@@ -22,6 +22,8 @@ from chainermn.communicators.single_node_communicator \
     import SingleNodeCommunicator
 from chainermn.communicators.two_dimensional_communicator \
     import TwoDimensionalCommunicator
+from chainermn.communicators.nccl_communicator \
+    import NcclCommunicator
 
 
 class ExampleModel(chainer.Chain):
@@ -70,6 +72,13 @@ class ExampleModel(chainer.Chain):
         'test_gpu': True,
         'multi_node': True,
         'nccl': True,
+    }, {
+        'communicator_class': NcclCommunicator,
+        'test_cpu': False,
+        'test_gpu': True,
+        'multi_node': True,
+        'nccl': True,
+        'multi_node_nccl': True,
     }
 )
 class TestCommunicator(unittest.TestCase):
