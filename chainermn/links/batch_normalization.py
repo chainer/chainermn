@@ -1,11 +1,11 @@
-import numpy
-
+import chainer.utils
 from chainer import configuration
 from chainer import cuda
 from chainer import initializers
 from chainer import link
 from chainer import variable
 from chainer.functions.normalization import batch_normalization
+import numpy
 
 from chainermn.functions.batch_normalization import \
     MultiNodeBatchNormalizationFunction
@@ -16,6 +16,8 @@ class MultiNodeBatchNormalization(link.Link):
     def __init__(self, size, comm, decay=0.9, eps=2e-5, dtype=numpy.float32,
                  use_gamma=True, use_beta=True,
                  initial_gamma=None, initial_beta=None):
+        chainer.utils.experimental('chainermn.links.MultiNodeBatchNormalization')
+
         super(MultiNodeBatchNormalization, self).__init__()
         self.comm = comm
         self.avg_mean = numpy.zeros(size, dtype=dtype)

@@ -1,14 +1,10 @@
-import cffi
 import chainer
-import numpy
 from chainer import configuration
 from chainer import cuda
 from chainer import function
+import chainer.utils
 from chainer.utils import type_check
-
-import mpi4py.MPI
-
-ffi = cffi.FFI()
+import numpy
 
 
 if cuda.cudnn_enabled:
@@ -34,6 +30,8 @@ def _xhat(x, mean, std, expander):
 class MultiNodeBatchNormalizationFunction(function.Function):
 
     def __init__(self, comm, eps=2e-5, mean=None, var=None, decay=0.9):
+        chainer.utils.experimental('chainermn.functions.MultiNodeBatchNormalizationFunction')
+
         self.comm = comm
         self.running_mean = mean
         self.running_var = var
