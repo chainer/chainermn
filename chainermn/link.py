@@ -221,6 +221,8 @@ class MultiNodeChainList(chainer.ChainList):
                             x, self._comm,
                             rank=_rank_out)
 
+        assert comm_queue.empty()
+
         # Return.
         if y is delegate_variable:
             # The last computational graph component returns model output.
