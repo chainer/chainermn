@@ -48,7 +48,7 @@ cdef extern from "chainermn_nccl.h":
                            int root, ncclComm_t comm, Stream stream) nogil
 
     ncclResult_t _ncclReduceScatter(const void* sendbuff,
-                                   void* recvbuff, int recvcount,
+                                   void* recvbuff, size_t recvcount,
                                    ncclDataType_t datatype, ncclRedOp_t op,
                                    ncclComm_t comm, Stream stream) nogil
 
