@@ -9,7 +9,6 @@ import chainer.cuda
 import chainer.links
 import chainer.testing
 import chainer.testing.attr
-from chainermn import nccl
 from chainermn.communicators import _communication_utility
 from chainermn.communicators.flat_communicator \
     import FlatCommunicator
@@ -25,6 +24,7 @@ from chainermn.communicators.single_node_communicator \
     import SingleNodeCommunicator
 from chainermn.communicators.two_dimensional_communicator \
     import TwoDimensionalCommunicator
+from chainermn import nccl
 
 
 class ExampleModel(chainer.Chain):
@@ -79,6 +79,7 @@ class ExampleModel(chainer.Chain):
         'test_gpu': True,
         'multi_node': True,
         'nccl': True,
+        'nccl1': False,
     }
 )
 class TestCommunicator(unittest.TestCase):
@@ -86,14 +87,13 @@ class TestCommunicator(unittest.TestCase):
     def setUp(self):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
 
-        if nccl.get_version() < 2000:
-            raise nose.plugins.skip.SkipTest()
-
         if not self.multi_node:
             ranks = _communication_utility.init_ranks(self.mpi_comm)
             inter_size = ranks[4]
             if inter_size > 1:
                 raise nose.plugins.skip.SkipTest()
+        if hasattr(self, 'nccl1') and not self.nccl1 and nccl.get_version() < 2000:
+            raise nose.plugins.skip.SkipTest()
 
         self.communicator = self.communicator_class(self.mpi_comm)
 
