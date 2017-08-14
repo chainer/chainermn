@@ -22,7 +22,8 @@ def create_communicator(
 
     Args:
         communicator_name: The name of communicator (``naive``, ``flat``,
-          ``hierarchical``, ``two_dimensional``, or ``single_node``)
+          ``hierarchical``, ``two_dimensional``, ``nccl``, or
+          ``single_node``)
         mpi_comm: MPI4py communicator
 
     Returns:
