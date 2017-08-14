@@ -4,6 +4,7 @@ import argparse
 import collections
 import os.path
 import pickle
+import re
 import sys
 import time
 
@@ -110,7 +111,11 @@ class Seq2seq(chainer.Chain):
         with chainer.no_backprop_mode():
             with chainer.using_config('train', False):
                 xs = [x[::-1] for x in xs]
+                # exs = sequence_embed(self.embed_x, [self.xp.array(x) for x in xs])
                 exs = sequence_embed(self.embed_x, xs)
+                # Initial hidden variable and cell variable
+                # zero = self.xp.zeros((self.n_layers, batch, self.n_units), 'f')
+                # h, c, _ = self.encoder(zero, zero, exs, train=False)
                 h, c, _ = self.encoder(None, None, exs)
                 ys = self.xp.zeros(batch, 'i')
                 result = []
@@ -239,7 +244,9 @@ class BleuEvaluator(extensions.Evaluator):
 def main():
     parser = argparse.ArgumentParser(description='Chainer example: seq2seq')
     parser.add_argument('--batchsize', '-b', type=int, default=64,
-                        help='Number of images in each mini-batch')
+                        help='Number of images in each mini-batch') # 10 - 13,14 epoch?
+    parser.add_argument('--bleu', type=bool, default=False,
+                        help='Report BLEU score')
     parser.add_argument('--epoch', '-e', type=int, default=20,
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', action='store_true',
@@ -250,6 +257,12 @@ def main():
                         help='Resume the training from snapshot')
     parser.add_argument('--unit', '-u', type=int, default=1024,
                         help='Number of units')
+    parser.add_argument('--shift-gpu', type=int, default=0,
+                        help=("Shift device ID of GPUs " +
+                              "(convenient if you want to " +
+                              "run multiple seq2seq_mn.py on a sinle node"))
+    parser.add_argument('--stop', '-s', type=str, default="15e",
+                        help='Stop trigger (ex. "500i", "15e")')
     parser.add_argument('--input', '-i', type=str, default='wmt',
                         help='Input directory')
     parser.add_argument('--out', '-o', default='result',
@@ -362,7 +375,23 @@ def main():
         chainer.cuda.get_device(dev).use()
         model.to_gpu(dev)
 
-    # optimizer = chainer.optimizers.Adam()
+    # determine the stop trigger
+    m = re.match(r'^(\d+)e$', args.stop)
+    if m:
+        trigger = chainermn.get_epoch_trigger(int(m.group(1)), train_data, args.batchsize, comm)
+    else:
+        m = re.match(r'^(\d+)i$', args.stop)
+        if m:
+            trigger = (int(m.group(1)), 'iteration')
+        else:
+            if comm.rank == 0:
+                sys.stderr.write("Error: unknown stop trigger: {}".format(args.stop))
+            exit(-1)
+
+    if comm.rank == 0:
+        print("Trigger: {}".format(trigger))
+
+    #optimizer = chainer.optimizers.Adam()
     optimizer = chainermn.create_multi_node_optimizer(
         chainer.optimizers.Adam(), comm)
     optimizer.setup(model)
@@ -399,6 +428,7 @@ def main():
     updater = training.StandardUpdater(
         train_iter, optimizer, converter=convert, device=dev)
     trainer = training.Trainer(updater,
+                               trigger,
                                # Use epoch trigger
                                (args.epoch, 'epoch'),
                                out=args.out)
