@@ -92,8 +92,8 @@ class TestCommunicator(unittest.TestCase):
             inter_size = ranks[4]
             if inter_size > 1:
                 raise nose.plugins.skip.SkipTest()
-        if (hasattr(self, 'nccl1') and not self.nccl1
-           and nccl.get_version() < 2000):
+        if hasattr(self, 'nccl1') and not self.nccl1 \
+           and nccl.get_version() < 2000:
             raise nose.plugins.skip.SkipTest()
 
         self.communicator = self.communicator_class(self.mpi_comm)
