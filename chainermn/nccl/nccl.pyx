@@ -59,7 +59,7 @@ cdef extern from "chainermn_nccl.h":
                                 ncclComm_t comm, Stream stream) nogil
     int NCCL_VERSION
 
-cdef dict STATUS_v1 = {
+cdef dict STATUS_V1 = {
     0: 'NCCL_ERROR_SUCCESS',
     1: 'NCCL_ERROR_UNHANDLED_CUDA_ERROR',
     2: 'NCCL_ERROR_SYSTEM_ERROR',
@@ -94,7 +94,7 @@ class NcclError(RuntimeError):
         if NCCL_VERSION >= 2000:
             s = STATUS[status]
         else:
-            s = STATUS_v1[status]
+            s = STATUS_V1[status]
         super(NcclError, self).__init__('%s: %s' % (s, msg.decode()))
 
 
