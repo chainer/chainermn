@@ -4,6 +4,7 @@ import argparse
 import collections
 import pickle
 import os.path
+import re
 import sys
 import time
 
@@ -185,7 +186,9 @@ class CalculateBleu(chainer.training.Extension):
 def main():
     parser = argparse.ArgumentParser(description='Chainer example: seq2seq')
     parser.add_argument('--batchsize', '-b', type=int, default=64,
-                        help='Number of images in each mini-batch')
+                        help='Number of images in each mini-batch') # 10 - 13,14 epoch?
+    parser.add_argument('--bleu', type=bool, default=False,
+                        help='Report BLEU score')
     parser.add_argument('--epoch', '-e', type=int, default=20,
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', action='store_true',
@@ -204,6 +207,8 @@ def main():
                         help=("Shift device ID of GPUs " +
                               "(convenient if you want to " +
                               "run multiple seq2seq_mn.py on a sinle node"))
+    parser.add_argument('--stop', '-s', type=str, default="15e",
+                        help='Stop trigger (ex. "500i", "15e")')
     args = parser.parse_args()
 
     # Prepare ChainerMN communicator
@@ -311,6 +316,23 @@ def main():
         chainer.cuda.get_device(dev).use()
         model.to_gpu(dev)
 
+
+    # determine the stop trigger
+    m = re.match(r'^(\d+)e$', args.stop)
+    if m:
+        trigger = chainermn.get_epoch_trigger(int(m.group(1)), train_data, args.batchsize, comm)
+    else:
+        m = re.match(r'^(\d+)i$', args.stop)
+        if m:
+            trigger = (int(m.group(1)), 'iteration')
+        else:
+            if comm.rank == 0:
+                sys.stderr.write("Error: unknown stop trigger: {}".format(args.stop))
+            exit(-1)
+
+    if comm.rank == 0:
+        print("Trigger: {}".format(trigger))
+
     #optimizer = chainer.optimizers.Adam()
     optimizer = chainermn.create_multi_node_optimizer(
         chainer.optimizers.Adam(), comm)
@@ -326,9 +348,9 @@ def main():
     updater = training.StandardUpdater(
         train_iter, optimizer, converter=convert, device=dev)
     trainer = training.Trainer(updater,
+                               trigger,
                                # Use epoch trigger
-                               chainermn.get_epoch_trigger(
-                                   args.epoch, train_data, args.batchsize, comm),
+                               # chainermn.get_epoch_trigger(args.epoch, train_data, args.batchsize, comm),
                                out=args.out)
     
     def translate_one(source, target):
@@ -360,8 +382,8 @@ def main():
     if comm.rank == 0:
         #trigger = chainermn.get_epoch_trigger(1, train_data, args.batchsize, comm)
                                               
-        trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
-                       trigger=(1, 'epoch'))
+        trainer.extend(extensions.LogReport(trigger=(100, 'iteration')),
+                       trigger=(100, 'iteration'))
         #trainer.extend(extensions.LogReport(trigger=trigger), trigger=trigger)
         
         report = extensions.PrintReport(['epoch',
@@ -371,11 +393,12 @@ def main():
                                          'main/perp',
                                          #'validation/main/perp',
                                          'elapsed_time'])
-        trainer.extend(report, trigger=(1, 'epoch'))
+        trainer.extend(report, trigger=(100, 'iteration'))
         #trainer.extend(translate, trigger=(200, 'iteration'))
 
-        trainer.extend(CalculateBleu(model, test_data),
-                       trigger=(10000, 'iteration'))
+        if args.bleu:
+            trainer.extend(CalculateBleu(model, test_data),
+                           trigger=(100, 'iteration')) # start from <<1  ->  20
         
     comm.mpi_comm.Barrier()
     if comm.rank == 0:
