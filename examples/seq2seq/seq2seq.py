@@ -2,8 +2,8 @@
 
 import argparse
 import collections
-import pickle
 import os.path
+import pickle
 import re
 import sys
 import time
@@ -11,6 +11,7 @@ import time
 from nltk.corpus import comtrans
 from nltk.translate import bleu_score
 import numpy
+import six
 
 import chainer
 from chainer import cuda
@@ -22,6 +23,35 @@ from chainer.training import extensions
 import chainermn
 
 import europal
+
+
+def cached_call(fname, func, *args):
+    if os.path.exists(fname):
+        with open(fname, 'rb') as f:
+            return pickle.load(f)
+    else:
+        # not yet cached
+        val = func(*args)
+        with open(fname, 'wb') as f:
+            pickle.dump(val, f)
+        return val
+
+
+def read_source(in_dir, cache=None):
+    en_path = os.path.join(in_dir, 'giga-fren.release2.fixed.en')
+    source_vocab = ['<eos>', '<unk>'] + europal.count_words(en_path)
+    source_data = europal.make_dataset(en_path, source_vocab)
+
+    return source_vocab, source_data
+
+
+def read_target(in_dir, cahce=None):
+    fr_path = os.path.join(in_dir, 'giga-fren.release2.fixed.fr')
+    target_vocab = ['<eos>', '<unk>'] + europal.count_words(fr_path)
+    target_data = europal.make_dataset(fr_path, target_vocab)
+
+    return target_vocab, target_data
+
 
 def sequence_embed(embed, xs):
     x_len = [len(x) for x in xs]
@@ -45,8 +75,6 @@ class Seq2seq(chainer.Chain):
         self.n_units = n_units
 
     def __call__(self, *inputs):
-        #print("{} sentences".format(len(inputs)))
-        #print([d.data for d in inputs])
         xs = inputs[:len(inputs) // 2]
         ys = inputs[len(inputs) // 2:]
 
@@ -56,26 +84,29 @@ class Seq2seq(chainer.Chain):
         ys_in = [F.concat([eos, y], axis=0) for y in ys]
         ys_out = [F.concat([y, eos], axis=0) for y in ys]
 
+        # Both xs and ys_in are lists of arrays.
         exs = sequence_embed(self.embed_x, xs)
         eys = sequence_embed(self.embed_y, ys_in)
 
         batch = len(xs)
-        # Initial hidden variable and cell variable
-        zero = self.xp.zeros((self.n_layers, batch, self.n_units), 'f')
-        hx, cx, _ = self.encoder(zero, zero, exs)
+        # None represents a zero vector in an encoder.
+        hx, cx, _ = self.encoder(None, None, exs)
         _, _, os = self.decoder(hx, cx, eys)
+
+        # It is faster to concatenate data before calculating loss
+        # because only one matrix multiplication is called.
         concat_os = F.concat(os, axis=0)
         concat_ys_out = F.concat(ys_out, axis=0)
-        loss = F.softmax_cross_entropy(
-            self.W(concat_os), concat_ys_out, normalize=False) \
-            * concat_ys_out.shape[0] / batch
+        loss = F.sum(F.softmax_cross_entropy(
+            self.W(concat_os), concat_ys_out, reduce='no')) / batch
 
         reporter.report({'loss': loss.data}, self)
-        perp = self.xp.exp(loss.data / concat_ys_out.shape[0] * batch)
+        n_words = concat_ys_out.shape[0]
+        perp = self.xp.exp(loss.data * batch / n_words)
         reporter.report({'perp': perp}, self)
         return loss
 
-    def translate(self, xs, max_length=50):
+    def translate(self, xs, max_length=100):
         batch = len(xs)
         with chainer.no_backprop_mode():
             xs = [x[::-1] for x in xs]
@@ -106,27 +137,18 @@ class Seq2seq(chainer.Chain):
             outs.append(y)
         return outs
 
-def convert(batch, device):
-    sys.stdout.flush()
-    if device is None:
-        def to_device(x):
-            return x
-    elif device < 0:
-        to_device = cuda.to_cpu
-    else:
-        def to_device(x):
-            return cuda.to_gpu(x, device, cuda.Stream.null)
 
+def convert(batch, device):
     def to_device_batch(batch):
         if device is None:
             return batch
         elif device < 0:
-            return [to_device(x) for x in batch]
+            return [chainer.dataset.to_device(device, x) for x in batch]
         else:
             xp = cuda.cupy.get_array_module(*batch)
             concat = xp.concatenate(batch, axis=0)
             sections = numpy.cumsum([len(x) for x in batch[:-1]], dtype='i')
-            concat_dev = to_device(concat)
+            concat_dev = chainer.dataset.to_device(device, concat)
             batch_dev = cuda.cupy.split(concat_dev, sections)
             return batch_dev
 
@@ -134,37 +156,17 @@ def convert(batch, device):
         to_device_batch([x for x, _ in batch]) +
         to_device_batch([y for _, y in batch]))
 
-def cached_call(fname, func, *args):
-    if os.path.exists(fname):
-        with open(fname, 'rb') as f:
-            return pickle.load(f)
-    else:
-        # not yet cached
-        val = func(*args)
-        with open(fname, 'wb') as f:
-            pickle.dump(val, f)
-        return val
-
-def read_source(in_dir, cache=None):
-    en_path = os.path.join(in_dir, 'giga-fren.release2.fixed.en')
-    source_vocab = ['<eos>', '<unk>'] + europal.count_words(en_path)
-    source_data = europal.make_dataset(en_path, source_vocab)
-
-    return source_vocab, source_data
-
-def read_target(in_dir, cahce=None):
-    fr_path = os.path.join(in_dir, 'giga-fren.release2.fixed.fr')
-    target_vocab = ['<eos>', '<unk>'] + europal.count_words(fr_path)
-    target_data = europal.make_dataset(fr_path, target_vocab)
-
-    return target_vocab, target_data
-
 
 class CalculateBleu(chainer.training.Extension):
-    def __init__(self, model, test_data, batch=100):
+    # priority = chainer.training.PRIORITY_WRITER
+    def __init__(
+            self, model, test_data, key, batch=100, device=-1, max_length=100):
         self.model = model
         self.test_data = test_data
+        self.key = key
         self.batch = batch
+        self.device = device
+        self.max_length = max_length
 
     def __call__(self, trainer):
         with chainer.no_backprop_mode():
@@ -174,13 +176,66 @@ class CalculateBleu(chainer.training.Extension):
                 sources, targets = zip(*self.test_data[i:i + self.batch])
                 references.extend([[t.tolist()] for t in targets])
 
-                ys = [y.tolist() for y in self.model.translate(sources)]
+                sources = [
+                    chainer.dataset.to_device(self.device, x) for x in sources]
+                ys = [y.tolist()
+                      for y in self.model.translate(sources, self.max_length)]
                 hypotheses.extend(ys)
 
         bleu = bleu_score.corpus_bleu(
             references, hypotheses,
             smoothing_function=bleu_score.SmoothingFunction().method1)
-        print('BELU {}'.format(bleu))
+        reporter.report({self.key: bleu})
+
+
+class BleuEvaluator(extensions.Evaluator):
+    def __init__(self, model, test_data, device=-1, batch=100,
+                 max_length=100, comm=None):
+        super(BleuEvaluator, self).__init__({'main': None}, model)
+        self.model = model
+        self.test_data = test_data
+        self.batch = batch
+        self.device = device
+        self.max_length = max_length
+        self.comm = comm
+
+    def evaluate(self):
+        bt = time.time()
+        with chainer.no_backprop_mode():
+            references = []
+            hypotheses = []
+            observation = {}
+            with reporter.report_scope(observation):
+                for i in range(0, len(self.test_data), self.batch):
+                    src, trg = zip(*self.test_data[i:i + self.batch])
+                    references.extend([[t.tolist()] for t in trg])
+
+                    src = [chainer.dataset.to_device(self.device, x)
+                           for x in src]
+                    ys = [y.tolist()
+                          for y in self.model.translate(src, self.max_length)]
+                    hypotheses.extend(ys)
+
+                bleu = bleu_score.corpus_bleu(
+                    references, hypotheses,
+                    smoothing_function=bleu_score.SmoothingFunction().method1)
+                reporter.report({'bleu': bleu}, self.model)
+        et = time.time()
+
+        if self.comm is not None:
+            # This evaluator is called via chainermn.MultiNodeEvaluator
+            for i in range(0, self.comm.mpi_comm.size):
+                print("BleuEvaluator::evaluate(): "
+                      "took {:.3f} [s]".format(et - bt))
+                sys.stdout.flush()
+                self.comm.mpi_comm.Barrier()
+        else:
+            # This evaluator is called from a conventional
+            # Chainer exntension
+            print("BleuEvaluator(single)::evaluate(): "
+                  "took {:.3f} [s]".format(et - bt))
+            sys.stdout.flush()
+        return observation
 
 
 def main():
@@ -193,10 +248,6 @@ def main():
                         help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', action='store_true',
                         help='Use GPU')
-    parser.add_argument('--input', '-i', type=str, default="wmt",
-                        help="Input directory")
-    parser.add_argument('--out', '-o', default='result',
-                        help='Directory to output the result')
     parser.add_argument('--cache', '-c', default=None,
                         help='Directory to cache pre-processed dataset')
     parser.add_argument('--resume', '-r', default='',
@@ -209,6 +260,10 @@ def main():
                               "run multiple seq2seq_mn.py on a sinle node"))
     parser.add_argument('--stop', '-s', type=str, default="15e",
                         help='Stop trigger (ex. "500i", "15e")')
+    parser.add_argument('--input', '-i', type=str, default='wmt',
+                        help='Input directory')
+    parser.add_argument('--out', '-o', default='result',
+                        help='Directory to output the result')
     args = parser.parse_args()
 
     # Prepare ChainerMN communicator
@@ -218,8 +273,6 @@ def main():
     else:
         comm = chainermn.create_communicator('naive')
         dev = -1
-
-    dev += args.shift_gpu
 
     if False:
         sentences = comtrans.aligned_sents('alignment-en-fr.txt')
@@ -246,47 +299,51 @@ def main():
             bt = time.time()
             if args.cache:
                 cache_file = os.path.join(args.cache, 'source.pickle')
-                src_vocab, src_data = cached_call(cache_file,
-                                                  read_source,
-                                                  args.input, args.cache)
+                source_vocab, source_data = cached_call(cache_file,
+                                                        read_source,
+                                                        args.input, args.cache)
             else:
-                src_vocab, src_data = read_source(args.input, args.cache)
+                source_vocab, source_data = read_source(args.input, args.cache)
             et = time.time()
-            print("RD source done. {:.3f} [s]".format(et-bt))
+            print("RD source done. {:.3f} [s]".format(et - bt))
             sys.stdout.flush()
 
             # Read target data
             bt = time.time()
             if args.cache:
                 cache_file = os.path.join(args.cache, 'target.pickle')
-                trg_vocab, trg_data = cached_call(cache_file,
-                                                  read_target,
-                                                  args.input, args.cache)
+                target_vocab, target_data = cached_call(cache_file,
+                                                        read_target,
+                                                        args.input, args.cache)
             else:
-                trg_vocab, trg_data = read_target(args.input, args.cache)
+                target_vocab, target_data = read_target(args.input, args.cache)
             et = time.time()
-            print("RD target done. {:.3f} [s]".format(et-bt))
+            print("RD target done. {:.3f} [s]".format(et - bt))
             sys.stdout.flush()
 
-            print('Original training data size: %d' % len(src_data))
-            train_data = [(s, t) for s, t in zip(src_data, trg_data)
-                          if 0 < len(s) < 50 and len(t) < 50]
+            print('Original training data size: %d' % len(source_data))
+            train_data = [(s, t)
+                          for s, t in six.moves.zip(source_data, target_data)
+                          if 0 < len(s) < 50 and 0 < len(t) < 50]
             print('Filtered training data size: %d' % len(train_data))
 
-            en_path = os.path.join(args.input, 'dev','newstest2013.en')
-            src_data = europal.make_dataset(en_path, src_vocab)
-            sys.stdout.flush()
+            import pdb; pdb.set_trace()
 
-            fr_path = os.path.join(args.input, 'dev','newstest2013.fr')
-            trg_data = europal.make_dataset(fr_path, trg_vocab)
-            sys.stdout.flush()
+            en_path = os.path.join(args.input, 'dev', 'newstest2013.en')
+            source_data = europal.make_dataset(en_path, source_vocab)
+            fr_path = os.path.join(args.input, 'dev', 'newstest2013.fr')
+            target_data = europal.make_dataset(fr_path, target_vocab)
+            assert(len(source_data) == len(target_data))
+            test_data = [(s, t) for s, t
+                         in six.moves.zip(source_data, target_data)
+                         if 0 < len(s) and 0 < len(t)]
 
-            test_data = list(zip(src_data, trg_data))
-
-            source_ids = {word: index for index, word in enumerate(src_vocab)}
-            target_ids = {word: index for index, word in enumerate(trg_vocab)}
+            source_ids = {word: index
+                          for index, word in enumerate(source_vocab)}
+            target_ids = {word: index
+                          for index, word in enumerate(target_vocab)}
         else:
-            #target_data, src_data = None, None
+            # target_data, source_data = None, None
             train_data, test_data = None, None
             target_ids, source_ids = None, None
 
@@ -308,14 +365,12 @@ def main():
     if comm.rank == 0:
         print("target_words : {}".format(len(target_words)))
         print("source_words : {}".format(len(source_words)))
-        
 
     model = Seq2seq(3, len(source_ids), len(target_ids), args.unit)
-    
+
     if dev >= 0:
         chainer.cuda.get_device(dev).use()
         model.to_gpu(dev)
-
 
     # determine the stop trigger
     m = re.match(r'^(\d+)e$', args.stop)
@@ -339,7 +394,10 @@ def main():
     optimizer.setup(model)
 
     # Broadcast dataset
+    # Sanity check of train_data
+
     train_data = chainermn.scatter_dataset(train_data, comm)
+    test_data_all = test_data  # NOQA
     test_data = chainermn.scatter_dataset(test_data, comm)
 
     train_iter = chainer.iterators.SerialIterator(train_data,
@@ -350,9 +408,13 @@ def main():
     trainer = training.Trainer(updater,
                                trigger,
                                # Use epoch trigger
-                               # chainermn.get_epoch_trigger(args.epoch, train_data, args.batchsize, comm),
+                               (args.epoch, 'epoch'),
                                out=args.out)
-    
+
+    trainer.extend(chainermn.create_multi_node_evaluator(
+        BleuEvaluator(model, test_data, device=dev, comm=comm),
+        comm))
+
     def translate_one(source, target):
         words = europal.split_sentence(source)
         print('# source : ' + ' '.join(words))
@@ -363,7 +425,7 @@ def main():
         print('#  result : ' + ' '.join(words))
         print('#  expect : ' + target)
 
-    #@chainer.training.make_extension(trigger=(200, 'iteration'))
+    # @chainer.training.make_extension(trigger=(200, 'iteration'))
     def translate(trainer):
         translate_one(
             'Who are we ?',
@@ -380,26 +442,24 @@ def main():
         translate_one(source, target)
 
     if comm.rank == 0:
-        #trigger = chainermn.get_epoch_trigger(1, train_data, args.batchsize, comm)
-                                              
-        trainer.extend(extensions.LogReport(trigger=(100, 'iteration')),
-                       trigger=(100, 'iteration'))
-        #trainer.extend(extensions.LogReport(trigger=trigger), trigger=trigger)
-        
+        # trainer.extend(BleuEvaluator(model, test_data_all, dev))
+        trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
+                       trigger=(1, 'epoch'))
+
         report = extensions.PrintReport(['epoch',
                                          'iteration',
                                          'main/loss',
-                                         #'validation/main/loss',
+                                         # 'validation/main/loss',
                                          'main/perp',
-                                         #'validation/main/perp',
+                                         'validation/main/bleu',
+                                         # 'validation/main/perp',
                                          'elapsed_time'])
-        trainer.extend(report, trigger=(100, 'iteration'))
-        #trainer.extend(translate, trigger=(200, 'iteration'))
+        trainer.extend(report, trigger=(1, 'epoch'))
+        # trainer.extend(translate, trigger=(200, 'iteration'))
 
-        if args.bleu:
-            trainer.extend(CalculateBleu(model, test_data),
-                           trigger=(100, 'iteration')) # start from <<1  ->  20
-        
+        # trainer.extend(CalculateBleu(model, test_data),
+        #                trigger=(10, 'iteration'))
+
     comm.mpi_comm.Barrier()
     if comm.rank == 0:
         print('start training')

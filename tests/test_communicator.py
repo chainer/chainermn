@@ -1,13 +1,14 @@
+import unittest
+
+import mpi4py.MPI
+import nose.plugins.skip
+import numpy as np
+
 import chainer
 import chainer.cuda
 import chainer.links
 import chainer.testing
 import chainer.testing.attr
-import mpi4py.MPI
-import nose.plugins.skip
-import numpy as np
-import unittest
-
 from chainermn.communicators import _communication_utility
 from chainermn.communicators.flat_communicator \
     import FlatCommunicator
@@ -39,6 +40,7 @@ class ExampleModel(chainer.Chain):
         'multi_node': True,
     }, {
         'communicator_class': FlatCommunicator,
+        'gpu': True,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
@@ -47,16 +49,19 @@ class ExampleModel(chainer.Chain):
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
+        'nccl': True,
     }, {
         'communicator_class': TwoDimensionalCommunicator,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,
+        'nccl': True,
     }, {
         'communicator_class': SingleNodeCommunicator,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': False,
+        'nccl': True,
     }
 )
 class TestCommunicator(unittest.TestCase):
@@ -93,18 +98,22 @@ class TestCommunicator(unittest.TestCase):
         chainer.testing.assert_allclose(model.c.b.data, 2 * np.ones((5, )))
 
     def check_allreduce_grad(self, model):
-        model.a.W.grad[:] = self.communicator.rank
-        model.b.W.grad[:] = self.communicator.rank + 1
-        model.c.b.grad[:] = self.communicator.rank + 2
-        self.communicator.allreduce_grad(model)
+        # We need to repeat twice for regressions on lazy initialization of
+        # sub communicators.
+        for _ in range(2):
+            model.a.W.grad[:] = self.communicator.rank
+            model.b.W.grad[:] = self.communicator.rank + 1
+            model.c.b.grad[:] = self.communicator.rank + 2
 
-        base = (self.communicator.size - 1) / 2
-        chainer.testing.assert_allclose(model.a.W.grad,
-                                        (base + 0) * np.ones((3, 2)))
-        chainer.testing.assert_allclose(model.b.W.grad,
-                                        (base + 1) * np.ones((4, 3)))
-        chainer.testing.assert_allclose(model.c.b.grad,
-                                        (base + 2) * np.ones((5, )))
+            self.communicator.allreduce_grad(model)
+            base = (self.communicator.size - 1.0) / 2
+
+            chainer.testing.assert_allclose(model.a.W.grad,
+                                            (base + 0) * np.ones((3, 2)))
+            chainer.testing.assert_allclose(model.b.W.grad,
+                                            (base + 1) * np.ones((4, 3)))
+            chainer.testing.assert_allclose(model.c.b.grad,
+                                            (base + 2) * np.ones((5, )))
 
     def test_broadcast_data_cpu(self):
         if not self.test_cpu:

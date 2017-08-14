@@ -1,0 +1,74 @@
+language: python
+
+os:
+  - linux
+
+python:
+  - "2.7"
+  - "3.5.1"
+
+env:
+  - MPI="mpich-3.0.4"    CHAINER_VER="1.24"
+  - MPI="mpich-3.0.4"    CHAINER_VER="2"
+  - MPI="mpich-3.2"      CHAINER_VER="1.24"
+  - MPI="mpich-3.2"      CHAINER_VER="2"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="1.24"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="2"
+  - MPI="openmpi-1.10.3" CHAINER_VER="1.24"
+  - MPI="openmpi-1.10.3" CHAINER_VER="2"
+  
+
+cache:
+  - pip
+  - ccache
+  - directories:
+      $HOME/mpi
+      $HOME/.chaier
+
+before_install:
+  - if [[ $TRAVIS_OS_NAME = "osx" ]]; then
+      brew update >/dev/null;
+      brew outdated pyenv || brew upgrade --quiet pyenv;
+      brew install homebrew/boneyard/pyenv-pip-rehash;
+
+      PYTHON_CONFIGURE_OPTS="--enable-unicode=ucs2" pyenv install -ks $PYTHON_VERSION;
+      pyenv global $PYTHON_VERSION;
+      python --version;
+    fi
+  - /bin/bash .travis_build_mpi.sh
+  - export PATH=$HOME/mpi/$MPI/bin:$PATH
+  - export LD_LIBRARY_PATH=$HOME/mpi/$MPI/lib:$HOME/mpi/$MPI/lib64:$LD_LIBRARY_PATH
+
+install:
+  - pip install -U pip wheel
+  - pip install nose hacking mock
+  - pip install autopep8
+  - pip install cython mpi4py cffi
+  - pip install chainer==${CHAINER_VER}
+  - python setup.py develop --no-nccl
+
+script:
+  - flake8 .
+  - flake8 --config=.flake8.cython .
+  - autopep8 -r . --global-config .pep8 | tee check_autopep8
+  - test ! -s check_autopep8
+  - for NP in 1 2; do PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' mpiexec -n ${NP} nosetests -a '!nccl,!gpu'; done
+  # - cd tests
+  # - PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' nosetests -a '!gpu,!slow' --with-doctest chainer_tests
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
+      READTHEDOCS=True python setup.py develop --no-nccl;
+    fi
+
+dist: trusty
+sudo: false
+
+addons:
+  apt:
+    packages:
+      - gfortran
+      - libhdf5-serial-dev
+      - liblapack-dev
+
+notifications:
+  slack:
+    secure: BMQN8rhuB2Syqm2u1TdJBqiil34eTrnvZyqnb7RJOvZ/7TqN5wH6Qy1Ncl1ihOpbAhxAFXzp3szKOPg2duzrZ3/LBGxJlPWqBnGRNMJDHSM0rnG8zv4LpZFhzwyvy5g2V3Jj9Z8VTRC920z/gF5y/M622Xve1t+8b5SUSFS2rYCgNDwd2RU99WUKt5GNL/6eAe8SI1752BhLTd+zEkg38HcpH7R8Q2fXoz5gIRJTGO+Cp8UVKgzUFQL0SJMlfYHNHpCw2BcRQl3whFNZiBD4XAHzbxtHRRE/TznUmKsN7pSTQrXSDHz4RbaQ3ZSEOKchwbsgB98Flx8F3xYjm5fyVMekbhkRggOuB0SME1YWIgM5Oa9EF5a3NniEf971iw6VrWaFFjr90JF4S/2oVLgzx09mhH0CGVP/Uyfp2/o8UMP1C69/YemmfVbhrnFCRMT86svFGSdu+fW7iNjv4wlmCwDKaSk/7xsVzznNmsocvJdRBREoKh1BU1YOshXh2OrLvAOqsKRbkf5vHCxRpe8NR6r02QY+CZmBjEJ0XLURXPn6LQF+OP/QK87FNjZmlJjdbWNytgXXUmiMxzhwN63u1LSgD9TZKQACb9ZyepqMTuk8EuQrDeAVGvdU8OndnW9kR41XBPwpiLWD6oAw5YSs5lwXTVaMj/OVe/lf/riix7E=

@@ -1,7 +1,5 @@
-import mpi4py.MPI
-
-
-def create_communicator(communicator_name='hierarchical', mpi_comm=mpi4py.MPI.COMM_WORLD):
+def create_communicator(
+        communicator_name='hierarchical', mpi_comm=None):
     """Create a ChainerMN communicator.
 
     Different communicators provide different approaches of communication, so
@@ -15,10 +13,10 @@ def create_communicator(communicator_name='hierarchical', mpi_comm=mpi4py.MPI.CO
     Name            CPU GPU NCCL     Recommended Use Cases
     =============== === === ======== =======================================
     naive           OK  OK           Testing on CPU mode
-    flat                OK           Each node has one GPU
-    hierarchical        OK  Required Each node has multiple GPUs and one HCA
-    two_dimensional     OK  Required Each node has multiple GPUs and HCAs
+    hierarchical        OK  Required Each node has a single NIC or HCA
+    two_dimensional     OK  Required Each node has multiple NICs or HCAs
     single_node         OK  Required Single node with multiple GPUs
+    flat                OK           N/A
     =============== === === ======== =======================================
 
     Args:
@@ -29,8 +27,12 @@ def create_communicator(communicator_name='hierarchical', mpi_comm=mpi4py.MPI.CO
     Returns:
         ChainerMN communicator
 
-
     """
+
+    if mpi_comm is None:
+        import mpi4py.MPI
+        mpi_comm = mpi4py.MPI.COMM_WORLD
+
     if communicator_name == 'naive':
         from chainermn.communicators.naive_communicator \
             import NaiveCommunicator

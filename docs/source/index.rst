@@ -9,16 +9,9 @@ Welcome to ChainerMN's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   install
-   tutorial
+   installation/index
+   tutorial/index
    reference/index
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
