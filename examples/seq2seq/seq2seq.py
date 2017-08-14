@@ -78,7 +78,7 @@ class Seq2seq(chainer.Chain):
         batch = len(xs)
         with chainer.no_backprop_mode():
             xs = [x[::-1] for x in xs]
-            exs = sequence_embed(self.embed_x, xs)
+            exs = sequence_embed(self.embed_x, [self.xp.array(x) for x in xs])
             # Initial hidden variable and cell variable
             zero = self.xp.zeros((self.n_layers, batch, self.n_units), 'f')
             h, c, _ = self.encoder(zero, zero, exs, train=False)
