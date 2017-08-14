@@ -221,7 +221,10 @@ class MultiNodeChainList(chainer.ChainList):
                             x, self._comm,
                             rank=_rank_out)
 
-        assert comm_queue.empty()
+        if not comm_queue.empty():
+            raise ValueError(
+                'Communication queue is not empty at the end of forward.'
+                'Make sure if all rank_in and rank_out correspond each other.')
 
         # Return.
         if y is delegate_variable:
