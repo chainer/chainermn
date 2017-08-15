@@ -3,6 +3,7 @@ import chainer.testing
 import chainer.testing.attr
 import chainer.utils
 import mpi4py.MPI
+import nose.plugins.skip
 import numpy
 import unittest
 
@@ -51,7 +52,15 @@ class TestMultiNodeBatchNormalization(unittest.TestCase):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
         self.communicator = NaiveCommunicator(self.mpi_comm)
 
+    def test_version_check(self):
+        if chainer.__version__.startswith('1.'):
+            with self.assertRaises(RuntimeError):
+                chainermn.links.MultiNodeBatchNormalization(3, self.communicator)
+
     def test_multi_node_bn(self):
+        if chainer.__version__.startswith('1.'):
+            raise nose.plugins.skip.SkipTest()
+
         comm = self.communicator
 
         local_batchsize = 10
