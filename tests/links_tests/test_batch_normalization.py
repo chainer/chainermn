@@ -1,6 +1,7 @@
 import chainer
 import chainer.testing
 import chainer.testing.attr
+import chainer.utils
 import mpi4py.MPI
 import numpy
 import unittest
@@ -110,5 +111,13 @@ class TestDataset(unittest.TestCase):
                 chainer.testing.assert_allclose(p1[1].grad, p3[1].grad)
                 chainer.testing.assert_allclose(p1[1].grad, p4[1].grad)
 
-                # TODO: check p1[1].grad != p2[1].grad
-                # (to confirm that this test is valid)
+                # This is to see that this test is valid.
+                self.assert_not_allclose(p1[1].grad, p2[1].grad)
+
+    def assert_not_allclose(self, x, y, atol=1e-5, rtol=1e-4, verbose=True):
+        x = chainer.cuda.to_cpu(chainer.utils.force_array(x))
+        y = chainer.cuda.to_cpu(chainer.utils.force_array(y))
+
+        with self.assertRaises(AssertionError):
+            numpy.testing.assert_allclose(
+                x, y, atol=atol, rtol=rtol, verbose=verbose)
