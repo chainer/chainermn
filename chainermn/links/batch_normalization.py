@@ -1,3 +1,4 @@
+import chainer
 from chainer import configuration
 from chainer import cuda
 from chainer.functions.normalization import batch_normalization
@@ -43,6 +44,11 @@ class MultiNodeBatchNormalization(link.Link):
                  initial_gamma=None, initial_beta=None):
         chainer.utils.experimental(
             'chainermn.links.MultiNodeBatchNormalization')
+
+        if chainer.__version__.startswith('1.'):
+            raise RuntimeError(
+                'MultiNodeBatchNormalization works only with '
+                'chainer >= 2.0.0.')
 
         super(MultiNodeBatchNormalization, self).__init__()
         self.comm = comm
