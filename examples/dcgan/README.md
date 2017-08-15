@@ -30,3 +30,10 @@ For example, below command is to train the model using 4 GPUs (= processes).
 ```
 mpiexec -n 4 python train_dcgan.py -g
 ```
+
+If you want to restart the training to fine tune the trained model, 
+specify the file path saved by `snapshot_object`.
+Below command loads the models which are trained 30000 iterations.
+```
+mpiexec -n 4 python train_dcgan.py -g --gen_model=result/gen_iter_30000.npz --dis_model=result/dis_iter_30000.npz --out=result_finetune
+```

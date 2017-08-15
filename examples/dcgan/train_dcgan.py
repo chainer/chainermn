@@ -31,8 +31,10 @@ def main():
                         help='Directory of image files.  Default is cifar-10.')
     parser.add_argument('--out', '-o', default='result',
                         help='Directory to output the result')
-    parser.add_argument('--resume', '-r', default='',
-                        help='Resume the training from snapshot')
+    parser.add_argument('--gen_model', '-r', default='',
+                        help='Use pre-trained generator for training')
+    parser.add_argument('--dis_model', '-d', default='',
+                        help='Use pre-trained discriminator for training')
     parser.add_argument('--n_hidden', '-n', type=int, default=100,
                         help='Number of hidden units (z)')
     parser.add_argument('--seed', type=int, default=0,
@@ -126,10 +128,13 @@ def main():
     if comm.rank == 0:
         snapshot_interval = (args.snapshot_interval, 'iteration')
         display_interval = (args.display_interval, 'iteration')
-        trainer.extend(
-            extensions.snapshot(
-                filename='snapshot_iter_{.updater.iteration}.npz'),
-            trigger=snapshot_interval)
+        # Save only model parameters.
+        # `snapshot` extension will save all the trainer module's attribute,
+        # including `train_iter`.
+        # However, `train_iter` depends on scattered dataset, which means that
+        # `train_iter` may be different in each process.
+        # Here, instead of saving whole trainer module, only the network models
+        # are saved.
         trainer.extend(extensions.snapshot_object(
             gen, 'gen_iter_{.updater.iteration}.npz'),
             trigger=snapshot_interval)
@@ -147,9 +152,11 @@ def main():
                 10, 10, args.seed, args.out),
             trigger=snapshot_interval)
 
-    if args.resume:
-        # Resume from a snapshot
-        chainer.serializers.load_npz(args.resume, trainer)
+    # Start the training using pre-trained model, saved by snapshot_object
+    if args.gen_model:
+        chainer.serializers.load_npz(args.gen_model, gen)
+    if args.dis_model:
+        chainer.serializers.load_npz(args.dis_model, dis)
 
     # Run the training
     trainer.run()
