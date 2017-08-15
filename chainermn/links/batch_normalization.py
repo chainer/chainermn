@@ -13,6 +13,31 @@ from chainermn.functions.batch_normalization import \
 
 class MultiNodeBatchNormalization(link.Link):
 
+    """Batch normalization layer that can use the whole batch stats.
+
+    When using chainer.link.BatchNormalization, batch mean and std are
+    computed independently for the local batch in each worker. When local
+    batch size is too small, training is unstable due to unreliable batch
+    stats.
+
+    In contrast, when using this MultiNodeBatchNormalization, workers
+    communicate to conduct 'correct' batch normalization (e.g., obtaining
+    mean and std for the whole global batch).
+
+    Args:
+        size (int or tuple of ints): Size (or shape) of channel
+            dimensions.
+        comm (ChainerMN communicator): communicator to share
+            the batch stats.
+        decay (float): Decay rate of moving average. It is used on training.
+        eps (float): Epsilon value for numerical stability.
+        dtype (numpy.dtype): Type to use in computing.
+        use_gamma (bool): If ``True``, use scaling parameter. Otherwise, use
+            unit(1) which makes no effect.
+        use_beta (bool): If ``True``, use shifting parameter. Otherwise, use
+            unit(0) which makes no effect.
+    """
+
     def __init__(self, size, comm, decay=0.9, eps=2e-5, dtype=numpy.float32,
                  use_gamma=True, use_beta=True,
                  initial_gamma=None, initial_beta=None):
