@@ -1,10 +1,10 @@
-import chainer.utils
 from chainer import configuration
 from chainer import cuda
+from chainer.functions.normalization import batch_normalization
 from chainer import initializers
 from chainer import link
+import chainer.utils
 from chainer import variable
-from chainer.functions.normalization import batch_normalization
 import numpy
 
 from chainermn.functions.batch_normalization import \

@@ -50,10 +50,10 @@ class MultiNodeBatchNormalizationFunction(function.Function):
         self.decay = decay
 
         # We need to delay importing MPI4py (and momdules that import MPI4py)
-        from mpi4py import MPI as mpi4py_module
         import chainermn.communicators._memory_utility as memory_utility_module
-        self.mpi4py_module = mpi4py_module
+        from mpi4py import MPI as mpi4py_module
         self.memory_utility_module = memory_utility_module
+        self.mpi4py_module = mpi4py_module
 
     def check_type_forward(self, in_types):
         n_in = type_check.eval(in_types.size())
