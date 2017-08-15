@@ -45,7 +45,7 @@ class ModelDistributedBN(chainer.Chain):
         return self.l3(h)
 
 
-class TestDataset(unittest.TestCase):
+class TestMultiNodeBatchNormalization(unittest.TestCase):
 
     def setUp(self):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
