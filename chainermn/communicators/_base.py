@@ -96,7 +96,10 @@ class NodeAwareCommunicatorBase(CommunicatorBase):
 
         self._init_ranks()
 
-        # TODO(akiba): write why we delay initializing comms
+        # We have to delay the initialization of communicators. This is because
+        # NCCL's communicators use the current CUDA devices at the time of
+        # initialization. Therefore, we have to initialize NCCL communicators
+        # after users set the devices to use.
         self.inter_mpi_comm = None
         self.intra_mpi_comm = None
         if self.use_nccl:
