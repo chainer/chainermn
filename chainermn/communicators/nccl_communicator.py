@@ -11,7 +11,7 @@ class NcclCommunicator(_base.CommunicatorBase):
 
     def __init__(self, mpi_comm):
         if nccl.get_version() < 2000:
-            raise ValueError(
+            raise RuntimeError(
                 'NcclCommunicator is only supported on NCCL 2.0+')
 
         super(NcclCommunicator, self).__init__(mpi_comm)
