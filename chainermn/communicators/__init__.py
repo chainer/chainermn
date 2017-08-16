@@ -58,6 +58,11 @@ def create_communicator(
             import SingleNodeCommunicator
         return SingleNodeCommunicator(mpi_comm=mpi_comm)
 
+    elif communicator_name == 'non_cuda_aware':
+        from chainermn.communicators.non_cuda_aware_communicator \
+            import NonCudaAwareCommunicator
+        return NonCudaAwareCommunicator(mpi_comm=mpi_comm)
+
     elif communicator_name == 'dummy':
         from chainermn.communicators.dummy_communicator \
             import DummyCommunicator
