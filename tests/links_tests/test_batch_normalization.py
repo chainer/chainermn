@@ -55,7 +55,12 @@ class TestMultiNodeBatchNormalization(unittest.TestCase):
     def test_version_check(self):
         if chainer.__version__.startswith('1.'):
             with self.assertRaises(RuntimeError):
-                chainermn.links.MultiNodeBatchNormalization(3, self.communicator)
+                chainermn.links.MultiNodeBatchNormalization(
+                    3, self.communicator)
+        else:
+            # Expecting no exceptions
+            chainermn.links.MultiNodeBatchNormalization(
+                3, self.communicator)
 
     def test_multi_node_bn(self):
         if chainer.__version__.startswith('1.'):
