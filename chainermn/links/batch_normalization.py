@@ -25,6 +25,8 @@ class MultiNodeBatchNormalization(link.Link):
     communicate to conduct 'correct' batch normalization (e.g., obtaining
     mean and std for the whole global batch).
 
+    This link works only with Chainer >= 2.0.0.
+
     Args:
         size (int or tuple of ints): Size (or shape) of channel
             dimensions.
