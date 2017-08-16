@@ -277,6 +277,17 @@ def main():
         comm = chainermn.create_communicator('naive')
         dev = -1
 
+    if comm.mpi_comm.rank == 0:
+        print('==========================================')
+        print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
+        if args.gpu:
+            print('Using GPUs')
+        print('Using {} communicator'.format(args.communicator))
+        print('Num unit: {}'.format(args.unit))
+        print('Num Minibatch-size: {}'.format(args.batchsize))
+        print('Num epoch: {}'.format(args.epoch))
+        print('==========================================')
+
     if False:
         sentences = comtrans.aligned_sents('alignment-en-fr.txt')
         source_ids = collections.defaultdict(lambda: len(source_ids))
