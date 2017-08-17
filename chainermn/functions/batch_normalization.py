@@ -1,3 +1,6 @@
+# This file is heavily based on Chainer's batch normalization implementation.
+# See: chainer/functions/normalization/batch_normalization.py (dbb650)
+
 import chainer
 from chainer import cuda
 from chainer import function
@@ -115,6 +118,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
         if chainer.configuration.config.train:
             axis = (0,) + tuple(range(head_ndim, x.ndim))
 
+            # ChainerMN diff (1/2) begins
             mpi_comm = self.comm.mpi_comm
             tmp = xp.empty(gamma.size * 2, dtype=x.dtype)
             x.mean(axis=axis, out=tmp[:gamma.size])
@@ -129,6 +133,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
             mean = tmp[:gamma.size]
             sqmean = tmp[gamma.size:]
             var = sqmean - xp.square(mean)
+            # ChainerMN diff (1/2) ends
 
             var += self.eps
         else:
@@ -194,7 +199,8 @@ class MultiNodeBatchNormalizationFunction(function.Function):
         # Note: If length of inputs is not 5, we must be in train mode.
         assert chainer.configuration.config.train
 
-        # It is wrong to multiply m by mpi_comm.size
+        # ChainerMN diff (2/2) begins
+        # Note: It is wrong to multiply m by mpi_comm.size
         # (instead of multiplying 1/size to gbeta, ggamma)
         mpi_comm = self.comm.mpi_comm
         tmp = xp.empty(gamma.size * 2, dtype=x.dtype)
@@ -208,6 +214,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
         tmp *= 1.0 / mpi_comm.size
         gbeta = tmp[:gamma.size]
         ggamma = tmp[gamma.size:]
+        # ChainerMN diff (2/2) ends
 
         if xp is numpy:
             gx = (gamma / self.std)[expander] * (
