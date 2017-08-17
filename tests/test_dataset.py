@@ -1,6 +1,7 @@
+import unittest
+
 import mpi4py.MPI
 import numpy as np
-import unittest
 
 import chainermn
 from chainermn.communicators.naive_communicator import NaiveCommunicator

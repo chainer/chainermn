@@ -16,6 +16,8 @@ from chainermn.communicators.hierarchical_communicator \
     import HierarchicalCommunicator
 from chainermn.communicators.naive_communicator \
     import NaiveCommunicator
+from chainermn.communicators.non_cuda_aware_communicator \
+    import NonCudaAwareCommunicator
 from chainermn.communicators.single_node_communicator \
     import SingleNodeCommunicator
 from chainermn.communicators.two_dimensional_communicator \
@@ -62,6 +64,12 @@ class ExampleModel(chainer.Chain):
         'test_gpu': True,
         'multi_node': False,
         'nccl': True,
+    }, {
+        'communicator_class': NonCudaAwareCommunicator,
+        'test_cpu': False,
+        'test_gpu': True,
+        'multi_node': True,
+        'nccl': True,
     }
 )
 class TestCommunicator(unittest.TestCase):
@@ -87,6 +95,34 @@ class TestCommunicator(unittest.TestCase):
     def test_size(self):
         self.assertEqual(self.communicator.size,
                          self.mpi_comm.Get_size())
+
+    def check_send_and_recv(self, *shape):
+        if self.communicator.size < 2:
+            raise nose.plugins.skip.SkipTest()
+
+        if self.communicator.rank > 0:
+            rank_prev = (self.communicator.rank - 1) % self.communicator.size
+            data_recv = self.communicator.recv(source=rank_prev, tag=0)
+            chainer.testing.assert_allclose(
+                data_recv, rank_prev * np.ones((shape)))
+
+        if self.communicator.rank < self.communicator.size - 1:
+            rank_next = (self.communicator.rank + 1) % self.communicator.size
+            data_send = self.communicator.rank * \
+                np.ones((shape)).astype(np.float32)
+            self.communicator.send(data_send, dest=rank_next, tag=0)
+
+    def test_send_and_recv1(self):
+        self.check_send_and_recv(50)
+
+    def test_send_and_recv2(self):
+        self.check_send_and_recv(50, 20)
+
+    def test_send_and_recv3(self):
+        self.check_send_and_recv(50, 20, 5)
+
+    def test_send_and_recv4(self):
+        self.check_send_and_recv(50, 20, 5, 3)
 
     def check_broadcast_data(self, model):
         model.a.W.data[:] = self.communicator.rank

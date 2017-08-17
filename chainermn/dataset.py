@@ -25,7 +25,8 @@ def scatter_dataset(dataset, comm, shuffle=False):
     assert hasattr(comm, 'send')
     assert hasattr(comm, 'recv')
 
-    # TODO(akiba): write why we do not use mpi_comm.scatter
+    # We cannot use `mpi_comm.scatter`. This is due to MPI4py's bug.
+    # For large datasets, when using `mpi_comm.scatter`, it causes MemoryError.
     if comm.rank == 0:
         # TODO(keisukefukuda)
         mine = None

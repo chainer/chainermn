@@ -4,6 +4,7 @@ from __future__ import print_function
 import argparse
 import multiprocessing
 import random
+import sys
 
 import numpy as np
 
@@ -26,6 +27,18 @@ else:
     import models_v2.googlenetbn as googlenetbn
     import models_v2.nin as nin
     import models_v2.resnet50 as resnet50
+
+# Check Python version if it supports multiprocessing.set_start_method,
+# which was introduced in Python 3.4
+major, minor, _, _, _ = sys.version_info
+if major <= 2 or (major == 3 and minor < 4):
+    sys.stderr.write("Error: ImageNet example uses "
+                     "chainer.iterators.MultiprocessIterator, "
+                     "which works only with Python >= 3.4. \n"
+                     "For more details, see "
+                     "http://chainermn.readthedocs.io/en/master/"
+                     "tutorial/tips_faqs.html#using-multiprocessiterator\n")
+    exit(-1)
 
 
 class PreprocessedDataset(chainer.dataset.DatasetMixin):
@@ -127,6 +140,15 @@ def main():
     # Prepare ChainerMN communicator.
     comm = chainermn.create_communicator(args.communicator)
     device = comm.intra_rank
+
+    if comm.mpi_comm.rank == 0:
+        print('==========================================')
+        print('Num process (COMM_WORLD): {}'.format(comm.size))
+        print('Using {} communicator'.format(args.communicator))
+        print('Using {} arch'.format(args.arch))
+        print('Num Minibatch-size: {}'.format(args.batchsize))
+        print('Num epoch: {}'.format(args.epoch))
+        print('==========================================')
 
     model = archs[args.arch]()
     if args.initmodel:
