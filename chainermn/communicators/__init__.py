@@ -9,16 +9,23 @@ def create_communicator(
     However, choosing proper communicator may give better performance.
     The following communicators are available.
 
-    =============== === === ======== =======================================
-    Name            CPU GPU NCCL     Recommended Use Cases
-    =============== === === ======== =======================================
-    naive           OK  OK           Testing on CPU mode
-    hierarchical        OK  Required Each node has a single NIC or HCA
-    two_dimensional     OK  Required Each node has multiple NICs or HCAs
-    single_node         OK  Required Single node with multiple GPUs
-    flat                OK           N/A
-    nccl                OK  Required N/A
-    =============== === === ======== =======================================
+    +---------------+---+---+--------+--------------------------------------+
+    |Name           |CPU|GPU|NCCL    |Recommended Use Cases                 |
+    +===============+===+===+========+======================================+
+    |naive          |OK |OK |        |Testing on CPU mode                   |
+    +---------------+---+---+--------+--------------------------------------+
+    |hierarchical   |   |OK |Required|Each node has a single NIC or HCA     |
+    +---------------+---+---+--------+--------------------------------------+
+    |two_dimensional|   |OK |Required|Each node has multiple NICs or HCAs   |
+    +---------------+---+---+--------+--------------------------------------+
+    |single_node    |   |OK |Required|Single node with multiple GPUs        |
+    +---------------+---+---+--------+--------------------------------------+
+    |flat           |   |OK |        |N/A                                   |
+    +---------------+---+---+--------+--------------------------------------+
+    |nccl           |   |OK |Required|``nccl`` is recommended when NCCL2 is |
+    |               |   |   |        |available in the environment, but it's|
+    |               |   |   |        |still experimental support.           |
+    +---------------+---+---+--------+--------------------------------------+
 
     Args:
         communicator_name: The name of communicator (``naive``, ``flat``,
