@@ -1,5 +1,4 @@
 import chainer
-from chainer import configuration
 from chainer import cuda
 from chainer.functions.normalization import batch_normalization
 from chainer import initializers
@@ -91,7 +90,7 @@ class MultiNodeBatchNormalization(link.Link):
                 beta = variable.Variable(self.xp.zeros(
                     self.avg_mean.shape, dtype=x.dtype))
 
-        if configuration.config.train:
+        if chainer.configuration.config.train:
             if finetune:
                 self.N += 1
                 decay = 1. - 1. / self.N

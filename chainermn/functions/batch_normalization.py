@@ -1,5 +1,4 @@
 import chainer
-from chainer import configuration
 from chainer import cuda
 from chainer import function
 import chainer.utils
@@ -84,7 +83,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
     def forward(self, inputs):
         xp = cuda.get_array_module(*inputs)
         x, gamma, beta = inputs[:3]
-        if configuration.config.train:
+        if chainer.configuration.config.train:
             if self.running_mean is None:
                 self.running_mean = xp.zeros_like(gamma)
                 self.running_var = xp.zeros_like(gamma)
@@ -113,7 +112,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
 
         cudnn_updated_running_stats = False
 
-        if configuration.config.train:
+        if chainer.configuration.config.train:
             axis = (0,) + tuple(range(head_ndim, x.ndim))
 
             mpi_comm = self.comm.mpi_comm
@@ -150,7 +149,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
                 'bn_fwd')(x, mean[expander], self.std[expander], gamma,
                           beta)
 
-        if configuration.config.train and (not cudnn_updated_running_stats):
+        if chainer.configuration.config.train and (not cudnn_updated_running_stats):
             # Note: If in training mode, the cuDNN forward training function
             # will do this for us, so
             # only run following code if cuDNN was not used.
@@ -193,7 +192,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
             return gx, ggamma, gbeta, gmean, gvar
 
         # Note: If length of inputs is not 5, we must be in train mode.
-        assert configuration.config.train
+        assert chainer.configuration.config.train
 
         # It is wrong to multiply m by mpi_comm.size
         # (instead of multiplying 1/size to gbeta, ggamma)
