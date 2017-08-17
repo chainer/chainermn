@@ -10,16 +10,16 @@ class Alex(chainer.Chain):
     insize = 227
 
     def __init__(self):
-        super(Alex, self).__init__(
-            conv1=L.Convolution2D(None, 96, 11, stride=4),
-            conv2=L.Convolution2D(None, 256,  5, pad=2),
-            conv3=L.Convolution2D(None, 384,  3, pad=1),
-            conv4=L.Convolution2D(None, 384,  3, pad=1),
-            conv5=L.Convolution2D(None, 256,  3, pad=1),
-            fc6=L.Linear(None, 4096),
-            fc7=L.Linear(None, 4096),
-            fc8=L.Linear(None, 1000),
-        )
+        super(Alex, self).__init__()
+        with self.init_scope():
+            self.conv1 = L.Convolution2D(None, 96, 11, stride=4)
+            self.conv2 = L.Convolution2D(None, 256, 5, pad=2)
+            self.conv3 = L.Convolution2D(None, 384, 3, pad=1)
+            self.conv4 = L.Convolution2D(None, 384, 3, pad=1)
+            self.conv5 = L.Convolution2D(None, 256, 3, pad=1)
+            self.fc6 = L.Linear(None, 4096)
+            self.fc7 = L.Linear(None, 4096)
+            self.fc8 = L.Linear(None, 1000)
 
     def __call__(self, x, t):
         h = F.max_pooling_2d(F.local_response_normalization(

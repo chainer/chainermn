@@ -38,8 +38,6 @@ class HierarchicalCommunicator(_base.NodeAwareCommunicatorBase):
             self.gpu_buffer_a.ptr(), self.gpu_buffer_b.ptr(), n_elems_total,
             nccl.NCCL_FLOAT, nccl.NCCL_SUM, 0, stream.ptr)
 
-        # TODO(akiba): sync necessary?
-
         # Inter-node allreduce
         if self.intra_rank == 0:
             _communication_utility.inter_allreduce_gpu(
