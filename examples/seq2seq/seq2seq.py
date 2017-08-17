@@ -8,6 +8,7 @@ import re
 import sys
 import time
 
+from mpi4py import MPI
 from nltk.corpus import comtrans
 from nltk.translate import bleu_score
 import numpy
@@ -111,11 +112,10 @@ class Seq2seq(chainer.Chain):
         with chainer.no_backprop_mode():
             with chainer.using_config('train', False):
                 xs = [x[::-1] for x in xs]
-                # exs = sequence_embed(self.embed_x, [self.xp.array(x) for x in xs])
                 exs = sequence_embed(self.embed_x, xs)
                 # Initial hidden variable and cell variable
-                # zero = self.xp.zeros((self.n_layers, batch, self.n_units), 'f')
-                # h, c, _ = self.encoder(zero, zero, exs, train=False)
+                # zero = self.xp.zeros((self.n_layers, batch, self.n_units), 'f')  # NOQA
+                # h, c, _ = self.encoder(zero, zero, exs, train=False)  # NOQA
                 h, c, _ = self.encoder(None, None, exs)
                 ys = self.xp.zeros(batch, 'i')
                 result = []
@@ -244,11 +244,9 @@ class BleuEvaluator(extensions.Evaluator):
 def main():
     parser = argparse.ArgumentParser(description='Chainer example: seq2seq')
     parser.add_argument('--batchsize', '-b', type=int, default=64,
-                        help='Number of images in each mini-batch') # 10 - 13,14 epoch?
-    parser.add_argument('--bleu', type=bool, default=False,
+                        help='Number of images in each mini-batch')
+    parser.add_argument('--bleu', action="store_true", default=False,
                         help='Report BLEU score')
-    parser.add_argument('--epoch', '-e', type=int, default=20,
-                        help='Number of sweeps over the dataset to train')
     parser.add_argument('--gpu', '-g', action='store_true',
                         help='Use GPU')
     parser.add_argument('--cache', '-c', default=None,
@@ -257,10 +255,8 @@ def main():
                         help='Resume the training from snapshot')
     parser.add_argument('--unit', '-u', type=int, default=1024,
                         help='Number of units')
-    parser.add_argument('--shift-gpu', type=int, default=0,
-                        help=("Shift device ID of GPUs " +
-                              "(convenient if you want to " +
-                              "run multiple seq2seq_mn.py on a sinle node"))
+    parser.add_argument('--communicator', default='hierarchical',
+                        help="Type of communicator")
     parser.add_argument('--stop', '-s', type=str, default="15e",
                         help='Stop trigger (ex. "500i", "15e")')
     parser.add_argument('--input', '-i', type=str, default='wmt',
@@ -285,7 +281,6 @@ def main():
         print('Using {} communicator'.format(args.communicator))
         print('Num unit: {}'.format(args.unit))
         print('Num Minibatch-size: {}'.format(args.batchsize))
-        print('Num epoch: {}'.format(args.epoch))
         print('==========================================')
 
     if False:
@@ -341,8 +336,6 @@ def main():
                           if 0 < len(s) < 50 and 0 < len(t) < 50]
             print('Filtered training data size: %d' % len(train_data))
 
-            #import pdb; pdb.set_trace()
-
             en_path = os.path.join(args.input, 'dev', 'newstest2013.en')
             source_data = europal.make_dataset(en_path, source_vocab)
             fr_path = os.path.join(args.input, 'dev', 'newstest2013.fr')
@@ -389,20 +382,20 @@ def main():
     # determine the stop trigger
     m = re.match(r'^(\d+)e$', args.stop)
     if m:
-        trigger = chainermn.get_epoch_trigger(int(m.group(1)), train_data, args.batchsize, comm)
+        trigger = (int(m.group(1)), 'epoch')
     else:
         m = re.match(r'^(\d+)i$', args.stop)
         if m:
             trigger = (int(m.group(1)), 'iteration')
         else:
             if comm.rank == 0:
-                sys.stderr.write("Error: unknown stop trigger: {}".format(args.stop))
+                sys.stderr.write("Error: unknown stop trigger: {}".format(
+                    args.stop))
             exit(-1)
 
     if comm.rank == 0:
         print("Trigger: {}".format(trigger))
 
-    #optimizer = chainer.optimizers.Adam()
     optimizer = chainermn.create_multi_node_optimizer(
         chainer.optimizers.Adam(), comm)
     optimizer.setup(model)
@@ -417,7 +410,7 @@ def main():
     # separately and join later.
 
     # Compute the # of scatter_dataset call
-    Nmax=1000000
+    Nmax = 1000000
     if comm.rank == 0:
         n_iter = int((len(train_data) + Nmax - 1) / Nmax)
     else:
@@ -426,7 +419,7 @@ def main():
     recv_train_data = []
     for i in range(0, n_iter):
         beg = i * Nmax
-        end = (i+1) * Nmax
+        end = (i + 1) * Nmax
         data = train_data[beg:end] if train_data is not None else None
         recv_train_data += chainermn.scatter_dataset(data, comm)
     train_data = recv_train_data
@@ -440,8 +433,6 @@ def main():
         train_iter, optimizer, converter=convert, device=dev)
     trainer = training.Trainer(updater,
                                trigger,
-                               # Use epoch trigger
-                               (args.epoch, 'epoch'),
                                out=args.out)
 
     trainer.extend(chainermn.create_multi_node_evaluator(
