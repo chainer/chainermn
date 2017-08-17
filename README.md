@@ -1,4 +1,4 @@
-<div align="center"><img src="docs/image/chainermn1000px.png" width="400"/></div>
+<div align="center"><img src="docs/image/chainermn1000px.png" width="800"/></div>
 
 [![Build Status](https://travis-ci.org/chainer/chainermn.svg?branch=master)](https://travis-ci.org/chainer/chainermn)
 [![Documentation Status](https://readthedocs.org/projects/chainermn/badge/?version=latest)](http://chainermn.readthedocs.io/en/latest/?badge=latest)
