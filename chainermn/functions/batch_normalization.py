@@ -154,7 +154,8 @@ class MultiNodeBatchNormalizationFunction(function.Function):
                 'bn_fwd')(x, mean[expander], self.std[expander], gamma,
                           beta)
 
-        if chainer.configuration.config.train and (not cudnn_updated_running_stats):
+        if chainer.configuration.config.train and \
+                (not cudnn_updated_running_stats):
             # Note: If in training mode, the cuDNN forward training function
             # will do this for us, so
             # only run following code if cuDNN was not used.
