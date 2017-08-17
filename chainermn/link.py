@@ -115,10 +115,10 @@ class MultiNodeChainList(chainer.ChainList):
 
         Args:
             link (chainer.Link): The link object to be registered.
-            rank_in (int or list):
+            rank_in (int, list, or None):
                 Ranks from which it receives data. If None is specified,
                 the model does not receive from any machines.
-            rank_out (int or list):
+            rank_out (int, list, or None):
                 Ranks to which it sends data. If None is specified,
                 the model will not send to any machine.
         """
