@@ -39,13 +39,13 @@ class TestDataset(unittest.TestCase):
 
         for shuffle in [True, False]:
             for root in range(self.communicator.size):
-                self.check_scatter_dataset([], root, shuffle)
-                self.check_scatter_dataset([0], root, shuffle)
-                self.check_scatter_dataset(list(range(n)), root, shuffle)
+                self.check_scatter_dataset([], shuffle, root)
+                self.check_scatter_dataset([0], shuffle, root)
+                self.check_scatter_dataset(list(range(n)), shuffle, root)
                 self.check_scatter_dataset(list(range(n * 5 - 1)),
-                                           root, shuffle)
+                                           shuffle, root)
 
-                self.check_scatter_dataset(np.array([]), root, shuffle)
-                self.check_scatter_dataset(np.array([0]), root, shuffle)
-                self.check_scatter_dataset(np.arange(n), root, shuffle)
-                self.check_scatter_dataset(np.arange(n * 5 - 1), root, shuffle)
+                self.check_scatter_dataset(np.array([]), shuffle, root)
+                self.check_scatter_dataset(np.array([0]), shuffle, root)
+                self.check_scatter_dataset(np.arange(n), shuffle, root)
+                self.check_scatter_dataset(np.arange(n * 5 - 1), shuffle, root)

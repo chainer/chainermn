@@ -16,6 +16,8 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
         dataset: A dataset (e.g., ``list``, ``numpy.ndarray``,
             ``chainer.datasets.TupleDataset``, ...).
         comm: ChainerMN communicator or MPI4py communicator.
+        shuffle: Shuffle the dataset before being scattered.
+        root: The root process of the scatter operation.
 
     Returns:
         Scattered dataset.
@@ -25,9 +27,12 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
         comm = comm.mpi_comm
     assert hasattr(comm, 'send')
     assert hasattr(comm, 'recv')
+    assert 0 <= root and root < comm.size, "root={},rank={}".format(root,comm.rank)
 
     # We cannot use `mpi_comm.scatter`. This is due to MPI4py's bug.
     # For large datasets, when using `mpi_comm.scatter`, it causes MemoryError.
+    # import sys
+    # sys.stderr.write("scatter_dataset(): root={}".format(root))
     if comm.rank == root:
         mine = None
         n_total_samples = len(dataset)
@@ -48,7 +53,7 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
                 comm.send(subds, dest=i)
         return mine
     else:
-        return comm.recv(source=0)
+        return comm.recv(source=root)
 
 
 def get_n_iterations_for_one_epoch(dataset, local_batch_size, comm):
