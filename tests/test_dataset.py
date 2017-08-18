@@ -13,12 +13,13 @@ class TestDataset(unittest.TestCase):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
         self.communicator = NaiveCommunicator(self.mpi_comm)
 
-    def check_scatter_dataset(self, original_dataset):
+    def check_scatter_dataset(self, original_dataset, shuffle=False, root=0):
         my_dataset = chainermn.scatter_dataset(
-            original_dataset, self.communicator)
+            original_dataset, self.communicator,
+            shuffle=shuffle, root=root)
         sub_datasets = self.mpi_comm.gather(my_dataset)
 
-        if self.mpi_comm.rank == 0:
+        if self.mpi_comm.rank == root:
             # Test the sizes
             sub_sizes = [len(sub_dataset) for sub_dataset in sub_datasets]
             self.assertEqual(len(set(sub_sizes)), 1)
@@ -36,12 +37,15 @@ class TestDataset(unittest.TestCase):
     def test_scatter_dataset(self):
         n = self.communicator.size
 
-        self.check_scatter_dataset([])
-        self.check_scatter_dataset([0])
-        self.check_scatter_dataset(list(range(n)))
-        self.check_scatter_dataset(list(range(n * 5 - 1)))
+        for shuffle in [True, False]:
+            for root in range(self.communicator.size):
+                self.check_scatter_dataset([], root, shuffle)
+                self.check_scatter_dataset([0], root, shuffle)
+                self.check_scatter_dataset(list(range(n)), root, shuffle)
+                self.check_scatter_dataset(list(range(n * 5 - 1)),
+                                           root, shuffle)
 
-        self.check_scatter_dataset(np.array([]))
-        self.check_scatter_dataset(np.array([0]))
-        self.check_scatter_dataset(np.arange(n))
-        self.check_scatter_dataset(np.arange(n * 5 - 1))
+                self.check_scatter_dataset(np.array([]), root, shuffle)
+                self.check_scatter_dataset(np.array([0]), root, shuffle)
+                self.check_scatter_dataset(np.arange(n), root, shuffle)
+                self.check_scatter_dataset(np.arange(n * 5 - 1), root, shuffle)

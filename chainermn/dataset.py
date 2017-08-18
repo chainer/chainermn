@@ -1,8 +1,9 @@
 import chainer.datasets
+import numpy
 import warnings
 
 
-def scatter_dataset(dataset, comm, shuffle=False):
+def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
     """Scatter the given dataset to the workers in the communicator.
 
     The dataset of worker 0 (i.e., the worker whose ``comm.rank`` is 0) is
@@ -27,16 +28,21 @@ def scatter_dataset(dataset, comm, shuffle=False):
 
     # We cannot use `mpi_comm.scatter`. This is due to MPI4py's bug.
     # For large datasets, when using `mpi_comm.scatter`, it causes MemoryError.
-    if comm.rank == 0:
-        # TODO(keisukefukuda)
+    if comm.rank == root:
         mine = None
         n_total_samples = len(dataset)
         n_sub_samples = (n_total_samples + comm.size - 1) // comm.size
+
+        if shuffle:
+            order = numpy.random.RandomState(seed).permutation(n_total_samples)
+        else:
+            order = numpy.arange(n_total_samples)
+
         for i in range(comm.size):
             b = n_total_samples * i // comm.size
             e = b + n_sub_samples
-            subds = chainer.datasets.SubDataset(dataset, b, e)
-            if i == 0:
+            subds = chainer.datasets.SubDataset(dataset, b, e, order)
+            if i == root:
                 mine = subds
             else:
                 comm.send(subds, dest=i)
