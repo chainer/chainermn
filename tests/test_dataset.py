@@ -17,7 +17,7 @@ class TestDataset(unittest.TestCase):
         my_dataset = chainermn.scatter_dataset(
             original_dataset, self.communicator,
             shuffle=shuffle, root=root)
-        sub_datasets = self.mpi_comm.gather(my_dataset)
+        sub_datasets = self.mpi_comm.gather(my_dataset, root=root)
 
         if self.mpi_comm.rank == root:
             # Test the sizes
