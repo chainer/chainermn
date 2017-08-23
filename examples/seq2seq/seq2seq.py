@@ -241,6 +241,54 @@ class BleuEvaluator(extensions.Evaluator):
         return observation
 
 
+def create_optimizer(opt_arg):
+    """Parse a string and get an optimizer.
+
+    The syntax is:
+
+        opt(params...)
+
+    where
+        opt := sgd | adam
+        param := [float | key=val]...
+    """
+    m = re.match(r'(adam|sgd)\(([^)]*)\)', opt_arg, re.I)
+    name = m.group(1).lower()
+    args = m.group(2)
+
+    names_dict = {
+        "adadelta": chainer.optimizers.AdaDelta,
+        "adagrad": chainer.optimizers.AdaGrad,
+        "adam": chainer.optimizers.Adam,
+        "momentumsgd": chainer.optimizers.MomentumSGD,
+        "nesterovag": chainer.optimizers.NesterovAG,
+        "rmsprop": chainer.optimizers.RMSprop,
+        "rmspropgraves": chainer.optimizers.RMSpropGraves,
+        "sgd": chainer.optimizers.SGD,
+        "smorms3": chainer.optimizers.SMORMS3,
+    }
+
+    try:
+        opt = names_dict[name]
+    except KeyError:
+        raise RuntimeError("Unknown optimizer: '{}' in '{}'".format(
+            name, opt_arg))
+
+    # positional arguments
+    pos = []
+    # keyword arguments
+    kw = {}
+
+    for a in re.split(r',\s*', args):
+        if a.find('=') >= 0:
+            key, val = a.split('=')
+            kw[key] = float(val)
+        else:
+            pos.append(float(a))
+
+    return opt(*pos, **kw)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Chainer example: seq2seq')
     parser.add_argument('--batchsize', '-b', type=int, default=64,
@@ -261,9 +309,13 @@ def main():
                         help='Stop trigger (ex. "500i", "15e")')
     parser.add_argument('--input', '-i', type=str, default='wmt',
                         help='Input directory')
+    parser.add_argument('--optimizer', type=str, default="adam()",
+                        help="Optimizer and its argument")
     parser.add_argument('--out', '-o', default='result',
                         help='Directory to output the result')
     args = parser.parse_args()
+
+    print(create_optimizer(args.optimizer))
 
     # Prepare ChainerMN communicator
     if args.gpu:
@@ -397,7 +449,7 @@ def main():
         print("Trigger: {}".format(trigger))
 
     optimizer = chainermn.create_multi_node_optimizer(
-        chainer.optimizers.Adam(), comm)
+        create_optimizer(args.optimizer), comm)
     optimizer.setup(model)
 
     # Broadcast dataset
