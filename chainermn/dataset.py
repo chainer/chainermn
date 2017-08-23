@@ -37,8 +37,6 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
 
     # We cannot use `mpi_comm.scatter`. This is due to MPI4py's bug.
     # For large datasets, when using `mpi_comm.scatter`, it causes MemoryError.
-    # import sys
-    # sys.stderr.write("scatter_dataset(): root={}".format(root))
     if comm.rank == root:
         mine = None
         n_total_samples = len(dataset)
