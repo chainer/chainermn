@@ -16,8 +16,14 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
         dataset: A dataset (e.g., ``list``, ``numpy.ndarray``,
             ``chainer.datasets.TupleDataset``, ...).
         comm: ChainerMN communicator or MPI4py communicator.
-        shuffle: Shuffle the dataset before being scattered.
-        root: The root process of the scatter operation.
+        shuffle (bool): If ``True``, the order of examples is shuffled
+            before being scattered.
+        root (int): The root process of the scatter operation.
+        seed (int): Seed the generator used for the permutation of indexes.
+            If an integer being convertible to 32 bit unsigned integers is
+            specified, it is guaranteed that each sample
+            in the given dataset always belongs to a specific subset.
+            If ``None``, the permutation is changed randomly.
 
     Returns:
         Scattered dataset.
@@ -37,11 +43,10 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
         mine = None
         n_total_samples = len(dataset)
         n_sub_samples = (n_total_samples + comm.size - 1) // comm.size
+        order = None
 
         if shuffle:
             order = numpy.random.RandomState(seed).permutation(n_total_samples)
-        else:
-            order = numpy.arange(n_total_samples)
 
         for i in range(comm.size):
             b = n_total_samples * i // comm.size
