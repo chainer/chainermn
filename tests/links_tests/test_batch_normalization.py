@@ -153,7 +153,8 @@ class TestMultiNodeBatchNormalization(unittest.TestCase):
                 chainer.testing.assert_allclose(p1[1].grad, p4[1].grad)
 
                 # This is to see that this test is valid.
-                self.assert_not_allclose(p1[1].grad, p2[1].grad)
+                if comm.size >= 2:
+                    self.assert_not_allclose(p1[1].grad, p2[1].grad)
 
     def assert_not_allclose(self, x, y, atol=1e-5, rtol=1e-4, verbose=True):
         x = chainer.cuda.to_cpu(chainer.utils.force_array(x))
