@@ -70,7 +70,6 @@ class NcclCommunicator(_base.CommunicatorBase):
                                  self.gpu_buffer_b.ptr(), n_elems_total,
                                  nccl.NCCL_FLOAT, nccl.NCCL_SUM,
                                  stream.ptr)
-        stream.synchronize()
         ret = self.gpu_buffer_b.array(n_elems_total) * (1.0 / self.size)
         self.gpu_buffer_b.from_device(ret, n_bytes_buffer)
         _memory_utility.unpack_params(

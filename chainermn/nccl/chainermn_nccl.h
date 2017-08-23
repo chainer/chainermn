@@ -1,5 +1,3 @@
-// This file is a stub header file of nccl for Read the Docs.
-
 #ifndef INCLUDE_GUARD_CHAINERMN_NCCL_H
 #define INCLUDE_GUARD_CHAINERMN_NCCL_H
 
