@@ -1,5 +1,51 @@
-import chainer.datasets
+import math
+import re
 import warnings
+
+import chainer.datasets
+
+
+class DataSizeError(RuntimeError):
+    def __init__(self, ds_size, pickled_size):
+        msg = """The dataset was too large to be scattered using MPI.
+
+        The length of the dataset is {} and it's size after being pickled
+        was {}. In the current MPI specification, the size cannot exceed
+        {}, which is so called 'INT_MAX'.
+
+        To solve this problem, please split the dataset into multiple
+        peaces and send/recv them separately.
+
+        Recommended sizes are indicated by ``slices()`` method.
+        """
+
+        INT_MAX = 2147483647
+        msg = msg.format(ds_size, pickled_size, INT_MAX)
+        super(DataSizeError, self).__init__(self, msg)
+
+        self.pickled_size = pickled_size
+        self.max_size = INT_MAX
+        self.dataset_size = ds_size
+
+    def num_split(self):
+        ps = self.pickled_size
+        mx = self.max_size
+        return (ps + mx - 1) // mx
+
+    def slices(self):
+        ds = self.dataset_size
+        nsplit = self.num_split()
+        size = math.ceil(ds / nsplit)
+
+        return [(b, min(e, ds)) for b, e in
+                ((i * size, (i + 1) * size) for i in range(0, nsplit))]
+
+
+def _parse_overflow_error(err):
+    msg = str(err)
+    m = re.search(r'integer (\d+) does not fit in', msg)
+    assert m is not None, "'{}' must include size of the message".format(msg)
+    return int(m.group(1))
 
 
 def scatter_dataset(dataset, comm):
@@ -38,10 +84,19 @@ def scatter_dataset(dataset, comm):
             if i == 0:
                 mine = subds
             else:
-                comm.send(subds, dest=i)
+                try:
+                    comm.send(subds, dest=i)
+                except OverflowError as e:
+                    pickled_size = _parse_overflow_error(e)
+                    raise DataSizeError(len(dataset), pickled_size)
+
         return mine
     else:
-        return comm.recv(source=0)
+        try:
+            return comm.recv(source=0)
+        except OverflowError as e:
+            pickled_size = _parse_overflow_error(e)
+            raise DataSizeError(len(dataset), pickled_size)
 
 
 def get_n_iterations_for_one_epoch(dataset, local_batch_size, comm):
