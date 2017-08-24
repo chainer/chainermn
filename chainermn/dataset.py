@@ -25,7 +25,7 @@ class DataSizeError(RuntimeError):
 
         self.pickled_size = pickled_size
         self.max_size = INT_MAX
-        self.dataset_size = ds_size
+        self.dataset_len = ds_size
 
     def num_split(self):
         ps = self.pickled_size
@@ -33,7 +33,7 @@ class DataSizeError(RuntimeError):
         return (ps + mx - 1) // mx
 
     def slices(self):
-        ds = self.dataset_size
+        ds = self.dataset_len
         nsplit = self.num_split()
         size = math.ceil(ds / nsplit)
 

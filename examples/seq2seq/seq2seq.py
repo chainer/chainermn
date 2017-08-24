@@ -279,12 +279,15 @@ def create_optimizer(opt_arg):
     # keyword arguments
     kw = {}
 
-    for a in re.split(r',\s*', args):
-        if a.find('=') >= 0:
-            key, val = a.split('=')
-            kw[key] = float(val)
-        else:
-            pos.append(float(a))
+    args = args.strip()
+
+    if len(args) > 0:
+        for a in re.split(r',\s*', args):
+            if a.find('=') >= 0:
+                key, val = a.split('=')
+                kw[key] = float(val)
+            else:
+                pos.append(float(a))
 
     return opt(*pos, **kw)
 
@@ -462,20 +465,14 @@ def main():
     # separately and join later.
 
     # Compute the # of scatter_dataset call
-    Nmax = 1000000
-    if comm.rank == 0:
-        n_iter = int((len(train_data) + Nmax - 1) / Nmax)
-    else:
-        n_iter = 0
-    n_iter = comm.mpi_comm.bcast(n_iter, root=0)
-    recv_train_data = []
-    for i in range(0, n_iter):
-        beg = i * Nmax
-        end = (i + 1) * Nmax
-        data = train_data[beg:end] if train_data is not None else None
-        recv_train_data += chainermn.scatter_dataset(data, comm)
-    train_data = recv_train_data
-    test_data_all = test_data  # NOQA
+    try:
+        train_data = chainermn.scatter_dataset(train_data, comm)
+    except chainermn.DataSizeError as e:
+        sys.stderr.write("DataSizeError: picked_size={} max_size={} dataset_len={} num_split={} slices={}".format(e.picked_size, e.max_size, e.dataset_size, e.num_split, e.nslices))
+        recv_data = []
+        for (b,e) in e.slices():
+            recv_data += chainermn.scatter_dataset(train_data[b:e], comm)
+
     test_data = chainermn.scatter_dataset(test_data, comm)
 
     train_iter = chainer.iterators.SerialIterator(train_data,
@@ -518,7 +515,6 @@ def main():
         translate_one(source, target)
 
     if comm.rank == 0:
-        # trainer.extend(BleuEvaluator(model, test_data_all, dev))
         trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
                        trigger=(1, 'epoch'))
 
