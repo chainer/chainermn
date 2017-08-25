@@ -67,7 +67,12 @@ class TestMNIST(unittest.TestCase):
                                                      repeat=False,
                                                      shuffle=False)
 
-        updater = training.StandardUpdater(train_iter, optimizer, device=device)
+        updater = training.StandardUpdater(
+            train_iter,
+            optimizer,
+            device=device
+        )
+
         trainer = training.Trainer(updater, (epoch, 'epoch'))
 
         # Wrap standard Chainer evaluators by MultiNodeEvaluator.
