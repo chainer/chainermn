@@ -168,7 +168,7 @@ def main():
     else:
         train = None
         val = None
-    train = chainermn.scatter_dataset(train, comm)
+    train = chainermn.scatter_dataset(train, comm, shuffle=True)
     val = chainermn.scatter_dataset(val, comm)
 
     # We need to change the start method of multiprocessing module if we are
