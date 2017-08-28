@@ -16,10 +16,10 @@ from chainermn.communicators.hierarchical_communicator \
     import HierarchicalCommunicator
 from chainermn.communicators.naive_communicator \
     import NaiveCommunicator
-from chainermn.communicators.nccl_communicator \
-    import NcclCommunicator
 from chainermn.communicators.non_cuda_aware_communicator \
     import NonCudaAwareCommunicator
+from chainermn.communicators.pure_nccl_communicator \
+    import PureNcclCommunicator
 from chainermn.communicators.single_node_communicator \
     import SingleNodeCommunicator
 from chainermn.communicators.two_dimensional_communicator \
@@ -74,7 +74,7 @@ class ExampleModel(chainer.Chain):
         'multi_node': True,
         'nccl': True,
     }, {
-        'communicator_class': NcclCommunicator,
+        'communicator_class': PureNcclCommunicator,
         'test_cpu': False,
         'test_gpu': True,
         'multi_node': True,

@@ -7,14 +7,14 @@ from chainermn.communicators import _memory_utility
 from chainermn import nccl
 
 
-class NcclCommunicator(_base.CommunicatorBase):
+class PureNcclCommunicator(_base.CommunicatorBase):
 
     def __init__(self, mpi_comm):
         if nccl.get_version() < 2000:
             raise RuntimeError(
                 'NcclCommunicator is only supported on NCCL 2.0+')
 
-        super(NcclCommunicator, self).__init__(mpi_comm)
+        super(PureNcclCommunicator, self).__init__(mpi_comm)
         self._init_ranks()
 
         self.inter_mpi_comm = None

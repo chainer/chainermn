@@ -22,14 +22,14 @@ def create_communicator(
     +---------------+---+---+--------+--------------------------------------+
     |flat           |   |OK |        |N/A                                   |
     +---------------+---+---+--------+--------------------------------------+
-    |nccl           |   |OK |Required|``nccl`` is recommended when NCCL2 is |
+    |pure_nccl      |   |OK |Required|``nccl`` is recommended when NCCL2 is |
     |               |   |   |(>= v2) |available in the environment, but it's|
     |               |   |   |        |still experimental support.           |
     +---------------+---+---+--------+--------------------------------------+
 
     Args:
         communicator_name: The name of communicator (``naive``, ``flat``,
-          ``hierarchical``, ``two_dimensional``, ``nccl``, or
+          ``hierarchical``, ``two_dimensional``, ``pure_nccl``, or
           ``single_node``)
         mpi_comm: MPI4py communicator
 
@@ -72,10 +72,10 @@ def create_communicator(
             import NonCudaAwareCommunicator
         return NonCudaAwareCommunicator(mpi_comm=mpi_comm)
 
-    elif communicator_name == 'nccl':
-        from chainermn.communicators.nccl_communicator \
-            import NcclCommunicator
-        return NcclCommunicator(mpi_comm=mpi_comm)
+    elif communicator_name == 'pure_nccl':
+        from chainermn.communicators.pure_nccl_communicator \
+            import PureNcclCommunicator
+        return PureNcclCommunicator(mpi_comm=mpi_comm)
 
     elif communicator_name == 'dummy':
         from chainermn.communicators.dummy_communicator \
