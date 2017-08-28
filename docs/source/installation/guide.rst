@@ -59,7 +59,7 @@ only exception is when you run ChainerMN on CPU-only environments. See
 
    We reccomend NCCL 2.0+ but NCCL 1.0 can be used.
    When you use CUDA 7.0 and 7.5, please install NCCL 1.0 because NCCL 2.0 is not supported with CUDA 7.0 and 7.5.
-   However, for NCCL 1.0, ``PureNcclCommunicator`` is not supported.
+   However, for NCCL 1.0, ``PureNcclCommunicator`` is not supported in ChainerMN.
    If you use NCCL 1.0, please properly configure environment variables to expose NCCL both when you install and use ChainerMN.
    Typical configurations should look like the following::
 
@@ -95,12 +95,16 @@ Tested Environments
 We tested ChainerMN on all the following environments.
 
 * OS
+  
   * Ubuntu 14.04 LTS 64bit
+
 * Python 2.7.13 3.5.1 3.6.1
 * Chainer 1.24.0 2.0.2
 * MPI
+
   * openmpi 1.6.5 1.10.3 2.1.1
   * mvapich 2.2
+
 * MPI4py 2.0.0
 * NCCL 1.0 2.0.4
   
