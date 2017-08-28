@@ -22,9 +22,9 @@ def create_communicator(
     +---------------+---+---+--------+--------------------------------------+
     |flat           |   |OK |        |N/A                                   |
     +---------------+---+---+--------+--------------------------------------+
-    |pure_nccl      |   |OK |Required|``nccl`` is recommended when NCCL2 is |
-    |               |   |   |(>= v2) |available in the environment, but it's|
-    |               |   |   |        |still experimental support.           |
+    |pure_nccl      |   |OK |Required|``pure_nccl`` is recommended when     |
+    |               |   |   |(>= v2) |NCCL2 is available in the environment,|
+    |               |   |   |        | but it'sstill experimental support.  |
     +---------------+---+---+--------+--------------------------------------+
 
     Args:
