@@ -18,10 +18,13 @@ from chainermn.communicators.naive_communicator \
     import NaiveCommunicator
 from chainermn.communicators.non_cuda_aware_communicator \
     import NonCudaAwareCommunicator
+from chainermn.communicators.pure_nccl_communicator \
+    import PureNcclCommunicator
 from chainermn.communicators.single_node_communicator \
     import SingleNodeCommunicator
 from chainermn.communicators.two_dimensional_communicator \
     import TwoDimensionalCommunicator
+from chainermn import nccl
 
 
 class ExampleModel(chainer.Chain):
@@ -70,6 +73,13 @@ class ExampleModel(chainer.Chain):
         'test_gpu': True,
         'multi_node': True,
         'nccl': True,
+    }, {
+        'communicator_class': PureNcclCommunicator,
+        'test_cpu': False,
+        'test_gpu': True,
+        'multi_node': True,
+        'nccl': True,
+        'nccl1': False,
     }
 )
 class TestCommunicator(unittest.TestCase):
@@ -82,6 +92,9 @@ class TestCommunicator(unittest.TestCase):
             inter_size = ranks[4]
             if inter_size > 1:
                 raise nose.plugins.skip.SkipTest()
+        if hasattr(self, 'nccl1') and not self.nccl1 \
+           and nccl.get_version() < 2000:
+            raise nose.plugins.skip.SkipTest()
 
         self.communicator = self.communicator_class(self.mpi_comm)
 

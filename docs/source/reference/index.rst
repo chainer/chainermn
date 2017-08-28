@@ -15,6 +15,7 @@ Links
 
 .. autoclass:: MultiNodeChainList
     :members: add_link
+.. autoclass:: chainermn.links.MultiNodeBatchNormalization
 
 
 Optimizers and Evaluators
