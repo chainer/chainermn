@@ -48,8 +48,8 @@ NVIDIA NCCL
 ~~~~~~~~~~~
 
 To enable efficient intra-node GPU-to-GPU communication,
-we use `NVIDIA NCCL <https://github.com/NVIDIA/nccl>`_.
-See `the official instructions <https://github.com/NVIDIA/nccl#build--run>`_ for installation.
+we use `NVIDIA Collective Communications Library (NCCL) <https://developer.nvidia.com/nccl>`_.
+See `the official instructions <http://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/index.html#downloadnccl>`_ for installation.
 
 Please properly configure environment variables to expose NCCL both when you install and use ChainerMN.
 Typical configurations should look like the following::
@@ -63,6 +63,12 @@ ChainerMN requires NCCL even if you have only one GPU per node.  The
 only exception is when you run ChainerMN on CPU-only environments. See
 :ref:`non-gpu-env` for more details.
 
+.. note::
+
+   We reccomend NCCL 2.0+ but NCCL 1.0 can be used.
+   When you use CUDA 7.0 and 7.5, please install NCCL 1.0 because NCCL 2.0 is not supported with CUDA 7.0 and 7.5.
+   However, for NCCL 1.0, ``PureNcclCommunicator`` is not supported.
+   
 .. _mpi4py-install:
 
 MPI4py
