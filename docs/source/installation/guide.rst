@@ -44,20 +44,12 @@ MVAPICH (for details, see `the official instructions <http://mvapich.cse.ohio-st
 
 .. _nccl-install:
   
-NVIDIA NCCL
-~~~~~~~~~~~
+NCCL
+~~~~
 
 To enable efficient intra-node GPU-to-GPU communication,
 we use `NVIDIA Collective Communications Library (NCCL) <https://developer.nvidia.com/nccl>`_.
 See `the official instructions <http://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/index.html#downloadnccl>`_ for installation.
-
-Please properly configure environment variables to expose NCCL both when you install and use ChainerMN.
-Typical configurations should look like the following::
-
-  export NCCL_ROOT=<path to NCCL directory>
-  export CPATH=$NCCL_ROOT/include:$CPATH
-  export LD_LIBRARY_PATH=$NCCL_ROOT/lib/:$LD_LIBRARY_PATH
-  export LIBRARY_PATH=$NCCL_ROOT/lib/:$LIBRARY_PATH
 
 ChainerMN requires NCCL even if you have only one GPU per node.  The
 only exception is when you run ChainerMN on CPU-only environments. See
@@ -68,7 +60,14 @@ only exception is when you run ChainerMN on CPU-only environments. See
    We reccomend NCCL 2.0+ but NCCL 1.0 can be used.
    When you use CUDA 7.0 and 7.5, please install NCCL 1.0 because NCCL 2.0 is not supported with CUDA 7.0 and 7.5.
    However, for NCCL 1.0, ``PureNcclCommunicator`` is not supported.
-   
+   If you use NCCL 1.0, please properly configure environment variables to expose NCCL both when you install and use ChainerMN.
+   Typical configurations should look like the following::
+
+     export NCCL_ROOT=<path to NCCL directory>
+     export CPATH=$NCCL_ROOT/include:$CPATH
+     export LD_LIBRARY_PATH=$NCCL_ROOT/lib/:$LD_LIBRARY_PATH
+     export LIBRARY_PATH=$NCCL_ROOT/lib/:$LIBRARY_PATH
+ 
 .. _mpi4py-install:
 
 MPI4py
@@ -90,7 +89,21 @@ It can be installed manually via :command:`pip`::
 
   $ pip install cython
 
+Tested Environments
+~~~~~~~~~~~~~~~~~~~
 
+We tested ChainerMN on all the following environments.
+
+* OS
+  * Ubuntu 14.04 LTS 64bit
+* Python 2.7.13 3.5.1 3.6.1
+* Chainer 1.24.0 2.0.2
+* MPI
+  * openmpi 1.6.5 1.10.3 2.1.1
+  * mvapich 2.2
+* MPI4py 2.0.0
+* NCCL 1.0 2.0.4
+  
 .. _chainermn-install:
 
 Installation
