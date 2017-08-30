@@ -1,7 +1,6 @@
 # encoding: utf-8
 
 import argparse
-import collections
 import os.path
 import pickle
 import re
@@ -9,7 +8,6 @@ import sys
 import time
 
 from mpi4py import MPI
-from nltk.corpus import comtrans
 from nltk.translate import bleu_score
 import numpy
 import six
