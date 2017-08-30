@@ -1,13 +1,14 @@
 # ChainerMN seq2seq example
 
-An sample implementation of seq2seq model.
+A sample implementation of seq2seq model.
 
 ## Data download and setup
 
 First, go to http://www.statmt.org/wmt15/translation-task.html#download and donwload necessary dataset.
 Let's assume you are in a working directory called `$WMT_DIR`.
 
-```
+```bash
+$ WMT_DIR=$HOME/path/to/your/data
 $ cd $WMT_DIR
 $ wget http://www.statmt.org/wmt10/training-giga-fren.tar
 $ wget http://www.statmt.org/wmt15/dev-v2.tgz
@@ -20,8 +21,9 @@ dev/  dev-v2.tgz  giga-fren.release2.fixed.en.gz  giga-fren.release2.fixed.fr.gz
 
 Next, you need to install required packages.
 
-```
+```bash
 $ pip install nltk progressbar2
+```
 
 ## Run
 

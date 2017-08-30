@@ -318,8 +318,6 @@ def main():
                         help='Directory to output the result')
     args = parser.parse_args()
 
-    print(create_optimizer(args.optimizer))
-
     # Prepare ChainerMN communicator
     if args.gpu:
         comm = chainermn.create_communicator('hierarchical')
@@ -338,79 +336,62 @@ def main():
         print('Num Minibatch-size: {}'.format(args.batchsize))
         print('==========================================')
 
-    if False:
-        sentences = comtrans.aligned_sents('alignment-en-fr.txt')
-        source_ids = collections.defaultdict(lambda: len(source_ids))
-        target_ids = collections.defaultdict(lambda: len(target_ids))
-        target_ids['eos']
-        data = []
-        for sentence in sentences:
-            source = numpy.array([source_ids[w] for w in sentence.words], 'i')
-            target = numpy.array([target_ids[w] for w in sentence.mots], 'i')
-            data.append((source, target))
-        print('Source vocabulary: %d' % len(source_ids))
-        print('Target vocabulary: %d' % len(target_ids))
+    # Rank 0 prepares all data
+    if comm.rank == 0:
+        if args.cache and not os.path.exists(args.cache):
+            os.mkdir(args.cache)
 
-        test_data = data[:len(data) / 10]
-        train_data = data[len(data) / 10:]
-    else:
-        # Rank 0 prepares all data
-        if comm.rank == 0:
-            if args.cache and not os.path.exists(args.cache):
-                os.mkdir(args.cache)
-
-            # Read source data
-            bt = time.time()
-            if args.cache:
-                cache_file = os.path.join(args.cache, 'source.pickle')
-                source_vocab, source_data = cached_call(cache_file,
-                                                        read_source,
-                                                        args.input, args.cache)
-            else:
-                source_vocab, source_data = read_source(args.input, args.cache)
-            et = time.time()
-            print("RD source done. {:.3f} [s]".format(et - bt))
-            sys.stdout.flush()
-
-            # Read target data
-            bt = time.time()
-            if args.cache:
-                cache_file = os.path.join(args.cache, 'target.pickle')
-                target_vocab, target_data = cached_call(cache_file,
-                                                        read_target,
-                                                        args.input, args.cache)
-            else:
-                target_vocab, target_data = read_target(args.input, args.cache)
-            et = time.time()
-            print("RD target done. {:.3f} [s]".format(et - bt))
-            sys.stdout.flush()
-
-            print('Original training data size: %d' % len(source_data))
-            train_data = [(s, t)
-                          for s, t in six.moves.zip(source_data, target_data)
-                          if 0 < len(s) < 50 and 0 < len(t) < 50]
-            print('Filtered training data size: %d' % len(train_data))
-
-            en_path = os.path.join(args.input, 'dev', 'newstest2013.en')
-            source_data = europal.make_dataset(en_path, source_vocab)
-            fr_path = os.path.join(args.input, 'dev', 'newstest2013.fr')
-            target_data = europal.make_dataset(fr_path, target_vocab)
-            assert(len(source_data) == len(target_data))
-            test_data = [(s, t) for s, t
-                         in six.moves.zip(source_data, target_data)
-                         if 0 < len(s) and 0 < len(t)]
-
-            source_ids = {word: index
-                          for index, word in enumerate(source_vocab)}
-            target_ids = {word: index
-                          for index, word in enumerate(target_vocab)}
+        # Read source data
+        bt = time.time()
+        if args.cache:
+            cache_file = os.path.join(args.cache, 'source.pickle')
+            source_vocab, source_data = cached_call(cache_file,
+                                                    read_source,
+                                                    args.input, args.cache)
         else:
-            # target_data, source_data = None, None
-            train_data, test_data = None, None
-            target_ids, source_ids = None, None
+            source_vocab, source_data = read_source(args.input, args.cache)
+        et = time.time()
+        print("RD source done. {:.3f} [s]".format(et - bt))
+        sys.stdout.flush()
 
-    comm.mpi_comm.Barrier()
-    # Check file
+        # Read target data
+        bt = time.time()
+        if args.cache:
+            cache_file = os.path.join(args.cache, 'target.pickle')
+            target_vocab, target_data = cached_call(cache_file,
+                                                    read_target,
+                                                    args.input, args.cache)
+        else:
+            target_vocab, target_data = read_target(args.input, args.cache)
+        et = time.time()
+        print("RD target done. {:.3f} [s]".format(et - bt))
+        sys.stdout.flush()
+
+        print('Original training data size: %d' % len(source_data))
+        train_data = [(s, t)
+                      for s, t in six.moves.zip(source_data, target_data)
+                      if 0 < len(s) < 50 and 0 < len(t) < 50]
+        print('Filtered training data size: %d' % len(train_data))
+
+        en_path = os.path.join(args.input, 'dev', 'newstest2013.en')
+        source_data = europal.make_dataset(en_path, source_vocab)
+        fr_path = os.path.join(args.input, 'dev', 'newstest2013.fr')
+        target_data = europal.make_dataset(fr_path, target_vocab)
+        assert(len(source_data) == len(target_data))
+        test_data = [(s, t) for s, t
+                     in six.moves.zip(source_data, target_data)
+                     if 0 < len(s) and 0 < len(t)]
+
+        source_ids = {word: index
+                      for index, word in enumerate(source_vocab)}
+        target_ids = {word: index
+                      for index, word in enumerate(target_vocab)}
+    else:
+        # target_data, source_data = None, None
+        train_data, test_data = None, None
+        target_ids, source_ids = None, None
+
+    # Print GPU id
     for i in range(0, comm.size):
         if comm.rank == i:
             print("Rank {} GPU: {}".format(comm.rank, dev))
@@ -518,16 +499,10 @@ def main():
         report = extensions.PrintReport(['epoch',
                                          'iteration',
                                          'main/loss',
-                                         # 'validation/main/loss',
                                          'main/perp',
                                          'validation/main/bleu',
-                                         # 'validation/main/perp',
                                          'elapsed_time'])
         trainer.extend(report, trigger=(1, 'epoch'))
-        # trainer.extend(translate, trigger=(200, 'iteration'))
-
-        # trainer.extend(CalculateBleu(model, test_data),
-        #                trigger=(10, 'iteration'))
 
     comm.mpi_comm.Barrier()
     if comm.rank == 0:
