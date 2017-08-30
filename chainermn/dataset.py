@@ -110,9 +110,9 @@ def scatter_dataset(dataset, comm):
     else:
         print("Rank {}: recv from rank {}".format(comm.rank, root))
         data = comm.recv(source=root)
-        #if isinstance(data, DataSizeError):
-        #    raise DataSizeError(data.dataset_size, data.pickled_size)
         print("Rank {}: Got data: data = {}".format(comm.rank, data))
+        #if isinstance(data, DataSizeError):
+        #    raise data
         if isinstance(data, dict) and data.get('token') == _datasize_error_token:
             raise DataSizeError(data['dataset_size'], data['pickled_size'])
         else:
