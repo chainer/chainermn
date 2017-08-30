@@ -3,7 +3,6 @@ import re
 import warnings
 
 import chainer.datasets
-import numpy
 
 
 class DataSizeError(RuntimeError):
@@ -49,7 +48,10 @@ def _parse_overflow_error(err):
     return int(m.group(1))
 
 
-def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
+_datasize_error_token = "832932439470324903284302"
+
+
+def scatter_dataset(dataset, comm):
     """Scatter the given dataset to the workers in the communicator.
 
     The dataset of worker 0 (i.e., the worker whose ``comm.rank`` is 0) is
@@ -62,14 +64,6 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
         dataset: A dataset (e.g., ``list``, ``numpy.ndarray``,
             ``chainer.datasets.TupleDataset``, ...).
         comm: ChainerMN communicator or MPI4py communicator.
-        shuffle (bool): If ``True``, the order of examples is shuffled
-            before being scattered.
-        root (int): The root process of the scatter operation.
-        seed (int): Seed the generator used for the permutation of indexes.
-            If an integer being convertible to 32 bit unsigned integers is
-            specified, it is guaranteed that each sample
-            in the given dataset always belongs to a specific subset.
-            If ``None``, the permutation is changed randomly.
 
     Returns:
         Scattered dataset.
@@ -79,39 +73,50 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
         comm = comm.mpi_comm
     assert hasattr(comm, 'send')
     assert hasattr(comm, 'recv')
-    assert 0 <= root and root < comm.size
 
     # We cannot use `mpi_comm.scatter`. This is due to MPI4py's bug.
     # For large datasets, when using `mpi_comm.scatter`, it causes MemoryError.
+    root = 0
     if comm.rank == root:
-        mine = None
-        n_total_samples = len(dataset)
-        n_sub_samples = (n_total_samples + comm.size - 1) // comm.size
-        order = None
-
-        if shuffle:
-            order = numpy.random.RandomState(seed).permutation(n_total_samples)
-
-        for i in range(comm.size):
-            b = n_total_samples * i // comm.size
-            e = b + n_sub_samples
-            subds = chainer.datasets.SubDataset(dataset, b, e, order)
-            if i == root:
-                mine = subds
-            else:
-                try:
-                    comm.send(subds, dest=i)
-                except OverflowError as e:
-                    pickled_size = _parse_overflow_error(e)
-                    raise DataSizeError(len(dataset), pickled_size)
-
-        return mine
-    else:
         try:
-            return comm.recv(source=0)
+            mine = None
+            n_total_samples = len(dataset)
+            n_sub_samples = (n_total_samples + comm.size - 1) // comm.size
+            for i in range(comm.size):
+                b = n_total_samples * i // comm.size
+                e = b + n_sub_samples
+                subds = chainer.datasets.SubDataset(dataset, b, e)
+                if i == root:
+                    mine = subds
+                else:
+                    comm.send(subds, dest=i)
+            return mine
         except OverflowError as e:
+            print("Rank {}: caught OverflowError".format(comm.rank))
             pickled_size = _parse_overflow_error(e)
-            raise DataSizeError(len(dataset), pickled_size)
+            ds_err = DataSizeError(len(dataset), pickled_size)
+            msg = {
+                'token': _datasize_error_token,
+                'pickled_size': ds_err.pickled_size,
+                'dataset_size': ds_err.dataset_size,
+                'num_split': ds_err.num_split(),
+            }
+            for i in range(comm.size):
+                if i != comm.rank:
+                    print("Rank {}: Sending ds_err to rank {}".format(comm.rank, i))
+                    comm.send(msg, dest=i)
+            raise ds_err
+
+    else:
+        print("Rank {}: recv from rank {}".format(comm.rank, root))
+        data = comm.recv(source=root)
+        #if isinstance(data, DataSizeError):
+        #    raise DataSizeError(data.dataset_size, data.pickled_size)
+        print("Rank {}: Got data: data = {}".format(comm.rank, data))
+        if isinstance(data, dict) and data.get('token') == _datasize_error_token:
+            raise DataSizeError(data['dataset_size'], data['pickled_size'])
+        else:
+            return data
 
 
 def get_n_iterations_for_one_epoch(dataset, local_batch_size, comm):
