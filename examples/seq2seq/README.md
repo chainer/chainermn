@@ -27,6 +27,5 @@ $ pip install nltk progressbar2
 
 ```bash
 $ cd $CHAINERMN
+$ mpiexec -genvall -n 2 python examples/seq2seq/seq2seq.py --gpu -c $WMT_DIR -i $WMT_DIR --out result.tmp
 ```
-
-
