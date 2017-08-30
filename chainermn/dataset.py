@@ -3,6 +3,7 @@ import re
 import warnings
 
 import chainer.datasets
+import numpy
 
 
 class DataSizeError(RuntimeError):
@@ -93,7 +94,8 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
             order = None
 
             if shuffle:
-                order = numpy.random.RandomState(seed).permutation(n_total_samples)
+                order = numpy.random.RandomState(seed).permutation(
+                    n_total_samples)
 
             for i in range(comm.size):
                 b = n_total_samples * i // comm.size
@@ -105,7 +107,6 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
                     comm.send(subds, dest=i)
             return mine
         except OverflowError as e:
-            print("Rank {}: caught OverflowError".format(comm.rank))
             pickled_size = _parse_overflow_error(e)
             ds_err = DataSizeError(len(dataset), pickled_size)
             msg = {
@@ -116,17 +117,13 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
             }
             for i in range(comm.size):
                 if i != comm.rank:
-                    print("Rank {}: Sending ds_err to rank {}".format(comm.rank, i))
                     comm.send(msg, dest=i)
             raise ds_err
 
     else:
-        print("Rank {}: recv from rank {}".format(comm.rank, root))
         data = comm.recv(source=root)
-        print("Rank {}: Got data: data = {}".format(comm.rank, data))
-        #if isinstance(data, DataSizeError):
-        #    raise data
-        if isinstance(data, dict) and data.get('token') == _datasize_error_token:
+        if isinstance(data, dict) and (
+                data.get('token') == _datasize_error_token):
             raise DataSizeError(data['dataset_size'], data['pickled_size'])
         else:
             return data
