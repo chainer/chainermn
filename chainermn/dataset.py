@@ -1,9 +1,9 @@
 import math
-import numpy
 import re
 import warnings
 
 import chainer.datasets
+import numpy
 
 
 class DataSizeError(RuntimeError):
@@ -26,7 +26,7 @@ class DataSizeError(RuntimeError):
 
         self.pickled_size = pickled_size
         self.max_size = INT_MAX
-        self.dataset_len = ds_size
+        self.dataset_size = ds_size
 
     def num_split(self):
         ps = self.pickled_size
@@ -34,7 +34,7 @@ class DataSizeError(RuntimeError):
         return (ps + mx - 1) // mx
 
     def slices(self):
-        ds = self.dataset_len
+        ds = self.dataset_size
         nsplit = self.num_split()
         size = math.ceil(ds / nsplit)
 
@@ -47,6 +47,9 @@ def _parse_overflow_error(err):
     m = re.search(r'integer (\d+) does not fit in', msg)
     assert m is not None, "'{}' must include size of the message".format(msg)
     return int(m.group(1))
+
+
+_datasize_error_token = "832932439470324903284302"
 
 
 def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
@@ -84,34 +87,46 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
     # We cannot use `mpi_comm.scatter`. This is due to MPI4py's bug.
     # For large datasets, when using `mpi_comm.scatter`, it causes MemoryError.
     if comm.rank == root:
-        mine = None
-        n_total_samples = len(dataset)
-        n_sub_samples = (n_total_samples + comm.size - 1) // comm.size
-        order = None
-
-        if shuffle:
-            order = numpy.random.RandomState(seed).permutation(n_total_samples)
-
-        for i in range(comm.size):
-            b = n_total_samples * i // comm.size
-            e = b + n_sub_samples
-            subds = chainer.datasets.SubDataset(dataset, b, e, order)
-            if i == root:
-                mine = subds
-            else:
-                try:
-                    comm.send(subds, dest=i)
-                except OverflowError as e:
-                    pickled_size = _parse_overflow_error(e)
-                    raise DataSizeError(len(dataset), pickled_size)
-
-        return mine
-    else:
         try:
-            return comm.recv(source=0)
+            mine = None
+            n_total_samples = len(dataset)
+            n_sub_samples = (n_total_samples + comm.size - 1) // comm.size
+            order = None
+
+            if shuffle:
+                order = numpy.random.RandomState(seed).permutation(
+                    n_total_samples)
+
+            for i in range(comm.size):
+                b = n_total_samples * i // comm.size
+                e = b + n_sub_samples
+                subds = chainer.datasets.SubDataset(dataset, b, e, order)
+                if i == root:
+                    mine = subds
+                else:
+                    comm.send(subds, dest=i)
+            return mine
         except OverflowError as e:
             pickled_size = _parse_overflow_error(e)
-            raise DataSizeError(len(dataset), pickled_size)
+            ds_err = DataSizeError(len(dataset), pickled_size)
+            msg = {
+                'token': _datasize_error_token,
+                'pickled_size': ds_err.pickled_size,
+                'dataset_size': ds_err.dataset_size,
+                'num_split': ds_err.num_split(),
+            }
+            for i in range(comm.size):
+                if i != comm.rank:
+                    comm.send(msg, dest=i)
+            raise ds_err
+
+    else:
+        data = comm.recv(source=root)
+        if isinstance(data, dict) and (
+                data.get('token') == _datasize_error_token):
+            raise DataSizeError(data['dataset_size'], data['pickled_size'])
+        else:
+            return data
 
 
 def get_n_iterations_for_one_epoch(dataset, local_batch_size, comm):
