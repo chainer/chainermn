@@ -1,10 +1,13 @@
 import unittest
 
 import mpi4py.MPI
+import nose.plugins.skip
 import numpy as np
 
 import chainermn
 from chainermn.communicators.naive_communicator import NaiveCommunicator
+from chainermn.datasets import DataSizeError
+from chainermn.datasets import scatter_dataset
 
 
 class TestDataset(unittest.TestCase):
@@ -49,3 +52,26 @@ class TestDataset(unittest.TestCase):
                 self.check_scatter_dataset(np.array([0]), shuffle, root)
                 self.check_scatter_dataset(np.arange(n), shuffle, root)
                 self.check_scatter_dataset(np.arange(n * 5 - 1), shuffle, root)
+
+    def scatter_large_data(self, comm_type):
+        comm = self.communicator
+        if comm.rank == 0:
+            data = ["test"] * 2000000000
+            data = chainermn.scatter_dataset(data, comm)
+        else:
+            data = []
+            data = scatter_dataset(data, comm)
+
+    def test_scatter_large_dataset(self):
+        # This test only runs when comm.size >= 2.
+        if self.communicator.size == 1:
+            raise nose.plugins.skip.SkipTest()
+
+        # This test inherently requires large memory (>4GB) and
+        # we always skip this test so far.
+        if False:
+            raise nose.plugins.skip.SkipTest()
+        else:
+            for comm_type in ['naive', 'flat']:
+                self.assertRaises(DataSizeError,
+                                  lambda: self.scatter_large_data(comm_type))

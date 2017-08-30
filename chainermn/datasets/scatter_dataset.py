@@ -109,6 +109,11 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
         except OverflowError as e:
             pickled_size = _parse_overflow_error(e)
             ds_err = DataSizeError(len(dataset), pickled_size)
+            # We use a special data to indicate that
+            # an error occured in the root process, so
+            # the receiver processes can handle the error and
+            # call recv() function again (or possibly multiple times)
+            # to receive the whole data.
             msg = {
                 'token': _datasize_error_token,
                 'pickled_size': ds_err.pickled_size,
