@@ -299,6 +299,7 @@ def _get_num_split(excp):
 
 
 def _slices(excp):
+    """Get a list of slices that are expected to fit in a single send/recv."""
     ds = excp.dataset_size
     nsplit = _get_num_split(excp)
     size = math.ceil(ds / nsplit)
