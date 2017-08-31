@@ -1,9 +1,9 @@
 import unittest
 
 import mpi4py.MPI
+from nose.plugins.attrib import attr
 import nose.plugins.skip
 import numpy as np
-from nose.plugins.attrib import attr
 
 import chainermn
 from chainermn.communicators.naive_communicator import NaiveCommunicator
