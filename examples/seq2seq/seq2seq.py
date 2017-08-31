@@ -1,6 +1,7 @@
 # encoding: utf-8
 
 import argparse
+import math
 import os.path
 import pickle
 import re
@@ -304,6 +305,7 @@ def _slices(excp):
 
     return [(b, min(e, ds)) for b, e in
             ((i * size, (i + 1) * size) for i in range(0, nsplit))]
+
 
 def main():
     parser = argparse.ArgumentParser(description='Chainer example: seq2seq')
