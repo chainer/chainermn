@@ -91,6 +91,7 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
                     mine = subds
                 else:
                     comm.send(subds, dest=i)
+            assert mine is not None
             return mine
         except OverflowError as e:
             pickled_size = _parse_overflow_error(e)
@@ -116,6 +117,7 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
                 data.get('token') == _datasize_error_token):
             raise DataSizeError(data['dataset_size'], data['pickled_size'])
         else:
+            assert data is not None
             return data
 
 
