@@ -290,6 +290,21 @@ def create_optimizer(opt_arg):
     return opt(*pos, **kw)
 
 
+def _get_num_split(excp):
+    """Get the preferrable number of split from a DataSizeError error"""
+    ps = excp.pickled_size
+    mx = excp.max_size
+    return (ps + mx - 1) // mx
+
+
+def _slices(excp):
+    ds = excp.dataset_size
+    nsplit = _get_num_split(excp)
+    size = math.ceil(ds / nsplit)
+
+    return [(b, min(e, ds)) for b, e in
+            ((i * size, (i + 1) * size) for i in range(0, nsplit))]
+
 def main():
     parser = argparse.ArgumentParser(description='Chainer example: seq2seq')
     parser.add_argument('--batchsize', '-b', type=int, default=64,
@@ -446,7 +461,7 @@ def main():
         recv_data = []
         # Split the train_data into slices
         # as advised from DataSizeError, and retry sending them.
-        for (b, e) in e.slices():
+        for (b, e) in _slices(e):
             recv_data += chainermn.scatter_dataset(train_data[b:e], comm)
 
     test_data = chainermn.scatter_dataset(test_data, comm)
