@@ -28,19 +28,6 @@ class DataSizeError(RuntimeError):
         self.max_size = INT_MAX
         self.dataset_size = ds_size
 
-    def num_split(self):
-        ps = self.pickled_size
-        mx = self.max_size
-        return (ps + mx - 1) // mx
-
-    def slices(self):
-        ds = self.dataset_size
-        nsplit = self.num_split()
-        size = math.ceil(ds / nsplit)
-
-        return [(b, min(e, ds)) for b, e in
-                ((i * size, (i + 1) * size) for i in range(0, nsplit))]
-
 
 def _parse_overflow_error(err):
     msg = str(err)
@@ -118,7 +105,6 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False, seed=None):
                 'token': _datasize_error_token,
                 'pickled_size': ds_err.pickled_size,
                 'dataset_size': ds_err.dataset_size,
-                'num_split': ds_err.num_split(),
             }
             for i in range(comm.size):
                 if i != comm.rank:
