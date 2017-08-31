@@ -68,8 +68,8 @@ class TestDataset(unittest.TestCase):
             raise nose.plugins.skip.SkipTest()
 
         # This test inherently requires large memory (>4GB) and
-        # we always skip this test so far.
-        if False:
+        # we skip this test so far.
+        if True:
             raise nose.plugins.skip.SkipTest()
         else:
             for comm_type in ['naive', 'flat']:
