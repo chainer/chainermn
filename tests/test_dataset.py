@@ -3,6 +3,7 @@ import unittest
 import mpi4py.MPI
 import nose.plugins.skip
 import numpy as np
+from nose.plugins.attrib import attr
 
 import chainermn
 from chainermn.communicators.naive_communicator import NaiveCommunicator
@@ -62,16 +63,14 @@ class TestDataset(unittest.TestCase):
             data = []
             data = scatter_dataset(data, comm)
 
+    @attr(slow=True)
     def test_scatter_large_dataset(self):
         # This test only runs when comm.size >= 2.
         if self.communicator.size == 1:
             raise nose.plugins.skip.SkipTest()
 
         # This test inherently requires large memory (>4GB) and
-        # we always skip this test so far.
-        if False:
-            raise nose.plugins.skip.SkipTest()
-        else:
-            for comm_type in ['naive', 'flat']:
-                self.assertRaises(DataSizeError,
-                                  lambda: self.scatter_large_data(comm_type))
+        # we skip this test so far.
+        for comm_type in ['naive', 'flat']:
+            self.assertRaises(DataSizeError,
+                              lambda: self.scatter_large_data(comm_type))
