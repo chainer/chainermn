@@ -15,8 +15,6 @@ class DataSizeError(RuntimeError):
 
         To solve this problem, please split the dataset into multiple
         peaces and send/recv them separately.
-
-        Recommended sizes are indicated by ``slices()`` method.
         """
 
         INT_MAX = 2147483647
