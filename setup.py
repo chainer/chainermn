@@ -21,6 +21,12 @@ ext_modules = [
         libraries=['nccl'])
 ]
 
+package_data={
+    'chainermn': [
+        'nccl/chainermn_nccl.h'
+    ],
+}
+
 if '--no-nccl' in sys.argv:
     sys.argv.remove('--no-nccl')
     ext_modules = []
@@ -35,6 +41,7 @@ setup(
     author='Takuya Akiba',
     author_email='akiba@preferred.jp',
     packages=find_packages(),
+    package_data=package_data,
     ext_modules=ext_modules,
     cmdclass={'build_ext': build_ext},
     install_requires=install_requires
