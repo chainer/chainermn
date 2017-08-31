@@ -21,7 +21,7 @@ ext_modules = [
         libraries=['nccl'])
 ]
 
-package_data={
+package_data = {
     'chainermn': [
         'nccl/chainermn_nccl.h'
     ],
