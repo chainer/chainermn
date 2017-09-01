@@ -18,7 +18,6 @@ ext_modules = [
     Extension(
         name='chainermn.nccl.nccl',
         sources=['chainermn/nccl/nccl.pyx'],
-        include=['chainermn/nccl/chainermn_nccl.h'],
         libraries=['nccl'])
 ]
 
