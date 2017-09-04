@@ -21,6 +21,18 @@ class CommunicatorBase(object):
         return self.mpi_comm.size
 
     def split(self, color, key):
+        """A wrapper function of MPI_Comm_Split.
+
+        This method splits the inter MPI commnicator and return a wrapped
+        ChainerMN communicator.
+
+        Args:
+            color (int): Index of new group.
+            key (int): Control of rank assignment.
+
+        Returns:
+            CommunicatorBase
+        """
         return self.__class__(mpi_comm=self.mpi_comm.Split(color, key))
 
     def send(self, array, dest, tag):
