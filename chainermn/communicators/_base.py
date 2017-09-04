@@ -27,8 +27,14 @@ class CommunicatorBase(object):
         ChainerMN communicator.
 
         Args:
-            color (int): Index of new group.
-            key (int): Control of rank assignment.
+            color (int):
+                Index of new group. The process with the same color will be
+                assigned to the same group.
+            key (int):
+                Control of rank assignment. The process will be assigned
+                a rank in the new group ordered by the value of key.
+                If you do not care of the rank, you can just simply specify
+                the original rank.
 
         Returns:
             CommunicatorBase
