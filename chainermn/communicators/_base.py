@@ -20,6 +20,9 @@ class CommunicatorBase(object):
     def size(self):
         return self.mpi_comm.size
 
+    def split(self, color, key):
+        return self.__class__(mpi_comm=self.mpi_comm.Split(color, key))
+
     def send(self, array, dest, tag):
         """A primitive for inter-process transmitter.
 
