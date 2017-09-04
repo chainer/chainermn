@@ -82,6 +82,10 @@ class MLP1(chainermn.MultiNodeChainList):
         self.add_link(MLP1Sub(n_units, n_out), rank_in=0, rank_out=0)
 ```
 
+The conceptual figure is as follows:
+
+![model parallel MLP](https://github.com/levelfour/chainermn/blob/dual-parallel-example/examples/mnist/model_parallel.png)
+
 This example can be executed by the following command (with two workers):
 ```
 mpiexec -n 2 python examples/mnist/train_mnist_model_parallel.py
@@ -91,9 +95,17 @@ Note that this example cannot be executed on the different number of workers fro
 ## Data Parallel + Model Parallel (train\_mnist\_dual\_parallel.py)
 
 Of course we can use data parallelism and model parallelism at the same time.
+Overall we have two parallelism axis.
 
+![parallelism axis](https://github.com/levelfour/chainermn/blob/dual-parallel-example/examples/mnist/parallelism_axis.png)
+
+Combining these two axis, the detailed architecture used in this example is shown in the next figure.
+
+![dual parallel MLP](https://github.com/levelfour/chainermn/blob/dual-parallel-example/examples/mnist/dual_parallel.png)
+
+This example can be executed by the following command:
 ```
 mpiexec -n 4 python examples/mnist/train_mnist_dual_parallel.py
 ```
 
-Since this example relies on the splitting way of `train\_mnist\_model\_parallel.py` (splitting the original MLP into 2 processes), it can only executed on the even number of processes.
+Since this example relies on the splitting way of `train_mnist_model_parallel.py` (splitting the original MLP into 2 processes), it can only executed on the even number of processes.
