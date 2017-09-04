@@ -87,3 +87,13 @@ This example can be executed by the following command (with two workers):
 mpiexec -n 2 python examples/mnist/train_mnist_model_parallel.py
 ```
 Note that this example cannot be executed on the different number of workers from two, otherwise the remaining workers will just fail.
+
+## Data Parallel + Model Parallel (train\_mnist\_dual\_parallel.py)
+
+Of course we can use data parallelism and model parallelism at the same time.
+
+```
+mpiexec -n 4 python examples/mnist/train_mnist_dual_parallel.py
+```
+
+Since this example relies on the splitting way of `train\_mnist\_model\_parallel.py` (splitting the original MLP into 2 processes), it can only executed on the even number of processes.
