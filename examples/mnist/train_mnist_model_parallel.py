@@ -84,6 +84,10 @@ def main():
         comm = chainermn.create_communicator('naive')
         device = -1
 
+    if comm.size != 2:
+        raise ValueError(
+            'This example can only be executed on exactly 2 processes.')
+
     if comm.rank == 0:
         print('==========================================')
         if args.gpu:

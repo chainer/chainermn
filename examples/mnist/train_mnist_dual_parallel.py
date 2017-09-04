@@ -90,6 +90,11 @@ def main():
         model_comm = comm.split(model_axis, comm.rank)
         device = -1
 
+    if model_comm.size != 2:
+        raise ValueError(
+            'This example can only be executed on the even number'
+            'of processes.')
+
     if comm.rank == 0:
         print('==========================================')
         if args.gpu:
