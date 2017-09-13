@@ -37,7 +37,7 @@ class _MultiNodeNStepRNN(chainer.Chain):
                 device=self.actual_rnn._device_id)
                 for _ in range(self.n_cells)]
 
-        outputs = self.actual_rnn(*cells, *inputs)
+        outputs = self.actual_rnn(*(tuple(cells) + inputs))
         cells, ys = outputs[:-1], outputs[-1]
 
         delegate_variable = None
@@ -48,7 +48,7 @@ class _MultiNodeNStepRNN(chainer.Chain):
                     cell, self.communicator, rank=self.rank_out)
                 if i < self.n_cells - 1:
                     cell = chainermn.functions.pseudo_connect(
-                        delegate_variable, cells[i+1])
+                        delegate_variable, cells[i + 1])
 
         return cells + tuple([ys, delegate_variable])
 
