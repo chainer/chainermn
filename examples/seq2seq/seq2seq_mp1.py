@@ -22,10 +22,9 @@ from chainer import training
 from chainer.training import extensions
 import chainermn
 import chainermn.functions
+import chainermn.links
 
 import europal
-
-import numpy as np
 
 
 def cached_call(fname, func, *args):
@@ -66,10 +65,14 @@ def sequence_embed(embed, xs):
 
 class Encoder(chainer.Chain):
 
-    def __init__(self, comm, n_layers, n_source_vocab, n_target_vocab, n_units):
+    def __init__(
+            self, comm, n_layers, n_source_vocab, n_target_vocab, n_units):
         super(Encoder, self).__init__(
             embed_x=L.EmbedID(n_source_vocab, n_units),
-            encoder=L.NStepLSTM(n_layers, n_units, n_units, 0.1),
+            mn_encoder=chainermn.links.create_multi_node_n_step_rnn(
+                L.NStepLSTM(n_layers, n_units, n_units, 0.1),
+                comm, rank_in=None, rank_out=1
+            ),
         )
         self.comm = comm
         self.n_layers = n_layers
@@ -83,33 +86,26 @@ class Encoder(chainer.Chain):
         # Both xs and ys_in are lists of arrays.
         exs = sequence_embed(self.embed_x, xs)
 
-        batch = len(xs)
-        # None represents a zero vector in an encoder.
-        hx, cx, _ = self.encoder(None, None, exs)
-        cx = chainermn.functions.pseudo_connect(
-            chainermn.functions.send(hx, self.comm, rank=1),
-            cx)
-        sent_cx = chainermn.functions.send(cx, self.comm, rank=1)
-        return sent_cx
+        # Last element represents delegate variable.
+        return self.mn_encoder(exs)[-1]
 
     def translate(self, xs, max_length=100):
-        batch = len(xs)
         with chainer.no_backprop_mode():
             with chainer.using_config('train', False):
                 xs = [x[::-1] for x in xs]
                 exs = sequence_embed(self.embed_x, xs)
-                # Initial hidden variable and cell variable
-                h, c, _ = self.encoder(None, None, exs)
-                chainermn.functions.send(h, self.comm, rank=1)
-                chainermn.functions.send(c, self.comm, rank=1)
+                self.mn_encoder(exs)
 
 
 class Decoder(chainer.Chain):
 
-    def __init__(self, comm, n_layers, n_source_vocab, n_target_vocab, n_units):
+    def __init__(
+            self, comm, n_layers, n_source_vocab, n_target_vocab, n_units):
         super(Decoder, self).__init__(
             embed_y=L.EmbedID(n_target_vocab, n_units),
-            decoder=L.NStepLSTM(n_layers, n_units, n_units, 0.1),
+            mn_decoder=chainermn.links.create_multi_node_n_step_rnn(
+                L.NStepLSTM(n_layers, n_units, n_units, 0.1),
+                comm, rank_in=0, rank_out=None),
             W=L.Linear(n_units, n_target_vocab),
         )
         self.comm = comm
@@ -129,9 +125,7 @@ class Decoder(chainer.Chain):
 
         batch = len(xs)
         # None represents a zero vector in an encoder.
-        hx = chainermn.functions.recv(self.comm, rank=0, device=self._device_id)
-        cx = chainermn.functions.recv(self.comm, rank=0, device=self._device_id)
-        _, _, os = self.decoder(hx, cx, eys)
+        _, _, os, _ = self.mn_decoder(eys)
 
         # It is faster to concatenate data before calculating loss
         # because only one matrix multiplication is called.
@@ -150,17 +144,25 @@ class Decoder(chainer.Chain):
         batch = len(xs)
         with chainer.no_backprop_mode():
             with chainer.using_config('train', False):
-                # Initial hidden variable and cell variable
-                # zero = self.xp.zeros((self.n_layers, batch, self.n_units), 'f')  # NOQA
-                h = chainermn.functions.recv(self.comm, rank=0, device=self._device_id)
-                c = chainermn.functions.recv(self.comm, rank=0, device=self._device_id)
-                ys = self.xp.zeros(batch, 'i')
                 result = []
-                for i in range(max_length):
+                ys = self.xp.zeros(batch, 'i')
+                eys = self.embed_y(ys)
+                eys = chainer.functions.split_axis(
+                    eys, batch, 0, force_tuple=True)
+
+                # Initial hidden states must be received from encoder.
+                h, c, ys, _ = self.mn_decoder(eys)
+
+                cys = chainer.functions.concat(ys, axis=0)
+                wy = self.W(cys)
+                ys = self.xp.argmax(wy.data, axis=1).astype('i')
+                result.append(ys)
+
+                for i in range(1, max_length):
                     eys = self.embed_y(ys)
                     eys = chainer.functions.split_axis(
                         eys, batch, 0, force_tuple=True)
-                    h, c, ys = self.decoder(h, c, eys)
+                    h, c, ys = self.mn_decoder.actual_rnn(h, c, eys)
                     cys = chainer.functions.concat(ys, axis=0)
                     wy = self.W(cys)
                     ys = self.xp.argmax(wy.data, axis=1).astype('i')
@@ -227,15 +229,16 @@ class BleuEvaluator(extensions.Evaluator):
 
                     elif self.comm.rank == 1:
                         ys = [y.tolist()
-                              for y in self.model.translate(src, self.max_length)]
+                              for y in self.model.translate(
+                                  src, self.max_length)]
                         hypotheses.extend(ys)
 
                 if self.comm.rank == 0:
                     reporter.report({'bleu': 0}, self.model)
                 elif self.comm.rank == 1:
                     bleu = bleu_score.corpus_bleu(
-                        references, hypotheses,
-                        smoothing_function=bleu_score.SmoothingFunction().method1)
+                        references, hypotheses, smoothing_function=bleu_score.
+                        SmoothingFunction().method1)
                     reporter.report({'bleu': bleu}, self.model)
         et = time.time()
 
@@ -437,9 +440,11 @@ def main():
 
     n_lstm_layers = 3
     if comm.rank == 0:
-        model = Encoder(comm, n_lstm_layers, len(source_ids), len(target_ids), args.unit)
+        model = Encoder(
+            comm, n_lstm_layers, len(source_ids), len(target_ids), args.unit)
     elif comm.rank == 1:
-        model = Decoder(comm, n_lstm_layers, len(source_ids), len(target_ids), args.unit)
+        model = Decoder(
+            comm, n_lstm_layers, len(source_ids), len(target_ids), args.unit)
 
     if dev >= 0:
         chainer.cuda.get_device(dev).use()
