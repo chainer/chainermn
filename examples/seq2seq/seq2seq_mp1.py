@@ -67,8 +67,10 @@ class Encoder(chainer.Chain):
 
     def __init__(
             self, comm, n_layers, n_source_vocab, n_target_vocab, n_units):
+
         super(Encoder, self).__init__(
             embed_x=L.EmbedID(n_source_vocab, n_units),
+            # Corresponding decoder LSTM will be invoked on process 1.
             mn_encoder=chainermn.links.create_multi_node_n_step_rnn(
                 L.NStepLSTM(n_layers, n_units, n_units, 0.1),
                 comm, rank_in=None, rank_out=1
@@ -80,21 +82,27 @@ class Encoder(chainer.Chain):
 
     def __call__(self, *inputs):
         xs = inputs[:len(inputs) // 2]
-
         xs = [x[::-1] for x in xs]
-
-        # Both xs and ys_in are lists of arrays.
         exs = sequence_embed(self.embed_x, xs)
 
+        # Encode input sequence and send hidden states to decoder.
+        _, _, _, delegate_variable = self.mn_encoder(exs)
+
         # Last element represents delegate variable.
-        return self.mn_encoder(exs)[-1]
+        return delegate_variable
 
     def translate(self, xs, max_length=100):
         with chainer.no_backprop_mode():
             with chainer.using_config('train', False):
                 xs = [x[::-1] for x in xs]
                 exs = sequence_embed(self.embed_x, xs)
+
+                # Encode input sequence and send hidden stats to decoder.
                 self.mn_encoder(exs)
+
+        # Encoder does not return anything.
+        # All evaluation will be done in decoder process.
+        return None
 
 
 class Decoder(chainer.Chain):
@@ -103,6 +111,7 @@ class Decoder(chainer.Chain):
             self, comm, n_layers, n_source_vocab, n_target_vocab, n_units):
         super(Decoder, self).__init__(
             embed_y=L.EmbedID(n_target_vocab, n_units),
+            # Corresponding encoder LSTM will be invoked on process 0.
             mn_decoder=chainermn.links.create_multi_node_n_step_rnn(
                 L.NStepLSTM(n_layers, n_units, n_units, 0.1),
                 comm, rank_in=0, rank_out=None),
@@ -116,15 +125,16 @@ class Decoder(chainer.Chain):
         xs = inputs[:len(inputs) // 2]
         ys = inputs[len(inputs) // 2:]
 
+        xs = [x[::-1] for x in xs]
+        batch = len(xs)
+
         eos = self.xp.zeros(1, 'i')
         ys_in = [F.concat([eos, y], axis=0) for y in ys]
         ys_out = [F.concat([y, eos], axis=0) for y in ys]
 
-        # Both xs and ys_in are lists of arrays.
         eys = sequence_embed(self.embed_y, ys_in)
 
-        batch = len(xs)
-        # None represents a zero vector in an encoder.
+        # Receive hidden states from encoder process and decode.
         _, _, os, _ = self.mn_decoder(eys)
 
         # It is faster to concatenate data before calculating loss
@@ -150,7 +160,7 @@ class Decoder(chainer.Chain):
                 eys = chainer.functions.split_axis(
                     eys, batch, 0, force_tuple=True)
 
-                # Initial hidden states must be received from encoder.
+                # Receive hidden stats from encoder process.
                 h, c, ys, _ = self.mn_decoder(eys)
 
                 cys = chainer.functions.concat(ys, axis=0)
@@ -158,10 +168,12 @@ class Decoder(chainer.Chain):
                 ys = self.xp.argmax(wy.data, axis=1).astype('i')
                 result.append(ys)
 
+                # Recursively decode using the previously predicted token.
                 for i in range(1, max_length):
                     eys = self.embed_y(ys)
                     eys = chainer.functions.split_axis(
                         eys, batch, 0, force_tuple=True)
+                    # Non-MN RNN link can be accessed via `actual_rnn`.
                     h, c, ys = self.mn_decoder.actual_rnn(h, c, eys)
                     cys = chainer.functions.concat(ys, axis=0)
                     wy = self.W(cys)
@@ -233,9 +245,7 @@ class BleuEvaluator(extensions.Evaluator):
                                   src, self.max_length)]
                         hypotheses.extend(ys)
 
-                if self.comm.rank == 0:
-                    reporter.report({'bleu': 0}, self.model)
-                elif self.comm.rank == 1:
+                if self.comm.rank == 1:
                     bleu = bleu_score.corpus_bleu(
                         references, hypotheses, smoothing_function=bleu_score.
                         SmoothingFunction().method1)
@@ -365,8 +375,8 @@ def main():
         print('Num Minibatch-size: {}'.format(args.batchsize))
         print('==========================================')
 
-    # Rank 0 prepares all data
-    if True or comm.rank == 0:
+    # Both processes prepare datasets.
+    if comm.rank == 0 or comm.rank == 1:
         if args.cache and not os.path.exists(args.cache):
             os.mkdir(args.cache)
 
@@ -416,7 +426,6 @@ def main():
         target_ids = {word: index
                       for index, word in enumerate(target_vocab)}
     else:
-        # target_data, source_data = None, None
         train_data, test_data = None, None
         target_ids, source_ids = None, None
 
@@ -427,7 +436,7 @@ def main():
         sys.stdout.flush()
         comm.mpi_comm.Barrier()
 
-    # broadcast id- > word dictionary
+    # broadcast id -> word dictionary
     source_ids = comm.mpi_comm.bcast(source_ids, root=0)
     target_ids = comm.mpi_comm.bcast(target_ids, root=0)
 
@@ -470,35 +479,6 @@ def main():
     optimizer = create_optimizer(args.optimizer)
     optimizer.setup(model)
 
-    # Broadcast dataset
-    # Sanity check of train_data
-
-    # If the pickled size exceeds 4GB, which is a limit of data size
-    # that MPI can send in a single MPI_Send/MPI_Recv,
-    # ChainerMN raises DataSizeError.
-#    try:
-#        train_data = chainermn.scatter_dataset(train_data, comm)
-#    except chainermn.DataSizeError as exc:
-#        recv_data = []
-#        # Split the train_data into slices
-#        # as advised from DataSizeError, and retry sending them.
-#        for (b, e) in _slices(exc):
-#            if train_data is not None:
-#                slice = train_data[b:e]
-#            else:
-#                slice = None
-#            recv_data += chainermn.scatter_dataset(slice, comm)
-#        train_data = recv_data
-#
-#    test_data = chainermn.scatter_dataset(test_data, comm)
-
-#    debug('bcast train_data')
-#    train_data = comm.mpi_comm.bcast(train_data, root=0)
-#    debug('bcast test_data')
-#    test_data = comm.mpi_comm.bcast(test_data, root=0)
-#    train_data = [d[comm.rank] for d in train_data]
-#    test_data = [d[comm.rank] for d in test_data]
-
     train_iter = chainer.iterators.SerialIterator(train_data,
                                                   args.batchsize,
                                                   shuffle=False)
@@ -508,9 +488,8 @@ def main():
                                trigger,
                                out=args.out)
 
-#    trainer.extend(chainermn.create_multi_node_evaluator(
-#        BleuEvaluator(model, test_data, device=dev, comm=comm),
-#        comm))
+    # Do not use multi node evaluator.
+    # (because evaluation is done only on decoder process)
     trainer.extend(BleuEvaluator(model, test_data, device=dev, comm=comm))
 
     def translate_one(source, target):
