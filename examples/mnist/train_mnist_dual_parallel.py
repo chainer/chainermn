@@ -79,14 +79,21 @@ def main():
     # Prepare ChainerMN communicator.
     if args.gpu:
         comm = chainermn.create_communicator('hierarchical')
+        data_axis, model_axis = comm.rank % 2, comm.rank // 2
+        data_comm = comm.split(data_axis, comm.rank)
+        model_comm = comm.split(model_axis, comm.rank)
         device = comm.intra_rank
     else:
         comm = chainermn.create_communicator('naive')
+        data_axis, model_axis = comm.rank % 2, comm.rank // 2
+        data_comm = comm.split(data_axis, comm.rank)
+        model_comm = comm.split(model_axis, comm.rank)
         device = -1
 
-    if comm.size != 2:
+    if model_comm.size != 2:
         raise ValueError(
-            'This example can only be executed on exactly 2 processes.')
+            'This example can only be executed on the even number'
+            'of processes.')
 
     if comm.rank == 0:
         print('==========================================')
@@ -97,23 +104,30 @@ def main():
         print('Num epoch: {}'.format(args.epoch))
         print('==========================================')
 
-    if comm.rank == 0:
-        model = L.Classifier(MLP0(comm, args.unit))
-    elif comm.rank == 1:
-        model = MLP1(comm, args.unit, 10)
+    if data_axis == 0:
+        model = L.Classifier(MLP0(model_comm, args.unit))
+    elif data_axis == 1:
+        model = MLP1(model_comm, args.unit, 10)
 
     if device >= 0:
         chainer.cuda.get_device(device).use()
         model.to_gpu()
 
-    optimizer = chainer.optimizers.Adam()
+    optimizer = chainermn.create_multi_node_optimizer(
+        chainer.optimizers.Adam(), data_comm)
     optimizer.setup(model)
 
-    # Iterate dataset only on worker 0.
-    train, test = chainer.datasets.get_mnist()
-    if comm.rank == 1:
-        train = chainermn.datasets.create_empty_dataset(train)
-        test = chainermn.datasets.create_empty_dataset(test)
+    # Original dataset on worker 0 and 1.
+    # Datasets of worker 0 and 1 are split and distributed to all workers.
+    if model_axis == 0:
+        train, test = chainer.datasets.get_mnist()
+        if comm.rank == 1:
+            train = chainermn.datasets.create_empty_dataset(train)
+            test = chainermn.datasets.create_empty_dataset(test)
+    else:
+        train, test = None, None
+    train = chainermn.scatter_dataset(train, data_comm, shuffle=True)
+    test = chainermn.scatter_dataset(test, data_comm, shuffle=True)
 
     train_iter = chainer.iterators.SerialIterator(
         train, args.batchsize, shuffle=False)
@@ -122,7 +136,9 @@ def main():
 
     updater = training.StandardUpdater(train_iter, optimizer, device=device)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
-    trainer.extend(extensions.Evaluator(test_iter, model, device=device))
+    evaluator = extensions.Evaluator(test_iter, model, device=device)
+    evaluator = chainermn.create_multi_node_evaluator(evaluator, data_comm)
+    trainer.extend(evaluator)
 
     # Some display and output extentions are necessary only for worker 0.
     if comm.rank == 0:
