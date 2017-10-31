@@ -84,7 +84,7 @@ class MLP1(chainermn.MultiNodeChainList):
 
 The conceptual figure is as follows:
 
-![model parallel MLP](https://github.com/levelfour/chainermn/blob/dual-parallel-example/examples/mnist/model_parallel.png)
+![model parallel MLP](./model_parallel.png)
 
 This example can be executed by the following command (with two workers):
 ```
@@ -97,11 +97,11 @@ Note that this example cannot be executed on the different number of workers fro
 Of course we can use data parallelism and model parallelism at the same time.
 Overall we have two parallelism axis.
 
-![parallelism axis](https://github.com/levelfour/chainermn/blob/dual-parallel-example/examples/mnist/parallelism_axis.png)
+![parallelism axis](./parallelism_axis.png)
 
 Combining these two axis, the detailed architecture used in this example is shown in the next figure.
 
-![dual parallel MLP](https://github.com/levelfour/chainermn/blob/dual-parallel-example/examples/mnist/dual_parallel.png)
+![dual parallel MLP](./dual_parallel.png)
 
 This example can be executed by the following command:
 ```
