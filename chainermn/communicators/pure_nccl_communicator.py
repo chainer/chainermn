@@ -1,5 +1,4 @@
 import chainer.cuda
-import math
 
 from chainermn.communicators import _base
 from chainermn.communicators import _communication_utility
