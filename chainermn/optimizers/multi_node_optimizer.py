@@ -1,11 +1,11 @@
-class _MultiNodeOptimizer(object):
+class MultiNodeOptimizer(object):
 
     def __init__(self, actual_optimizer, communicator):
-        super(_MultiNodeOptimizer, self).__setattr__(
+        super(MultiNodeOptimizer, self).__setattr__(
             'communicator', communicator)
-        super(_MultiNodeOptimizer, self).__setattr__(
+        super(MultiNodeOptimizer, self).__setattr__(
             'actual_optimizer', actual_optimizer)
-        super(_MultiNodeOptimizer, self).__setattr__(
+        super(MultiNodeOptimizer, self).__setattr__(
             'needs_broadcast', True)
 
     def update(self, lossfun=None, *args, **kwds):
@@ -22,7 +22,7 @@ class _MultiNodeOptimizer(object):
 
         if self.needs_broadcast:
             self.communicator.broadcast_data(target)
-            super(_MultiNodeOptimizer, self).__setattr__(
+            super(MultiNodeOptimizer, self).__setattr__(
                 'needs_broadcast', False)
         else:
             self.communicator.allreduce_grad(target)
@@ -34,16 +34,3 @@ class _MultiNodeOptimizer(object):
     def __setattr__(self, attr_name, value):
         setattr(self.actual_optimizer, attr_name, value)
 
-
-def create_multi_node_optimizer(actual_optimizer, communicator):
-    """Create a multi node optimizer from a Chainer optimizer.
-
-    Args:
-        actual_optimizer: Chainer optimizer
-            (e.g., ``chainer.optimizers.Adam``).
-        communicator: ChainerMN communicator.
-
-    Returns:
-        The multi node optimizer based on ``actual_optimizer``.
-    """
-    return _MultiNodeOptimizer(actual_optimizer, communicator)
