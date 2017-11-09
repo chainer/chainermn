@@ -51,8 +51,10 @@ class PureNcclCommunicator(_base.CommunicatorBase):
     def broadcast_data(self, model):
         _communication_utility.broadcast_naive(self.mpi_comm, model)
 
-    def allreduce_grad(self, model, stream=chainer.cuda.Stream.null):
+    def allreduce_grad(self, model, stream=None):
         self._init_comms()
+        if stream is None:
+            stream = chainer.cuda.Stream.null
 
         params = [param for _, param in sorted(model.namedparams())]
         itemsize = 4

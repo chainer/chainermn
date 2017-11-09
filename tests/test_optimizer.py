@@ -1,5 +1,5 @@
 import unittest
-import unittest.mock
+import mock
 
 import chainer
 import chainermn
@@ -32,7 +32,7 @@ class TestOptimizer(unittest.TestCase):
         self.target.b.W.grad[:] = 0
         self.target.c.W.grad[:] = 0
         self.actual_optimizer = chainer.GradientMethod()
-        self.actual_optimizer.create_update_rule = unittest.mock.MagicMock        
+        self.actual_optimizer.create_update_rule = mock.MagicMock        
         self.actual_optimizer.setup(self.target)
 
 
@@ -49,7 +49,7 @@ class TestOptimizer(unittest.TestCase):
         self.target.b.W.grad[:] = 0
         self.target.c.W.grad[:] = 0
         self.actual_optimizer = chainer.GradientMethod()
-        self.actual_optimizer.create_update_rule = unittest.mock.MagicMock
+        self.actual_optimizer.create_update_rule = mock.MagicMock
         self.actual_optimizer.setup(self.target)
 
 
