@@ -135,7 +135,7 @@ class CommunicatorBase(object):
         self.mpi_comm.Alltoallv(
             [sshapes, (sndims, _cnt_to_dsp(sndims)), mpi4py.MPI.INT],
             [rshapes, (rndims, _cnt_to_dsp(rndims)), mpi4py.MPI.INT])
-        shapes = [rshapes[i:i+l] for i, l in zip(_cnt_to_dsp(rndims), rndims)]
+        shapes = [rshapes[i:i + l] for i, l in zip(_cnt_to_dsp(rndims), rndims)]
 
         # Collective communication.
         slens = [numpy.prod(x.shape) for x in xs]
@@ -145,7 +145,7 @@ class CommunicatorBase(object):
         self.mpi_comm.Alltoallv(
             [sbuf, (slens, _cnt_to_dsp(slens)), mpi4py.MPI.FLOAT],
             [rbuf, (rlens, _cnt_to_dsp(rlens)), mpi4py.MPI.FLOAT])
-        ys = [rbuf[i:i+l].reshape(s)
+        ys = [rbuf[i:i + l].reshape(s)
               for i, l, s in zip(_cnt_to_dsp(rlens), rlens, shapes)]
 
         return tuple(ys)
