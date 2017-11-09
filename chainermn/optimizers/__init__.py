@@ -1,15 +1,17 @@
-def create_multi_node_optimizer(actual_optimizer, communicator, double_buffering=False):
+def create_multi_node_optimizer(actual_optimizer, communicator,
+                                double_buffering=False):
     """Create a multi node optimizer from a Chainer optimizer.
 
     Args:
         actual_optimizer: Chainer optimizer
             (e.g., ``chainer.optimizers.Adam``).
         communicator: ChainerMN communicator.
-        double_buffering: double buffering flag. It is supported by PureNcclCommunicator only.
+        double_buffering: double buffering flag. It is supported
+            by PureNcclCommunicator only.
     Returns:
         The multi node optimizer based on ``actual_optimizer``.
     """
-    if double_buffering :
+    if double_buffering:
         from chainermn.communicators.pure_nccl_communicator \
             import PureNcclCommunicator
         if not isinstance(communicator, PureNcclCommunicator): 
