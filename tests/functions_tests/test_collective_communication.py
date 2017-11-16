@@ -44,7 +44,8 @@ class TestPointToPointCommunication(unittest.TestCase):
 
     def test_all_to_all_cpu(self):
         data = [
-            chainer.Variable(numpy.zeros((self.communicator.rank, i), dtype=numpy.float32))
+            chainer.Variable(numpy.zeros(
+                (self.communicator.rank, i), dtype=numpy.float32))
             for i in range(self.communicator.size)]
         self.check_all_to_all(data)
 
@@ -54,7 +55,8 @@ class TestPointToPointCommunication(unittest.TestCase):
             raise nose.plugins.skip.SkipTest()
         chainer.cuda.get_device_from_id(self.device).use()
         data = [
-            chainer.Variable(numpy.zeros((self.communicator.rank, i), dtype=numpy.float32))
+            chainer.Variable(numpy.zeros(
+                (self.communicator.rank, i), dtype=numpy.float32))
             for i in range(self.communicator.size)]
         for x in data:
             x.to_gpu()
