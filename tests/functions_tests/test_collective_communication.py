@@ -1,4 +1,3 @@
-import copy
 import nose.plugins.skip
 import unittest
 

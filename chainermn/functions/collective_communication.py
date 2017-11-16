@@ -1,12 +1,14 @@
 import chainer
+from chainer import cuda
 
 
 class Alltoall(chainer.Function):
     """Collective all-to-all communication."""
 
-    def __init__(self, comm):
+    def __init__(self, comm, device):
         chainer.utils.experimental('chainermn.functions.Alltoall')
         self.comm = comm
+        self.device = device
 
     def forward(self, inputs):
         if len(inputs) != self.comm.size:
@@ -15,16 +17,24 @@ class Alltoall(chainer.Function):
 
         xs = tuple([x for x in inputs])
         ys = self.comm.alltoall(xs)
+
+        if isinstance(self.device, int) and self.device >= 0:
+            ys = tuple([cuda.to_gpu(y, device=self.device) for y in ys])
+
         return ys
 
     def backward(self, inputs, grad_outputs):
         assert self.comm.size == len(grad_outputs)
-        gys = tuple([gy for gy in grad_outputs])
-        gx = self.comm.alltoall(gys)
-        return gx
+
+        xp = cuda.get_array_module(*inputs)
+        with cuda.get_device_from_array(*inputs):
+            gys = tuple([gy for gy in grad_outputs])
+            gx = self.comm.alltoall(gys)
+            gx = [xp.array(_gx) for _gx in gx]
+            return tuple(gx)
 
 
-def all_to_all(comm, xs):
+def all_to_all(comm, xs, device=-1):
     """Differentiable all-to-all communication between workers.
 
     This function invokes all-to-all communications among processes specified
@@ -40,6 +50,7 @@ def all_to_all(comm, xs):
     Args:
         comm: ChainerMN communicator.
         xs (list of chainer.Variables): Variables to send.
+        device (int): Target device specifier.
 
     Returns:
         ys (list of chainer.Variables): Received variables.
@@ -49,4 +60,4 @@ def all_to_all(comm, xs):
     if len(xs) != comm.size:
         raise ValueError('The length of xs must be same as communicator size.')
 
-    return Alltoall(comm)(*xs)
+    return Alltoall(comm, device)(*xs)

@@ -140,9 +140,13 @@ class CommunicatorBase(object):
 
         # Collective communication.
         slens = [numpy.prod(x.shape) for x in xs]
-        sbuf = numpy.hstack([x.reshape(-1) for x in xs])
+        xp = chainer.cuda.get_array_module(xs[0])
+        sbuf = xp.hstack([x.reshape(-1) for x in xs])
         rlens = [numpy.prod(s) for s in shapes]
         rbuf = numpy.empty(sum(rlens), dtype=numpy.float32)
+        if xp is not numpy:
+            sbuf = _memory_utility.array_to_buffer_object(sbuf)[0]
+            chainer.cuda.Stream.null.synchronize()
         self.mpi_comm.Alltoallv(
             [sbuf, (slens, _cnt_to_dsp(slens)), mpi4py.MPI.FLOAT],
             [rbuf, (rlens, _cnt_to_dsp(rlens)), mpi4py.MPI.FLOAT])
