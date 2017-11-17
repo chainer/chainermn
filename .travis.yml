@@ -53,7 +53,7 @@ script:
   - autopep8 -r . --global-config .pep8 | tee check_autopep8
   - test ! -s check_autopep8
   - if mpiexec --version | grep -q OpenRTE; then NOBIND="--bind-to none"; else NOBIND= ; fi
-  - (for NP in 1 2 3; do for T in $(find tests -name "test_*.py") ; do PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' mpiexec ${NOBIND} -n ${NP} nosetests -s -v -a '!nccl,!gpu,!slow' $T || exit $?; done; done)
+  - (for NP in 1 2 4; do for T in $(find tests -name "test_*.py") ; do PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' mpiexec ${NOBIND} -n ${NP} nosetests -s -v -a '!nccl,!gpu,!slow' $T || exit $?; done; done)
   # - cd tests
   # - PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' nosetests -a '!gpu,!slow' --with-doctest chainer_tests
   - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
