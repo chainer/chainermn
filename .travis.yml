@@ -52,7 +52,6 @@ script:
   - flake8 --config=.flake8.cython .
   - autopep8 -r . --global-config .pep8 | tee check_autopep8
   - test ! -s check_autopep8
-  #- if mpiexec --version | grep -q OpenRTE; then NOBIND="--bind-to none"; else NOBIND= ; fi
   - (for NP in 1 2; do mpiexec ${NOBIND} -n ${NP} nosetests -s -v -a '!nccl,!gpu,!slow' || exit $?; done)
   - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
       READTHEDOCS=True python setup.py develop --no-nccl;
