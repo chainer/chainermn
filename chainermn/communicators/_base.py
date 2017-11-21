@@ -7,6 +7,23 @@ from chainermn.communicators import _memory_utility
 from chainermn import nccl
 
 
+class _MessageType(object):
+
+    def __init__(self, obj):
+        if isinstance(obj, numpy.ndarray):
+            self.is_tuple = False
+            self.narr = 1
+            self.ndims = [obj.ndim]
+            self.shapes = [obj.shape]
+        elif isinstance(obj, tuple):
+            self.is_tuple = True
+            self.narr = len(obj)
+            self.ndims = [x.ndim for x in obj]
+            self.shapes = [x.shape for x in obj]
+        else:
+            raise ValueError('Message object should be numpy array or tuple.')
+
+
 class CommunicatorBase(object):
 
     def __init__(self, mpi_comm):
@@ -41,7 +58,7 @@ class CommunicatorBase(object):
         """
         return self.__class__(mpi_comm=self.mpi_comm.Split(color, key))
 
-    def send(self, array, dest, tag):
+    def send(self, obj, dest, tag):
         """A primitive for inter-process transmitter.
 
         This method sends numpy-array to target process.
@@ -51,23 +68,26 @@ class CommunicatorBase(object):
         chainer.Variable objects. Please be sure.
 
         Args:
-            array: numpy or cupy array object.
+            obj: data to be sent (tuple or raw numpy/cupy array)
             dest (int): Target process specifier.
             tag (int): Message ID (MPI feature).
 
         """
         chainer.utils.experimental(
             'chainermn.communicators.CommunicatorBase.send')
-        assert array.dtype == numpy.float32
-        ndim = numpy.array([array.ndim], dtype=numpy.int32)
-        shape = numpy.array(array.shape, dtype=numpy.int32)
-        buf = _memory_utility.array_to_buffer_object(array)
-        self.mpi_comm.Send([ndim, mpi4py.MPI.INT], dest=dest, tag=tag)
-        self.mpi_comm.Send([shape, mpi4py.MPI.INT], dest=dest, tag=tag)
 
-        if chainer.cuda.get_array_module(array) is not numpy:
-            chainer.cuda.Stream.null.synchronize()
-        self.mpi_comm.Send(buf, dest=dest, tag=tag)
+        msgtype = _MessageType(obj)
+        self.mpi_comm.send(msgtype, dest=dest, tag=tag)
+
+        if not msgtype.is_tuple:
+            obj = [obj]
+
+        for array in obj:
+            if chainer.cuda.get_array_module(array) is not numpy:
+                chainer.cuda.Stream.null.synchronize()
+
+            buf = _memory_utility.array_to_buffer_object(array)
+            self.mpi_comm.Send(buf, dest=dest, tag=tag)
 
     def recv(self, source, tag):
         """A primitive of inter-process receiver.
@@ -86,13 +106,23 @@ class CommunicatorBase(object):
 
         chainer.utils.experimental(
             'chainermn.communicators.CommunicatorBase.recv')
-        ndim = numpy.empty(1, dtype=numpy.int32)
-        self.mpi_comm.Recv([ndim, mpi4py.MPI.INT], source=source, tag=tag)
-        shape = numpy.empty(ndim[0], dtype=numpy.int32)
-        self.mpi_comm.Recv([shape, mpi4py.MPI.INT], source=source, tag=tag)
-        buf = numpy.empty(shape.prod(), dtype=numpy.float32)
-        self.mpi_comm.Recv(buf, source=source, tag=tag)
-        return buf.reshape(shape)
+
+        msgtype = self.mpi_comm.recv(source=source, tag=tag)
+
+        if msgtype.is_tuple:
+            msg = []
+            for shape in msgtype.shapes:
+                buf = numpy.empty(numpy.prod(shape), dtype=numpy.float32)
+                self.mpi_comm.Recv(buf, source=source, tag=tag)
+                msg.append(buf.reshape(shape))
+            return tuple(msg)
+
+        else:
+            assert len(msgtype.shapes) == 1
+            shape = msgtype.shapes[0]
+            buf = numpy.empty(numpy.prod(shape), dtype=numpy.float32)
+            self.mpi_comm.Recv(buf, source=source, tag=tag)
+            return buf.reshape(shape)
 
     def broadcast_data(self, model):
         raise NotImplementedError()
