@@ -24,7 +24,9 @@ class Send(chainer.Function):
     def forward(self, inputs):
         xp = cuda.get_array_module(*inputs)
 
-        # TODO(tsutsumi): if len(inputs) == 1, should we unpack inputs?
+        if len(inputs) == 1:
+            inputs = inputs[0]
+
         self.comm.send(inputs, self.peer_rank, self.peer_tag)
 
         # Return an empty variable, which serves as "delegate_variable."
@@ -51,34 +53,28 @@ class Recv(chainer.Function):
         self.device = device
 
     def __call__(self, *inputs):
-        data = self.comm.recv(self.peer_rank, self.peer_tag)
+        xp = cuda.get_array_module(*inputs)
 
-        if chainer.__version__.startswith('1.'):
-            # For backward compatibility.
-            if isinstance(data, tuple):
-                var = [chainer.Variable(x, volatile='auto') for x in data]
+        if inputs == ():
+            # Expected to be invoked without any args in usual case.
+            if chainer.__version__.startswith('1.'):
+                # For backward compatibility.
+                dummy_var = chainer.Variable(
+                    xp.array([], dtype=xp.float32),
+                    volatile='auto')
             else:
-                var = [chainer.Variable(data, volatle='auto')]
+                # This variable is necessary to backprop correctly
+                # in Chainer v2. This trick relies on the fact
+                # chainer.Variable.requires_grad is True by default
+                # in Chainer v2.0.0.
+                dummy_var = chainer.Variable(xp.array([], dtype=xp.float32))
+
+            dummy_var.name = 'dummy_var'
+            return super(Recv, self).__call__(dummy_var)
+
         else:
-            if isinstance(data, tuple):
-                var = [chainer.Variable(x) for x in data]
-            else:
-                var = [chainer.Variable(data)]
-
-        if inputs != ():
-            assert len(inputs) == 1, \
-                'No more than one delegate_variable will be passed.'
-
-            # inputs might contain delegate_variable.
-            # In this case, we must assure the backward path.
-            delegate_variable = inputs[0]
-            var[0] = chainermn.functions.pseudo_connect(
-                delegate_variable, var[0])
-
-        for x in var:
-            x.name = 'received_data'
-
-        return super(Recv, self).__call__(*var)
+            # Used for retaining computational graph.
+            return super(Recv, self).__call__(*inputs)
 
     @property
     def label(self):
@@ -87,19 +83,26 @@ class Recv(chainer.Function):
             self.peer_rank)
 
     def forward(self, inputs):
-        # Simply return the received data (passed via inputs).
+        data = self.comm.recv(self.peer_rank, self.peer_tag)
+
+        if not isinstance(data, tuple):
+            data = tuple([data])
+
         if isinstance(self.device, int) and self.device >= 0:
-            return tuple([cuda.to_gpu(x, device=self.device) for x in inputs])
+            return tuple([cuda.to_gpu(x, device=self.device) for x in data])
         else:
-            return inputs
+            return data
 
     def backward(self, inputs, grad_outputs):
         xp = cuda.get_array_module(*inputs)
         self.comm.send(grad_outputs, self.peer_rank, self.peer_tag)
 
         # dummy_var is needed to maintain Chainer's constraint.
-        dummy_var = tuple([xp.zeros(x.shape, dtype=xp.float32)
-                           for x in inputs])
+        if inputs == ():
+            dummy_var = tuple([xp.array([], dtype=xp.float32)])
+        else:
+            dummy_var = tuple([xp.zeros(x.shape, dtype=xp.float32)
+                               for x in inputs])
 
         return dummy_var
 
