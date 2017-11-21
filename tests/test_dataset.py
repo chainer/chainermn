@@ -3,10 +3,15 @@ import unittest
 import mpi4py.MPI
 from nose.plugins.attrib import attr
 import nose.plugins.skip
+from nose.tools import assert_raises
 import numpy as np
 
 import chainermn
 from chainermn.communicators.naive_communicator import NaiveCommunicator
+
+from chainermn.datasets.scatter_dataset import chunked_bcast  # NOQA
+from chainermn.datasets.scatter_dataset import INT_MAX  # NOQA
+
 from chainermn.datasets import DataSizeError
 from chainermn.datasets import scatter_dataset
 
@@ -53,6 +58,27 @@ class TestDataset(unittest.TestCase):
                 self.check_scatter_dataset(np.array([0]), shuffle, root)
                 self.check_scatter_dataset(np.arange(n), shuffle, root)
                 self.check_scatter_dataset(np.arange(n * 5 - 1), shuffle, root)
+
+    def test_chunked_bcasts(self):
+        # success
+        for (s, l) in [(10, 1), (1024, 7), (355678, 2378), (234, INT_MAX - 1)]:
+            self.check_chunked_bcast(s, l)
+        # fail
+        for (s, l) in [(200, -1), (23, INT_MAX)]:
+            assert_raises(AssertionError, self.check_chunked_bcast, s, l)
+
+    def check_chunked_bcast(self, data_size, max_buf_len):
+        root = 0
+        obj = np.arange(data_size)
+        src = None
+        if self.communicator.mpi_comm.rank == root:
+            src = obj
+
+        dst = chunked_bcast(src, self.communicator.mpi_comm,
+                            max_buf_len, root)
+        assert len(dst) == len(obj)
+        for i in range(len(obj)):
+            assert dst[i] == obj[i]
 
     def scatter_large_data(self, comm_type):
         comm = self.communicator
