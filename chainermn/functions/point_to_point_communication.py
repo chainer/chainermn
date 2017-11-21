@@ -3,7 +3,6 @@ import collections
 import chainer
 from chainer import cuda
 import chainer.utils
-import chainermn.functions
 
 
 class Send(chainer.Function):
