@@ -1,4 +1,3 @@
-import mpi4py.MPI
 import numpy
 
 import chainer.utils
