@@ -52,9 +52,7 @@ script:
   - flake8 --config=.flake8.cython .
   - autopep8 -r . --global-config .pep8 | tee check_autopep8
   - test ! -s check_autopep8
-  - (for NP in 1 2 3; do PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' mpiexec -n ${NP} nosetests -v -a '!nccl,!gpu,!slow' || exit $?; done)
-  # - cd tests
-  # - PYTHONWARNINGS='ignore::FutureWarning,module::DeprecationWarning' nosetests -a '!gpu,!slow' --with-doctest chainer_tests
+  - (for NP in 1 2; do mpiexec ${NOBIND} -n ${NP} nosetests -s -v -a '!nccl,!gpu,!slow' || exit $?; done)
   - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
       READTHEDOCS=True python setup.py develop --no-nccl;
     fi
