@@ -15,7 +15,7 @@ class _MessageType(object):
             self.narr = 1
             self.ndims = [obj.ndim]
             self.shapes = [obj.shape]
-        elif isinstance(obj, tuple):
+        elif isinstance(obj, tuple) or isinstance(obj, list):
             self.is_tuple = True
             self.narr = len(obj)
             self.ndims = [x.ndim for x in obj]
@@ -68,7 +68,7 @@ class CommunicatorBase(object):
         chainer.Variable objects. Please be sure.
 
         Args:
-            obj: data to be sent (tuple or raw numpy/cupy array)
+            obj: data to be sent (tuple, list or raw numpy/cupy array)
             dest (int): Target process specifier.
             tag (int): Message ID (MPI feature).
 
