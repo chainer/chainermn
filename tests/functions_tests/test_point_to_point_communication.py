@@ -130,3 +130,23 @@ class TestPointToPointCommunication(unittest.TestCase):
             err = chainermn.functions.send(
                 y, self.communicator, self.rank_send)
             err.backward()
+
+    def test_tuple_communication(self):
+        if self.communicator.rank == 0:
+            y0 = self.f(self.model(self.x))
+            y1 = self.f(self.model(self.x))
+            err = chainermn.functions.send(
+                [y0, y1], self.communicator, self.rank_send)
+            err.backward()
+
+        elif self.communicator.rank == self.communicator.size - 1:
+            y0, y1 = chainermn.functions.recv(self.communicator, self.rank_recv, device=self.device)
+            y = y0 + y1
+            err = self.evaluation(y, self.x)
+            err.backward()
+
+        else:
+            y0, y1 = chainermn.functions.recv(self.communicator, self.rank_recv, device=self.device)
+            err = chainermn.functions.send(
+                [y0, y1], self.communicator, self.rank_send)
+            err.backward()

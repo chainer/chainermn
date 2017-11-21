@@ -98,13 +98,7 @@ class Recv(chainer.Function):
         self.comm.send(grad_outputs, self.peer_rank, self.peer_tag)
 
         # dummy_var is needed to maintain Chainer's constraint.
-        if inputs == ():
-            dummy_var = tuple([
-                xp.zeros(x.shape, dtype=xp.float32) for x in inputs])
-        else:
-            delegate_variable, = inputs
-            dummy_var = tuple([
-                xp.zeros(delegate_variable.shape, dtype=xp.float32)])
+        dummy_var = tuple([xp.zeros(x.shape, dtype=xp.float32) for x in inputs])
 
         return dummy_var
 
