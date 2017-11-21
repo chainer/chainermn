@@ -98,7 +98,8 @@ class Recv(chainer.Function):
         self.comm.send(grad_outputs, self.peer_rank, self.peer_tag)
 
         # dummy_var is needed to maintain Chainer's constraint.
-        dummy_var = tuple([xp.zeros(x.shape, dtype=xp.float32) for x in inputs])
+        dummy_var = tuple([xp.zeros(x.shape, dtype=xp.float32)
+                           for x in inputs])
 
         return dummy_var
 
@@ -133,15 +134,19 @@ def send(x, communicator, rank, tag=0):
             'otherwise deadlock occurs')
 
     if isinstance(x, collections.Iterable):
-        delegate_variable = Send(communicator, peer_rank=rank, peer_tag=tag)(*x)
+        delegate_variable = Send(
+            communicator, peer_rank=rank, peer_tag=tag)(*x)
     else:
-        delegate_variable = Send(communicator, peer_rank=rank, peer_tag=tag)(x)
+        delegate_variable = Send(
+            communicator, peer_rank=rank, peer_tag=tag)(x)
 
     delegate_variable.name = 'delegate_variable'
     return delegate_variable
 
 
-def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
+def recv(
+        communicator, rank, delegate_variable=None, tag=0, device=-1,
+        force_tuple=False):
     """Receive elements from target process.
 
     This function returns data received from target process. If ``backward()``
@@ -162,6 +167,9 @@ def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
             Pointer to the other non-connected component.
         tag (int): Optional message ID (MPI feature).
         device (int): Target device specifier.
+        force_tuple (bool): If ``False`` (the default) a Variable will be
+            returned when the number of outputs is one. Otherwise, this
+            method returns a tuple even when the number of outputs is one.
 
     Returns:
         ~chainer.Variable:
@@ -177,15 +185,20 @@ def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
             'otherwise deadlock occurs')
 
     if delegate_variable is None:
-        return Recv(
+        res = Recv(
             communicator,
             peer_rank=rank,
             peer_tag=tag,
             device=device)()
     else:
         delegate_variable.name = 'delegate_variable'
-        return Recv(
+        res = Recv(
             communicator,
             peer_rank=rank,
             peer_tag=tag,
             device=device)(delegate_variable)
+
+    if force_tuple and len(res) == 1:
+        return tuple([res])
+    else:
+        return res
