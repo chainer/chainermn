@@ -200,7 +200,7 @@ def recv(
             peer_tag=tag,
             device=device)(delegate_variable)
 
-    if force_tuple and len(res) == 1:
+    if force_tuple and not isinstance(res, tuple):
         return tuple([res])
     else:
         return res
