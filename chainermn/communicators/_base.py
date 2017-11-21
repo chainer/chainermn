@@ -1,3 +1,5 @@
+import collections
+
 import numpy
 
 import chainer.utils
@@ -14,7 +16,7 @@ class _MessageType(object):
             self.narr = 1
             self.ndims = [obj.ndim]
             self.shapes = [obj.shape]
-        elif isinstance(obj, tuple) or isinstance(obj, list):
+        elif isinstance(obj, collections.Iterable):
             self.is_tuple = True
             self.narr = len(obj)
             self.ndims = [x.ndim for x in obj]

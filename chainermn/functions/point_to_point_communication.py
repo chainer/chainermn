@@ -1,3 +1,5 @@
+import collections
+
 import chainer
 from chainer import cuda
 import chainer.utils
@@ -136,7 +138,11 @@ def send(x, communicator, rank, tag=0):
             'rank must be different from communicator rank, '
             'otherwise deadlock occurs')
 
-    delegate_variable = Send(communicator, peer_rank=rank, peer_tag=tag)(x)
+    if isinstance(x, collections.Iterable):
+        delegate_variable = Send(communicator, peer_rank=rank, peer_tag=tag)(*x)
+    else:
+        delegate_variable = Send(communicator, peer_rank=rank, peer_tag=tag)(x)
+
     delegate_variable.name = 'delegate_variable'
     return delegate_variable
 
