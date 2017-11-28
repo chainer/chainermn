@@ -2,6 +2,7 @@ import collections
 
 import numpy
 
+import chainer.cuda
 import chainer.utils
 from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
@@ -11,7 +12,8 @@ from chainermn import nccl
 class _MessageType(object):
 
     def __init__(self, obj):
-        if isinstance(obj, numpy.ndarray):
+        if isinstance(obj, numpy.ndarray) \
+                or chainer.cuda.get_array_module(obj) is not numpy:
             self.is_tuple = False
             self.narr = 1
             self.ndims = [obj.ndim]
@@ -22,7 +24,8 @@ class _MessageType(object):
             self.ndims = [x.ndim for x in obj]
             self.shapes = [x.shape for x in obj]
         else:
-            raise ValueError('Message object should be numpy array or tuple.')
+            raise ValueError(
+                'Message object must be numpy/cupy array or tuple.')
 
 
 class CommunicatorBase(object):
