@@ -201,7 +201,8 @@ class TupleDataParent(chainermn.MultiNodeChainList):
 class TupleDataChild(chainermn.MultiNodeChainList):
     def __init__(self, comm, size, rank_parent):
         super(TupleDataChild, self).__init__(comm=comm)
-        self.add_link(TupleDataSubB(size), rank_in=rank_parent, rank_out=rank_parent)
+        self.add_link(
+            TupleDataSubB(size), rank_in=rank_parent, rank_out=rank_parent)
 
 
 @chainer.testing.parameterize(
