@@ -156,6 +156,54 @@ class TwistLast(chainermn.MultiNodeChainList):
         self.add_link(BranchSubA(size), rank_in=None, rank_out=rank_prev)
 
 
+class TupleDataSubA(chainer.Chain):
+    def __init__(self, size):
+        super(TupleDataSubA, self).__init__(
+            f0=L.Linear(size, size),
+            f1=L.Linear(size, size))
+
+    def __call__(self, x):
+        y0 = self.f0(x)
+        y1 = self.f1(x)
+        return y0, y1
+
+
+class TupleDataSubB(chainer.Chain):
+    def __init__(self, size):
+        super(TupleDataSubB, self).__init__(
+            f0=L.Linear(size, size),
+            f1=L.Linear(size, size))
+
+    def __call__(self, x):
+        # TupleDataSubB receives two elemental tuple from TupleDataSubA.
+        x0, x1 = x
+        y0 = self.f0(x0)
+        y1 = self.f1(x1)
+        return y0 + y1
+
+
+class TupleDataSubC(chainer.Chain):
+    def __init__(self, size):
+        super(TupleDataSubC, self).__init__(
+            f=L.Linear(size, size))
+
+    def __call__(self, x):
+        return self.f(x)
+
+
+class TupleDataParent(chainermn.MultiNodeChainList):
+    def __init__(self, comm, size, rank_child):
+        super(TupleDataParent, self).__init__(comm=comm)
+        self.add_link(TupleDataSubA(size), rank_in=None, rank_out=rank_child)
+        self.add_link(TupleDataSubC(size), rank_in=rank_child, rank_out=None)
+
+
+class TupleDataChild(chainermn.MultiNodeChainList):
+    def __init__(self, comm, size, rank_parent):
+        super(TupleDataChild, self).__init__(comm=comm)
+        self.add_link(TupleDataSubB(size), rank_in=rank_parent, rank_out=rank_parent)
+
+
 @chainer.testing.parameterize(
     {'gpu': True},
     {'gpu': False},
@@ -285,4 +333,27 @@ class TestMultiNodeChain(unittest.TestCase):
 
         for i in range(n):
             err = model(X[i:i + 1], Y[i:i + 1])
+            err.backward()
+
+    def test_tuple_data_model(self):
+        n, d = 100, 10
+        X = np.random.randn(n, d).astype(np.float32)
+        Y = (np.random.rand(n) * 2).astype(np.int32)
+
+        if self.communicator.rank == 0:
+            model = L.Classifier(
+                TupleDataParent(self.communicator, d, 1))
+        elif self.communicator.rank == 1:
+            model = TupleDataChild(self.communicator, d, 0)
+
+        if self.gpu:
+            model.to_gpu()
+            X = chainer.cuda.to_gpu(X)
+            Y = chainer.cuda.to_gpu(Y)
+
+        for i in range(n):
+            if self.communicator.rank == 0:
+                err = model(X[i:i + 1], Y[i:i + 1])
+            elif self.communicator.rank == 1:
+                err = model()
             err.backward()
