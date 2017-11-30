@@ -99,7 +99,7 @@ We tested ChainerMN on all the following environments.
   * Ubuntu 14.04 LTS 64bit
 
 * Python 2.7.13 3.5.1 3.6.1
-* Chainer 1.24.0 2.0.2
+* Chainer 2.0.2 2.1.0 3.0.0 3.1.0
 * MPI
 
   * openmpi 1.6.5 1.10.3 2.1.1
