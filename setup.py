@@ -12,7 +12,6 @@ install_requires = [
     'chainer >=1.23, !=2.0.0a1, !=2.0.0b1',
     'cython',
     'mpi4py',
-    'mock',
 ]
 
 ext_modules = [
@@ -38,5 +37,7 @@ setup(
     packages=find_packages(),
     ext_modules=ext_modules,
     cmdclass={'build_ext': build_ext},
-    install_requires=install_requires
+    install_requires=install_requires,
+    tests_require=['mock',
+                   'pytest'],
 )

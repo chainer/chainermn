@@ -47,12 +47,12 @@ def main():
 
     # Prepare ChainerMN communicator.
 
-    if args.communicator != 'pure_nccl' :
+    if args.communicator != 'pure_nccl':
         print("Error: Double buffering is supported by pure_nccl only.\n")
         exit(-1)
     comm = chainermn.create_communicator(args.communicator)
     device = comm.intra_rank
-    
+
     if comm.mpi_comm.rank == 0:
         print('==========================================')
         print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
