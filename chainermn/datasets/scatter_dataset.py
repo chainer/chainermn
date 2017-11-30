@@ -5,7 +5,7 @@ import chainer.datasets
 import numpy
 
 
-class DataSizeError(object):
+class DataSizeError(RuntimeError):
     pass
 
 

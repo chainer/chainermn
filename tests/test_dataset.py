@@ -12,9 +12,6 @@ from chainermn.communicators.naive_communicator import NaiveCommunicator
 from chainermn.datasets.scatter_dataset import chunked_bcast  # NOQA
 from chainermn.datasets.scatter_dataset import INT_MAX  # NOQA
 
-from chainermn.datasets import DataSizeError
-from chainermn.datasets import scatter_dataset
-
 
 class TestDataset(unittest.TestCase):
 
@@ -82,12 +79,11 @@ class TestDataset(unittest.TestCase):
 
     def scatter_large_data(self, comm_type):
         comm = self.communicator
+        data = []
         if comm.rank == 0:
             data = ["test"] * 2000000000
-            data = chainermn.scatter_dataset(data, comm)
-        else:
-            data = []
-            data = scatter_dataset(data, comm)
+        data = chainermn.scatter_dataset(data, comm)
+        assert len(data) > 0
 
     @attr(slow=True)
     def test_scatter_large_dataset(self):
@@ -95,8 +91,5 @@ class TestDataset(unittest.TestCase):
         if self.communicator.size == 1:
             raise nose.plugins.skip.SkipTest()
 
-        # This test inherently requires large memory (>4GB) and
-        # we skip this test so far.
         for comm_type in ['naive', 'flat']:
-            self.assertRaises(DataSizeError,
-                              lambda: self.scatter_large_data(comm_type))
+            self.scatter_large_data(comm_type)
