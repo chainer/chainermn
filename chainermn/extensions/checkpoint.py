@@ -1,3 +1,4 @@
+import errno
 import os
 import shutil
 import tempfile
@@ -113,7 +114,7 @@ class _DistCPRExtension(extension.Extension):
         # 'path/{rank}/snapshot' or 'path/{host}/snapshot'
         if path is not None:
             self.path = path
-            os.makedirs(self.path, exist_ok=True)
+            _maybe_makedirs(self.path)
         else:
             self.path = None
 
@@ -235,9 +236,9 @@ class _DistCPRExtension(extension.Extension):
         local_files = []
         try:
             local_files = os.listdir(self.path)
-        except FileNotFoundError:
+        except Exception:
             # Maybe I am the only process that does not have result
-            # directory.
+            # directory
             pass
         local_iters = filter(None, self._parse_filenames(local_files))
         local_iters = [i for name, rank, i in local_iters if name ==
@@ -274,6 +275,7 @@ def _load(path, filename, target):
 def _save(path, filename, target):
     # Simple save_npz may cause partial write - instead copied and
     # modified a bit from chainer.extensions.snapshot.
+    _maybe_makedirs(path)
     prefix = 'tmp-' + filename
     fd, tmppath = tempfile.mkstemp(prefix=prefix, dir=path)
     try:
@@ -284,3 +286,15 @@ def _save(path, filename, target):
         raise
     os.close(fd)
     shutil.move(tmppath, os.path.join(path, filename))
+
+
+def _maybe_makedirs(path):
+    # This is for Python 2-3 compatibility;
+    # os.makedirs(path, exist_ok=True) would be more simpler
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise

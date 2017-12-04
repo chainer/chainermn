@@ -110,5 +110,6 @@ class TestMNIST(unittest.TestCase):
         self.assertEqual(0, len(os.listdir(path)))
         os.removedirs(path)
 
+
 if __name__ == "__main__":
     TestMNIST().test_mnist(display_log=True)
