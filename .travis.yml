@@ -8,15 +8,14 @@ python:
   - "3.5.1"
 
 env:
-  - MPI="mpich-3.0.4"    CHAINER_VER="1.24"
-  - MPI="mpich-3.0.4"    CHAINER_VER="2"
-  - MPI="mpich-3.2"      CHAINER_VER="1.24"
-  - MPI="mpich-3.2"      CHAINER_VER="2"
-  - MPI="openmpi-1.6.5"  CHAINER_VER="1.24"
-  - MPI="openmpi-1.6.5"  CHAINER_VER="2"
-  - MPI="openmpi-1.10.3" CHAINER_VER="1.24"
-  - MPI="openmpi-1.10.3" CHAINER_VER="2"
-  
+  - MPI="mpich-3.0.4"    CHAINER_VER="2.1.0"
+  - MPI="mpich-3.0.4"    CHAINER_VER="3.1.0"
+  - MPI="mpich-3.2"      CHAINER_VER="2.1.0"
+  - MPI="mpich-3.2"      CHAINER_VER="3.1.0"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="2.1.0"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="3.1.0"
+  - MPI="openmpi-1.10.3" CHAINER_VER="2.1.0"
+  - MPI="openmpi-1.10.3" CHAINER_VER="3.1.0"
 
 cache:
   - pip
