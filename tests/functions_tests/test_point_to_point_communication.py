@@ -1,4 +1,5 @@
 import copy
+import functools
 import nose.plugins.skip
 import unittest
 
@@ -130,3 +131,35 @@ class TestPointToPointCommunication(unittest.TestCase):
             err = chainermn.functions.send(
                 y, self.communicator, self.rank_send)
             err.backward()
+
+    def check_tuple_communication(self, length):
+        if self.communicator.rank == 0:
+            y = []
+            for i in range(length):
+                _y = self.f(self.model(self.x))
+                y.append(_y)
+            err = chainermn.functions.send(
+                y, self.communicator, self.rank_send)
+            err.backward()
+
+        elif self.communicator.rank == self.communicator.size - 1:
+            y = chainermn.functions.recv(
+                self.communicator, self.rank_recv, device=self.device,
+                force_tuple=True)
+            self.assertTrue(isinstance(y, tuple))
+            z = functools.reduce(lambda x, y: x + y, y)
+            err = self.evaluation(z, self.x)
+            err.backward()
+
+        else:
+            y = chainermn.functions.recv(
+                self.communicator, self.rank_recv, device=self.device)
+            err = chainermn.functions.send(
+                y, self.communicator, self.rank_send)
+            err.backward()
+
+    def test_tuple_communication1(self):
+        self.check_tuple_communication(1)
+
+    def test_tuple_communication2(self):
+        self.check_tuple_communication(2)
