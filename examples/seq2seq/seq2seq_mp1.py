@@ -21,6 +21,8 @@ from chainer import reporter
 from chainer import training
 from chainer.training import extensions
 import chainermn
+import chainermn.functions
+import chainermn.links
 
 import europal
 
@@ -61,16 +63,61 @@ def sequence_embed(embed, xs):
     return exs
 
 
-class Seq2seq(chainer.Chain):
+class Encoder(chainer.Chain):
 
-    def __init__(self, n_layers, n_source_vocab, n_target_vocab, n_units):
-        super(Seq2seq, self).__init__(
+    def __init__(
+            self, comm, n_layers, n_source_vocab, n_target_vocab, n_units):
+
+        super(Encoder, self).__init__(
             embed_x=L.EmbedID(n_source_vocab, n_units),
+            # Corresponding decoder LSTM will be invoked on process 1.
+            mn_encoder=chainermn.links.create_multi_node_n_step_rnn(
+                L.NStepLSTM(n_layers, n_units, n_units, 0.1),
+                comm, rank_in=None, rank_out=1
+            ),
+        )
+        self.comm = comm
+        self.n_layers = n_layers
+        self.n_units = n_units
+
+    def __call__(self, *inputs):
+        xs = inputs[:len(inputs) // 2]
+        xs = [x[::-1] for x in xs]
+        exs = sequence_embed(self.embed_x, xs)
+
+        # Encode input sequence and send hidden states to decoder.
+        _, _, _, delegate_variable = self.mn_encoder(exs)
+
+        # Last element represents delegate variable.
+        return delegate_variable
+
+    def translate(self, xs, max_length=100):
+        with chainer.no_backprop_mode():
+            with chainer.using_config('train', False):
+                xs = [x[::-1] for x in xs]
+                exs = sequence_embed(self.embed_x, xs)
+
+                # Encode input sequence and send hidden stats to decoder.
+                self.mn_encoder(exs)
+
+        # Encoder does not return anything.
+        # All evaluation will be done in decoder process.
+        return None
+
+
+class Decoder(chainer.Chain):
+
+    def __init__(
+            self, comm, n_layers, n_source_vocab, n_target_vocab, n_units):
+        super(Decoder, self).__init__(
             embed_y=L.EmbedID(n_target_vocab, n_units),
-            encoder=L.NStepLSTM(n_layers, n_units, n_units, 0.1),
-            decoder=L.NStepLSTM(n_layers, n_units, n_units, 0.1),
+            # Corresponding encoder LSTM will be invoked on process 0.
+            mn_decoder=chainermn.links.create_multi_node_n_step_rnn(
+                L.NStepLSTM(n_layers, n_units, n_units, 0.1),
+                comm, rank_in=0, rank_out=None),
             W=L.Linear(n_units, n_target_vocab),
         )
+        self.comm = comm
         self.n_layers = n_layers
         self.n_units = n_units
 
@@ -79,19 +126,16 @@ class Seq2seq(chainer.Chain):
         ys = inputs[len(inputs) // 2:]
 
         xs = [x[::-1] for x in xs]
+        batch = len(xs)
 
         eos = self.xp.zeros(1, 'i')
         ys_in = [F.concat([eos, y], axis=0) for y in ys]
         ys_out = [F.concat([y, eos], axis=0) for y in ys]
 
-        # Both xs and ys_in are lists of arrays.
-        exs = sequence_embed(self.embed_x, xs)
         eys = sequence_embed(self.embed_y, ys_in)
 
-        batch = len(xs)
-        # None represents a zero vector in an encoder.
-        hx, cx, _ = self.encoder(None, None, exs)
-        _, _, os = self.decoder(hx, cx, eys)
+        # Receive hidden states from encoder process and decode.
+        _, _, os, _ = self.mn_decoder(eys)
 
         # It is faster to concatenate data before calculating loss
         # because only one matrix multiplication is called.
@@ -110,19 +154,27 @@ class Seq2seq(chainer.Chain):
         batch = len(xs)
         with chainer.no_backprop_mode():
             with chainer.using_config('train', False):
-                xs = [x[::-1] for x in xs]
-                exs = sequence_embed(self.embed_x, xs)
-                # Initial hidden variable and cell variable
-                # zero = self.xp.zeros((self.n_layers, batch, self.n_units), 'f')  # NOQA
-                # h, c, _ = self.encoder(zero, zero, exs, train=False)  # NOQA
-                h, c, _ = self.encoder(None, None, exs)
-                ys = self.xp.zeros(batch, 'i')
                 result = []
-                for i in range(max_length):
+                ys = self.xp.zeros(batch, 'i')
+                eys = self.embed_y(ys)
+                eys = chainer.functions.split_axis(
+                    eys, batch, 0, force_tuple=True)
+
+                # Receive hidden stats from encoder process.
+                h, c, ys, _ = self.mn_decoder(eys)
+
+                cys = chainer.functions.concat(ys, axis=0)
+                wy = self.W(cys)
+                ys = self.xp.argmax(wy.data, axis=1).astype('i')
+                result.append(ys)
+
+                # Recursively decode using the previously predicted token.
+                for i in range(1, max_length):
                     eys = self.embed_y(ys)
                     eys = chainer.functions.split_axis(
                         eys, batch, 0, force_tuple=True)
-                    h, c, ys = self.decoder(h, c, eys)
+                    # Non-MN RNN link can be accessed via `actual_rnn`.
+                    h, c, ys = self.mn_decoder.actual_rnn(h, c, eys)
                     cys = chainer.functions.concat(ys, axis=0)
                     wy = self.W(cys)
                     ys = self.xp.argmax(wy.data, axis=1).astype('i')
@@ -159,37 +211,6 @@ def convert(batch, device):
         to_device_batch([y for _, y in batch]))
 
 
-class CalculateBleu(chainer.training.Extension):
-    # priority = chainer.training.PRIORITY_WRITER
-    def __init__(
-            self, model, test_data, key, batch=100, device=-1, max_length=100):
-        self.model = model
-        self.test_data = test_data
-        self.key = key
-        self.batch = batch
-        self.device = device
-        self.max_length = max_length
-
-    def __call__(self, trainer):
-        with chainer.no_backprop_mode():
-            references = []
-            hypotheses = []
-            for i in range(0, len(self.test_data), self.batch):
-                sources, targets = zip(*self.test_data[i:i + self.batch])
-                references.extend([[t.tolist()] for t in targets])
-
-                sources = [
-                    chainer.dataset.to_device(self.device, x) for x in sources]
-                ys = [y.tolist()
-                      for y in self.model.translate(sources, self.max_length)]
-                hypotheses.extend(ys)
-
-        bleu = bleu_score.corpus_bleu(
-            references, hypotheses,
-            smoothing_function=bleu_score.SmoothingFunction().method1)
-        reporter.report({self.key: bleu})
-
-
 class BleuEvaluator(extensions.Evaluator):
     def __init__(self, model, test_data, device=-1, batch=100,
                  max_length=100, comm=None):
@@ -214,26 +235,24 @@ class BleuEvaluator(extensions.Evaluator):
 
                     src = [chainer.dataset.to_device(self.device, x)
                            for x in src]
-                    ys = [y.tolist()
-                          for y in self.model.translate(src, self.max_length)]
-                    hypotheses.extend(ys)
 
-                bleu = bleu_score.corpus_bleu(
-                    references, hypotheses,
-                    smoothing_function=bleu_score.SmoothingFunction().method1)
-                reporter.report({'bleu': bleu}, self.model)
+                    if self.comm.rank == 0:
+                        self.model.translate(src, self.max_length)
+
+                    elif self.comm.rank == 1:
+                        ys = [y.tolist()
+                              for y in self.model.translate(
+                                  src, self.max_length)]
+                        hypotheses.extend(ys)
+
+                if self.comm.rank == 1:
+                    bleu = bleu_score.corpus_bleu(
+                        references, hypotheses, smoothing_function=bleu_score.
+                        SmoothingFunction().method1)
+                    reporter.report({'bleu': bleu}, self.model)
         et = time.time()
 
-        if self.comm is not None:
-            # This evaluator is called via chainermn.MultiNodeEvaluator
-            for i in range(0, self.comm.mpi_comm.size):
-                print("BleuEvaluator::evaluate(): "
-                      "took {:.3f} [s]".format(et - bt))
-                sys.stdout.flush()
-                self.comm.mpi_comm.Barrier()
-        else:
-            # This evaluator is called from a conventional
-            # Chainer exntension
+        if self.comm.rank == 1:
             print("BleuEvaluator(single)::evaluate(): "
                   "took {:.3f} [s]".format(et - bt))
             sys.stdout.flush()
@@ -342,7 +361,11 @@ def main():
         comm = chainermn.create_communicator('naive')
         dev = -1
 
-    if comm.mpi_comm.rank == 0:
+    if comm.size != 2:
+        raise ValueError(
+            'This example can only be executed on exactly 2 processes.')
+
+    if comm.rank == 0:
         print('==========================================')
         print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
         if args.gpu:
@@ -352,8 +375,8 @@ def main():
         print('Num Minibatch-size: {}'.format(args.batchsize))
         print('==========================================')
 
-    # Rank 0 prepares all data
-    if comm.rank == 0:
+    # Both processes prepare datasets.
+    if comm.rank == 0 or comm.rank == 1:
         if args.cache and not os.path.exists(args.cache):
             os.mkdir(args.cache)
 
@@ -403,7 +426,6 @@ def main():
         target_ids = {word: index
                       for index, word in enumerate(target_vocab)}
     else:
-        # target_data, source_data = None, None
         train_data, test_data = None, None
         target_ids, source_ids = None, None
 
@@ -414,7 +436,7 @@ def main():
         sys.stdout.flush()
         comm.mpi_comm.Barrier()
 
-    # broadcast id- > word dictionary
+    # broadcast id -> word dictionary
     source_ids = comm.mpi_comm.bcast(source_ids, root=0)
     target_ids = comm.mpi_comm.bcast(target_ids, root=0)
 
@@ -425,7 +447,13 @@ def main():
         print("target_words : {}".format(len(target_words)))
         print("source_words : {}".format(len(source_words)))
 
-    model = Seq2seq(3, len(source_ids), len(target_ids), args.unit)
+    n_lstm_layers = 3
+    if comm.rank == 0:
+        model = Encoder(
+            comm, n_lstm_layers, len(source_ids), len(target_ids), args.unit)
+    elif comm.rank == 1:
+        model = Decoder(
+            comm, n_lstm_layers, len(source_ids), len(target_ids), args.unit)
 
     if dev >= 0:
         chainer.cuda.get_device(dev).use()
@@ -448,15 +476,8 @@ def main():
     if comm.rank == 0:
         print("Trigger: {}".format(trigger))
 
-    optimizer = chainermn.create_multi_node_optimizer(
-        create_optimizer(args.optimizer), comm)
+    optimizer = create_optimizer(args.optimizer)
     optimizer.setup(model)
-
-    # Broadcast dataset
-    # Sanity check of train_data
-    train_data = chainermn.scatter_dataset(train_data, comm)
-
-    test_data = chainermn.scatter_dataset(test_data, comm)
 
     train_iter = chainer.iterators.SerialIterator(train_data,
                                                   args.batchsize,
@@ -467,9 +488,9 @@ def main():
                                trigger,
                                out=args.out)
 
-    trainer.extend(chainermn.create_multi_node_evaluator(
-        BleuEvaluator(model, test_data, device=dev, comm=comm),
-        comm))
+    # Do not use multi node evaluator.
+    # (because evaluation is done only on decoder process)
+    trainer.extend(BleuEvaluator(model, test_data, device=dev, comm=comm))
 
     def translate_one(source, target):
         words = europal.split_sentence(source)
@@ -481,7 +502,6 @@ def main():
         print('#  result : ' + ' '.join(words))
         print('#  expect : ' + target)
 
-    # @chainer.training.make_extension(trigger=(200, 'iteration'))
     def translate(trainer):
         translate_one(
             'Who are we ?',
@@ -497,9 +517,10 @@ def main():
         target = ' '.join([target_words.get(i, '') for i in target])
         translate_one(source, target)
 
-    if comm.rank == 0:
-        trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
-                       trigger=(1, 'epoch'))
+    if comm.rank == 1:
+        trigger = (1, 'epoch')
+        trainer.extend(extensions.LogReport(trigger=trigger),
+                       trigger=trigger)
 
         report = extensions.PrintReport(['epoch',
                                          'iteration',
@@ -507,7 +528,8 @@ def main():
                                          'main/perp',
                                          'validation/main/bleu',
                                          'elapsed_time'])
-        trainer.extend(report, trigger=(1, 'epoch'))
+        trainer.extend(report, trigger=trigger)
+        trainer.extend(extensions.ProgressBar(update_interval=1))
 
     comm.mpi_comm.Barrier()
     if comm.rank == 0:
