@@ -454,23 +454,7 @@ def main():
 
     # Broadcast dataset
     # Sanity check of train_data
-
-    # If the pickled size exceeds 4GB, which is a limit of data size
-    # that MPI can send in a single MPI_Send/MPI_Recv,
-    # ChainerMN raises DataSizeError.
-    try:
-        train_data = chainermn.scatter_dataset(train_data, comm)
-    except chainermn.DataSizeError as exc:
-        recv_data = []
-        # Split the train_data into slices
-        # as advised from DataSizeError, and retry sending them.
-        for (b, e) in _slices(exc):
-            if train_data is not None:
-                slice = train_data[b:e]
-            else:
-                slice = None
-            recv_data += chainermn.scatter_dataset(slice, comm)
-        train_data = recv_data
+    train_data = chainermn.scatter_dataset(train_data, comm)
 
     test_data = chainermn.scatter_dataset(test_data, comm)
 
