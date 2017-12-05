@@ -137,6 +137,31 @@ class TestCommunicator(unittest.TestCase):
     def test_send_and_recv4(self):
         self.check_send_and_recv(50, 20, 5, 3)
 
+    def check_send_and_recv_tuple(self, data):
+        if self.communicator.size < 2:
+            raise nose.plugins.skip.SkipTest()
+
+        if self.communicator.rank > 0:
+            rank_prev = (self.communicator.rank - 1) % self.communicator.size
+            data_recv = self.communicator.recv(source=rank_prev, tag=0)
+            for array0, array1 in zip(data, data_recv):
+                chainer.testing.assert_allclose(array0, array1)
+
+        if self.communicator.rank < self.communicator.size - 1:
+            rank_next = (self.communicator.rank + 1) % self.communicator.size
+            self.communicator.send(data, dest=rank_next, tag=0)
+
+    def test_send_and_recv5(self):
+        data = [np.ones((50)).astype(np.float32)]
+        self.check_send_and_recv_tuple(data)
+
+    def test_send_and_recv6(self):
+        data = [
+            np.ones((50)).astype(np.float32),
+            np.ones((50, 20)).astype(np.float32),
+            np.ones((50, 20, 5)).astype(np.float32)]
+        self.check_send_and_recv_tuple(data)
+
     def check_broadcast_data(self, model):
         model.a.W.data[:] = self.communicator.rank
         model.b.W.data[:] = self.communicator.rank + 1

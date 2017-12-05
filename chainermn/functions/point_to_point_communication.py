@@ -1,3 +1,5 @@
+import collections
+
 import chainer
 from chainer import cuda
 import chainer.utils
@@ -20,23 +22,23 @@ class Send(chainer.Function):
 
     def forward(self, inputs):
         xp = cuda.get_array_module(*inputs)
-        # Note: inputs[1] might contain delegate_variable.
-        x = inputs[0]
-        self.comm.send(x, self.peer_rank, self.peer_tag)
+
+        if len(inputs) == 1:
+            inputs = inputs[0]
+
+        self.comm.send(inputs, self.peer_rank, self.peer_tag)
+
         # Return an empty variable, which serves as "delegate_variable."
         return xp.array([], dtype=xp.float32),
 
     def backward(self, inputs, grad_outputs):
         xp = cuda.get_array_module(*inputs)
         with cuda.get_device_from_array(*inputs):
-            gy = self.comm.recv(self.peer_rank, self.peer_tag)
-            if len(inputs) > 1:
-                # Dummy grad for delegate_variable.
-                # This grad will not be used, only for silencing type checker.
-                grad_delegate_variable = inputs[1]
-                return xp.array(gy), grad_delegate_variable
+            grad = self.comm.recv(self.peer_rank, self.peer_tag)
+            if isinstance(grad, tuple):
+                return tuple([xp.array(gy) for gy in grad])
             else:
-                return xp.array(gy),
+                return xp.array(grad),
 
 
 class Recv(chainer.Function):
@@ -80,24 +82,28 @@ class Recv(chainer.Function):
             self.peer_rank)
 
     def forward(self, inputs):
-        x = self.comm.recv(self.peer_rank, self.peer_tag)
+        data = self.comm.recv(self.peer_rank, self.peer_tag)
+
+        if not isinstance(data, tuple):
+            data = tuple([data])
+
         if isinstance(self.device, int) and self.device >= 0:
-            return cuda.to_gpu(x, device=self.device),
+            return tuple([cuda.to_gpu(x, device=self.device) for x in data])
         else:
-            return x,
+            return data
 
     def backward(self, inputs, grad_outputs):
         xp = cuda.get_array_module(*inputs)
-        gw, = grad_outputs
-        self.comm.send(gw, self.peer_rank, self.peer_tag)
+        self.comm.send(grad_outputs, self.peer_rank, self.peer_tag)
 
+        # dummy_var is needed to maintain Chainer's constraint.
         if inputs == ():
-            dummy_var = xp.array([], dtype=xp.float32)
+            dummy_var = tuple([xp.array([], dtype=xp.float32)])
         else:
-            var, = inputs
-            dummy_var = xp.zeros(var.shape, dtype=xp.float32)
+            dummy_var = tuple([xp.zeros(x.shape, dtype=xp.float32)
+                               for x in inputs])
 
-        return dummy_var,
+        return dummy_var
 
 
 def send(x, communicator, rank, tag=0):
@@ -129,12 +135,20 @@ def send(x, communicator, rank, tag=0):
             'rank must be different from communicator rank, '
             'otherwise deadlock occurs')
 
-    delegate_variable = Send(communicator, peer_rank=rank, peer_tag=tag)(x)
+    if isinstance(x, collections.Iterable):
+        delegate_variable = Send(
+            communicator, peer_rank=rank, peer_tag=tag)(*x)
+    else:
+        delegate_variable = Send(
+            communicator, peer_rank=rank, peer_tag=tag)(x)
+
     delegate_variable.name = 'delegate_variable'
     return delegate_variable
 
 
-def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
+def recv(
+        communicator, rank, delegate_variable=None, tag=0, device=-1,
+        force_tuple=False):
     """Receive elements from target process.
 
     This function returns data received from target process. If ``backward()``
@@ -155,6 +169,9 @@ def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
             Pointer to the other non-connected component.
         tag (int): Optional message ID (MPI feature).
         device (int): Target device specifier.
+        force_tuple (bool): If ``False`` (the default) a Variable will be
+            returned when the number of outputs is one. Otherwise, this
+            method returns a tuple even when the number of outputs is one.
 
     Returns:
         ~chainer.Variable:
@@ -170,15 +187,20 @@ def recv(communicator, rank, delegate_variable=None, tag=0, device=-1):
             'otherwise deadlock occurs')
 
     if delegate_variable is None:
-        return Recv(
+        res = Recv(
             communicator,
             peer_rank=rank,
             peer_tag=tag,
             device=device)()
     else:
         delegate_variable.name = 'delegate_variable'
-        return Recv(
+        res = Recv(
             communicator,
             peer_rank=rank,
             peer_tag=tag,
             device=device)(delegate_variable)
+
+    if force_tuple and not isinstance(res, tuple):
+        return tuple([res])
+    else:
+        return res
