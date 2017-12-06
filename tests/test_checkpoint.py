@@ -2,7 +2,6 @@ import os
 import tempfile
 import unittest
 
-import mpi4py.MPI
 import numpy as np
 
 import chainer
@@ -13,7 +12,6 @@ import chainer.testing
 from chainer import training
 
 import chainermn
-from chainermn.communicators.naive_communicator import NaiveCommunicator
 from chainermn.extensions.checkpoint import _CPRStats
 from chainermn.extensions.checkpoint import distributed_cpr
 
@@ -35,8 +33,7 @@ class MLP(chainer.Chain):
 class TestCheckpoint(unittest.TestCase):
 
     def setUp(self):
-        self.mpi_comm = mpi4py.MPI.COMM_WORLD
-        self.communicator = NaiveCommunicator(self.mpi_comm)
+        self.communicator = chainermn.create_communicator('naive')
 
     def test_stats(self):
         stats = _CPRStats()
@@ -57,7 +54,7 @@ class TestCheckpoint(unittest.TestCase):
         filenames = cpr._filenames(nums)
         nums2 = []
         for n, r, i in cpr._parse_filenames(filenames):
-            assert self.mpi_comm.rank == r
+            assert self.communicator.rank == r
             assert 'hoge' == n
             nums2.append(i)
 
@@ -68,7 +65,7 @@ class TestCheckpoint(unittest.TestCase):
         assert set(filenames) == set(filenames2)
 
     def setup_mnist_trainer(self, display_log=False):
-        batchsize = 10
+        batchsize = 100
         n_units = 100
 
         comm = self.communicator
