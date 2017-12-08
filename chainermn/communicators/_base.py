@@ -1,5 +1,6 @@
 import collections
 
+import mpi4py
 import numpy
 
 import chainer.cuda
@@ -7,6 +8,11 @@ import chainer.utils
 from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
 from chainermn import nccl
+
+
+def _cnt_to_dsp(cnt):
+    """Utility to convert length array to cumulative array."""
+    return [0] + numpy.cumsum(cnt)[:-1].tolist()
 
 
 class _MessageType(object):
@@ -127,6 +133,62 @@ class CommunicatorBase(object):
             buf = numpy.empty(numpy.prod(shape), dtype=numpy.float32)
             self.mpi_comm.Recv(buf, source=source, tag=tag)
             return buf.reshape(shape)
+
+    def alltoall(self, xs):
+        """A primitive of inter-process all-to-all function.
+
+        This method tries to invoke all-to-all communication within the
+        communicator. All processes in the communicator are expected to
+        invoke ``alltoall()``. This method relies on mpi4py fast communication
+        optimized for numpy arrays, as well as ``send()`` and ``recv()``.
+
+        Args:
+            xs (tuple of numpy.ndarray)
+
+        Returns:
+            ys (tuple of numpy.ndarray):
+                Received arrays. The length of tuple equals to
+                the communicator size.
+        """
+        chainer.utils.experimental(
+            'chainermn.communicators.CommunicatorBase.all_to_all')
+
+        if len(xs) != self.size:
+            raise ValueError(
+                'The length of data must be same as communicator size.')
+
+        # Mediate #axes of arrays.
+        sndims = numpy.array([x.ndim for x in xs], dtype=numpy.int32)
+        rndims = numpy.empty(self.size, dtype=numpy.int32)
+        self.mpi_comm.Alltoall(
+            [sndims, mpi4py.MPI.INT],
+            [rndims, mpi4py.MPI.INT])
+
+        # Arbitrate shapes of arrays.
+        sshapes = numpy.hstack([x.shape for x in xs]).astype(numpy.int32)
+        rshapes = numpy.empty(sum(rndims), dtype=numpy.int32)
+        self.mpi_comm.Alltoallv(
+            [sshapes, (sndims, _cnt_to_dsp(sndims)), mpi4py.MPI.INT],
+            [rshapes, (rndims, _cnt_to_dsp(rndims)), mpi4py.MPI.INT])
+        shapes = [rshapes[i:i + l]
+                  for i, l in zip(_cnt_to_dsp(rndims), rndims)]
+
+        # Collective communication.
+        slens = [numpy.prod(x.shape) for x in xs]
+        xp = chainer.cuda.get_array_module(xs[0])
+        sbuf = xp.hstack([x.reshape(-1) for x in xs])
+        rlens = [numpy.prod(s) for s in shapes]
+        rbuf = numpy.empty(sum(rlens), dtype=numpy.float32)
+        if xp is not numpy:
+            sbuf = _memory_utility.array_to_buffer_object(sbuf)[0]
+            chainer.cuda.Stream.null.synchronize()
+        self.mpi_comm.Alltoallv(
+            [sbuf, (slens, _cnt_to_dsp(slens)), mpi4py.MPI.FLOAT],
+            [rbuf, (rlens, _cnt_to_dsp(rlens)), mpi4py.MPI.FLOAT])
+        ys = [rbuf[i:i + l].reshape(s)
+              for i, l, s in zip(_cnt_to_dsp(rlens), rlens, shapes)]
+
+        return tuple(ys)
 
     def broadcast_data(self, model):
         raise NotImplementedError()
