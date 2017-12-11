@@ -15,6 +15,7 @@ from chainer.training import extensions
 
 import chainermn
 
+
 if chainer.__version__.startswith('1.'):
     import models_v1.alex as alex
     import models_v1.googlenet as googlenet
@@ -190,8 +191,13 @@ def main():
     updater = training.StandardUpdater(train_iter, optimizer, device=device)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), args.out)
 
+    cpr_interval = (10, 'iteration') if args.test else (1, 'epoch')
     val_interval = (10, 'iteration') if args.test else (1, 'epoch')
     log_interval = (10, 'iteration') if args.test else (1, 'epoch')
+
+    cpr = chainermn.distributed_cpr(name='imagenet-example', comm=comm)
+    cpr.maybe_resume(trainer, optimizer)
+    trainer.extend(cpr, trigger=cpr_interval)
 
     # Create a multi node evaluator from an evaluator.
     evaluator = TestModeEvaluator(val_iter, model, device=device)
