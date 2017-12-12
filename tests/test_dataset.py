@@ -1,12 +1,13 @@
+from __future__ import with_statement
 import unittest
 
+from chainer import testing
 import mpi4py.MPI
-from nose.plugins.attrib import attr
-import nose.plugins.skip
-from nose.tools import assert_raises
 import numpy as np
+import pytest
 
 import chainermn
+from chainermn.communicators.flat_communicator import FlatCommunicator
 from chainermn.communicators.naive_communicator import NaiveCommunicator
 
 from chainermn.datasets.scatter_dataset import chunked_bcast  # NOQA
@@ -62,7 +63,8 @@ class TestDataset(unittest.TestCase):
             self.check_chunked_bcast(s, l)
         # fail
         for (s, l) in [(200, -1), (23, INT_MAX)]:
-            assert_raises(AssertionError, self.check_chunked_bcast, s, l)
+            with pytest.raises(AssertionError):
+                self.check_chunked_bcast(s, l)
 
     def check_chunked_bcast(self, data_size, max_buf_len):
         root = 0
@@ -77,19 +79,37 @@ class TestDataset(unittest.TestCase):
         for i in range(len(obj)):
             assert dst[i] == obj[i]
 
-    def scatter_large_data(self, comm_type):
-        comm = self.communicator
-        data = []
-        if comm.rank == 0:
-            data = ["test"] * 2000000000
-        data = chainermn.scatter_dataset(data, comm)
-        assert len(data) > 0
 
-    @attr(slow=True)
-    def test_scatter_large_dataset(self):
-        # This test only runs when comm.size >= 2.
-        if self.communicator.size == 1:
-            raise nose.plugins.skip.SkipTest()
+def scatter_large_data(communicator):
+    data = []
+    if communicator.rank == 0:
+        data = ["test"] * 2000000000
+    data = chainermn.scatter_dataset(data, communicator)
+    assert len(data) > 0
 
-        for comm_type in ['naive', 'flat']:
-            self.scatter_large_data(comm_type)
+
+@testing.attr.slow
+def test_scatter_large_dataset_naive():
+    mpi_comm = mpi4py.MPI.COMM_WORLD
+    communicator = NaiveCommunicator(mpi_comm)
+
+    # This test only runs when comm.size >= 2.
+    if communicator.size == 1:
+        pytest.skip("This test is for multinode")
+
+    scatter_large_data(communicator)
+
+# FlatCommunicator requires GPU, not NCCL
+
+
+@testing.attr.gpu
+@testing.attr.slow
+def test_scatter_large_dataset_flat():
+    mpi_comm = mpi4py.MPI.COMM_WORLD
+    communicator = FlatCommunicator(mpi_comm)
+
+    # This test only runs when comm.size >= 2.
+    if communicator.size == 1:
+        pytest.skip("This test is for multinode")
+
+    scatter_large_data(communicator)

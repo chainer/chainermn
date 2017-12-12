@@ -9,7 +9,7 @@ import sys
 
 install_requires = [
     'cffi',
-    'chainer >=1.23, !=2.0.0a1, !=2.0.0b1',
+    'chainer >=2.0.0',
     'cython',
     'mpi4py',
 ]
@@ -37,5 +37,6 @@ setup(
     packages=find_packages(),
     ext_modules=ext_modules,
     cmdclass={'build_ext': build_ext},
-    install_requires=install_requires
+    install_requires=install_requires,
+    test_requires=['pytest']
 )

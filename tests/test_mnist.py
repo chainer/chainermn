@@ -3,13 +3,10 @@
 import os
 import sys
 import tempfile
-import unittest
 
 import chainer
 import chainer.functions as F
 import chainer.links as L
-import chainer.testing
-import chainer.testing.attr
 from chainer import training
 from chainer.training import extensions
 
@@ -31,87 +28,91 @@ class MLP(chainer.Chain):
         return self.l3(h2)
 
 
-@chainer.testing.parameterize(
-    {'gpu': True},
-    {'gpu': False},
-)
-class TestMNIST(unittest.TestCase):
-    def test_mnist(self, display_log=True):
-        epoch = 5
-        batchsize = 100
-        n_units = 100
+def check_mnist(gpu, display_log=True):
+    epoch = 5
+    batchsize = 100
+    n_units = 100
 
-        if self.gpu:
-            comm = chainermn.create_communicator('hierarchical')
-            device = comm.intra_rank
-            chainer.cuda.get_device(device).use()
-        else:
-            comm = chainermn.create_communicator('naive')
-            device = -1
+    if gpu:
+        comm = chainermn.create_communicator('hierarchical')
+        device = comm.intra_rank
+        chainer.cuda.get_device(device).use()
+    else:
+        comm = chainermn.create_communicator('naive')
+        device = -1
 
-        model = L.Classifier(MLP(n_units, 10))
-        if self.gpu:
-            model.to_gpu()
+    model = L.Classifier(MLP(n_units, 10))
+    if gpu:
+        model.to_gpu()
 
-        optimizer = chainermn.create_multi_node_optimizer(
-            chainer.optimizers.Adam(), comm)
-        optimizer.setup(model)
+    optimizer = chainermn.create_multi_node_optimizer(
+        chainer.optimizers.Adam(), comm)
+    optimizer.setup(model)
 
-        if comm.rank == 0:
-            train, test = chainer.datasets.get_mnist()
-        else:
-            train, test = None, None
+    if comm.rank == 0:
+        train, test = chainer.datasets.get_mnist()
+    else:
+        train, test = None, None
 
-        train = chainermn.scatter_dataset(train, comm, shuffle=True)
-        test = chainermn.scatter_dataset(test, comm, shuffle=True)
+    train = chainermn.scatter_dataset(train, comm, shuffle=True)
+    test = chainermn.scatter_dataset(test, comm, shuffle=True)
 
-        train_iter = chainer.iterators.SerialIterator(train, batchsize)
-        test_iter = chainer.iterators.SerialIterator(test, batchsize,
-                                                     repeat=False,
-                                                     shuffle=False)
+    train_iter = chainer.iterators.SerialIterator(train, batchsize)
+    test_iter = chainer.iterators.SerialIterator(test, batchsize,
+                                                 repeat=False,
+                                                 shuffle=False)
 
-        updater = training.StandardUpdater(
-            train_iter,
-            optimizer,
-            device=device
-        )
+    updater = training.StandardUpdater(
+        train_iter,
+        optimizer,
+        device=device
+    )
 
-        trainer = training.Trainer(updater, (epoch, 'epoch'))
+    trainer = training.Trainer(updater, (epoch, 'epoch'))
 
-        # Wrap standard Chainer evaluators by MultiNodeEvaluator.
-        evaluator = extensions.Evaluator(test_iter, model, device=device)
-        evaluator = chainermn.create_multi_node_evaluator(evaluator, comm)
-        trainer.extend(evaluator)
+    # Wrap standard Chainer evaluators by MultiNodeEvaluator.
+    evaluator = extensions.Evaluator(test_iter, model, device=device)
+    evaluator = chainermn.create_multi_node_evaluator(evaluator, comm)
+    trainer.extend(evaluator)
 
-        # Add checkpointer. This is just to check checkpointing runs
-        # without errors
-        path = tempfile.mkdtemp(dir='/tmp', prefix=__name__ + "-tmp-")
-        checkpointer = create_multi_node_checkpointer(name=__name__, comm=comm,
-                                                      path=path)
-        trainer.extend(checkpointer, trigger=(1, 'epoch'))
+    # Add checkpointer. This is just to check checkpointing runs
+    # without errors
+    path = tempfile.mkdtemp(dir='/tmp', prefix=__name__ + "-tmp-")
+    checkpointer = create_multi_node_checkpointer(name=__name__, comm=comm,
+                                                  path=path)
+    trainer.extend(checkpointer, trigger=(1, 'epoch'))
 
-        # Some display and output extensions are necessary only for one worker.
-        # (Otherwise, there would just be repeated outputs.)
-        if comm.rank == 0 and display_log:
-            trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
-                           trigger=(1, 'epoch'))
-            trainer.extend(extensions.PrintReport(['epoch',
-                                                   'main/loss',
-                                                   'validation/main/loss',
-                                                   'main/accuracy',
-                                                   'validation/main/accuracy',
-                                                   'elapsed_time'],
-                                                  out=sys.stderr),
-                           trigger=(1, 'epoch'))
-        trainer.run()
+    # Some display and output extensions are necessary only for one worker.
+    # (Otherwise, there would just be repeated outputs.)
+    if comm.rank == 0 and display_log:
+        trainer.extend(extensions.LogReport(trigger=(1, 'epoch')),
+                       trigger=(1, 'epoch'))
+        trainer.extend(extensions.PrintReport(['epoch',
+                                               'main/loss',
+                                               'validation/main/loss',
+                                               'main/accuracy',
+                                               'validation/main/accuracy',
+                                               'elapsed_time'],
+                                              out=sys.stderr),
+                       trigger=(1, 'epoch'))
+    trainer.run()
 
-        err = evaluator()['validation/main/accuracy']
-        self.assertGreaterEqual(err, 0.95)
+    err = evaluator()['validation/main/accuracy']
+    assert err > 0.95
 
-        # Check checkpointer successfully finalized snapshot directory
-        self.assertEqual(0, len(os.listdir(path)))
-        os.removedirs(path)
+    # Check checkpointer successfully finalized snapshot directory
+    assert [] == os.listdir(path)
+    os.removedirs(path)
+
+
+def test_mnist():
+    check_mnist(False)
+
+
+@chainer.testing.attr.gpu
+def test_mnist_gpu():
+    check_mnist(True)
 
 
 if __name__ == "__main__":
-    TestMNIST().test_mnist(display_log=True)
+    test_mnist()
