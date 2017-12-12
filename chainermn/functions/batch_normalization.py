@@ -9,11 +9,6 @@ from chainer.utils import type_check
 import numpy
 
 
-if cuda.cudnn_enabled:
-    cudnn = cuda.cudnn
-    libcudnn = cudnn.cudnn
-
-
 def _as4darray(arr):
     if arr.ndim == 0:
         return arr.reshape(1, 1, 1, 1)
