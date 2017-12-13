@@ -3,13 +3,8 @@ import chainer.testing
 import chainer.testing.attr
 import chainermn
 import mock
-import mpi4py.MPI
-import nose
 import numpy as np
 import unittest
-
-
-from chainermn.communicators import _communication_utility
 
 
 class ExampleModel(chainer.Chain):
@@ -109,14 +104,13 @@ class TestMultiNodeOptimizer(unittest.TestCase):
                                         (base + 2) * np.ones((5, 4)))
 
 
-
 class DynamicExampleModel(chainer.Chain):
 
     def __init__(self):
         super(DynamicExampleModel, self).__init__()
         with self.init_scope():
-            self.a=chainer.links.Linear(2, 3)
-            self.b=chainer.links.Linear(3, 4)
+            self.a = chainer.links.Linear(2, 3)
+            self.b = chainer.links.Linear(3, 4)
 
 
 class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
@@ -151,7 +145,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.optimizer.setup(self.target)
         self.optimizer.update()
         self.assertEqual(self.actual_optimizer.t, 0)
-        
+
         with self.target.init_scope():
             self.target.c = chainer.links.Linear(4, 4)
         if self.comm.rank == 0:
@@ -159,7 +153,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.optimizer.setup(self.target)
         self.optimizer.update()
         self.assertEqual(self.actual_optimizer.t, 0)
-                
+
         send_buf = chainer.cuda.to_cpu(self.optimizer.target.c.W.data)
         recv_buf = self.comm.mpi_comm.allgather(send_buf)
         for i in range(1, self.comm.size):
@@ -193,17 +187,17 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.optimizer.setup(self.target)
         self.optimizer.update()
         self.assertEqual(self.actual_optimizer.t, 0)
-        
+
         with self.target.init_scope():
             c = chainer.links.Linear(4, 4)
             c.to_gpu()
-            self.target.c = c 
+            self.target.c = c
         if self.comm.rank == 0:
             self.target.c.W.data[:] = self.comm.rank + 2
         self.optimizer.setup(self.target)
         self.optimizer.update()
         self.assertEqual(self.actual_optimizer.t, 0)
-                
+
         send_buf = chainer.cuda.to_cpu(self.optimizer.target.c.W.data)
         recv_buf = self.comm.mpi_comm.allgather(send_buf)
         for i in range(1, self.comm.size):
@@ -228,4 +222,3 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
                                         (base + 1) * np.ones((4, 3)))
         chainer.testing.assert_allclose(self.optimizer.target.c.W.grad,
                                         (base + 2) * np.ones((4, 4)))
-

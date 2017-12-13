@@ -29,7 +29,8 @@ class _MultiNodeOptimizer(object):
     def is_changed(self, target):
         previous_params = self.target_params
         super(_MultiNodeOptimizer, self).__setattr__(
-            'target_params', [(name, param.data is not None) for name, param in sorted(target.namedparams())])
+            'target_params', [(name, param.data is not None)
+                              for name, param in sorted(target.namedparams())])
         if len(previous_params) == len(self.target_params):
             for param1, param2 in zip(self.target_params, previous_params):
                 if param1[0] != param2[0]:
