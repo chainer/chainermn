@@ -6,8 +6,6 @@ class _MultiNodeOptimizer(object):
         super(_MultiNodeOptimizer, self).__setattr__(
             'actual_optimizer', actual_optimizer)
         super(_MultiNodeOptimizer, self).__setattr__(
-            'needs_broadcast', True)
-        super(_MultiNodeOptimizer, self).__setattr__(
             'target_params', [])
 
     def update(self, lossfun=None, *args, **kwds):
@@ -24,8 +22,6 @@ class _MultiNodeOptimizer(object):
 
         if self.is_changed(target):
             self.communicator.broadcast_data(target)
-            super(_MultiNodeOptimizer, self).__setattr__(
-                'needs_broadcast', False)
         else:
             self.communicator.allreduce_grad(target)
             self.actual_optimizer.update(None, *args, **kwds)
