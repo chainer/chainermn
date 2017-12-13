@@ -10,7 +10,7 @@ from chainermn.communicators import create_communicator  # NOQA
 from chainermn.datasets import DataSizeError  # NOQA
 from chainermn.datasets import scatter_dataset  # NOQA
 from chainermn.extensions import create_multi_node_evaluator  # NOQA
-from chainermn.extensions import distributed_cpr  # NOQA
+from chainermn.extensions import create_multi_node_checkpointer  # NOQA
 from chainermn.links import MultiNodeChainList  # NOQA
 from chainermn.optimizers import create_multi_node_optimizer  # NOQA
 
