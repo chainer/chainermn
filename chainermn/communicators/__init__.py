@@ -9,19 +9,28 @@ def create_communicator(
     However, choosing proper communicator may give better performance.
     The following communicators are available.
 
-    =============== === === ======== =======================================
-    Name            CPU GPU NCCL     Recommended Use Cases
-    =============== === === ======== =======================================
-    naive           OK  OK           Testing on CPU mode
-    hierarchical        OK  Required Each node has a single NIC or HCA
-    two_dimensional     OK  Required Each node has multiple NICs or HCAs
-    single_node         OK  Required Single node with multiple GPUs
-    flat                OK           N/A
-    =============== === === ======== =======================================
+    +---------------+---+---+--------+--------------------------------------+
+    |Name           |CPU|GPU|NCCL    |Recommended Use Cases                 |
+    +===============+===+===+========+======================================+
+    |naive          |OK |OK |        |Testing on CPU mode                   |
+    +---------------+---+---+--------+--------------------------------------+
+    |hierarchical   |   |OK |Required|Each node has a single NIC or HCA     |
+    +---------------+---+---+--------+--------------------------------------+
+    |two_dimensional|   |OK |Required|Each node has multiple NICs or HCAs   |
+    +---------------+---+---+--------+--------------------------------------+
+    |single_node    |   |OK |Required|Single node with multiple GPUs        |
+    +---------------+---+---+--------+--------------------------------------+
+    |flat           |   |OK |        |N/A                                   |
+    +---------------+---+---+--------+--------------------------------------+
+    |pure_nccl      |   |OK |Required|``pure_nccl`` is recommended when     |
+    |               |   |   |(>= v2) |NCCL2 is available in the environment,|
+    |               |   |   |        | but it'sstill experimental support.  |
+    +---------------+---+---+--------+--------------------------------------+
 
     Args:
         communicator_name: The name of communicator (``naive``, ``flat``,
-          ``hierarchical``, ``two_dimensional``, or ``single_node``)
+          ``hierarchical``, ``two_dimensional``, ``pure_nccl``, or
+          ``single_node``)
         mpi_comm: MPI4py communicator
 
     Returns:
@@ -57,6 +66,16 @@ def create_communicator(
         from chainermn.communicators.single_node_communicator \
             import SingleNodeCommunicator
         return SingleNodeCommunicator(mpi_comm=mpi_comm)
+
+    elif communicator_name == 'non_cuda_aware':
+        from chainermn.communicators.non_cuda_aware_communicator \
+            import NonCudaAwareCommunicator
+        return NonCudaAwareCommunicator(mpi_comm=mpi_comm)
+
+    elif communicator_name == 'pure_nccl':
+        from chainermn.communicators.pure_nccl_communicator \
+            import PureNcclCommunicator
+        return PureNcclCommunicator(mpi_comm=mpi_comm)
 
     elif communicator_name == 'dummy':
         from chainermn.communicators.dummy_communicator \

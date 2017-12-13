@@ -89,8 +89,8 @@ def main():
         train, test = chainer.datasets.get_mnist()
     else:
         train, test = None, None
-    train = chainermn.scatter_dataset(train, comm)
-    test = chainermn.scatter_dataset(test, comm)
+    train = chainermn.scatter_dataset(train, comm, shuffle=True)
+    test = chainermn.scatter_dataset(test, comm, shuffle=True)
 
     train_iter = chainer.iterators.SerialIterator(train, args.batchsize)
     test_iter = chainer.iterators.SerialIterator(test, args.batchsize,

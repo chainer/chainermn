@@ -4,6 +4,7 @@ from __future__ import print_function
 import argparse
 import multiprocessing
 import random
+import sys
 
 import numpy as np
 
@@ -13,6 +14,7 @@ from chainer import training
 from chainer.training import extensions
 
 import chainermn
+
 
 if chainer.__version__.startswith('1.'):
     import models_v1.alex as alex
@@ -26,6 +28,18 @@ else:
     import models_v2.googlenetbn as googlenetbn
     import models_v2.nin as nin
     import models_v2.resnet50 as resnet50
+
+# Check Python version if it supports multiprocessing.set_start_method,
+# which was introduced in Python 3.4
+major, minor, _, _, _ = sys.version_info
+if major <= 2 or (major == 3 and minor < 4):
+    sys.stderr.write("Error: ImageNet example uses "
+                     "chainer.iterators.MultiprocessIterator, "
+                     "which works only with Python >= 3.4. \n"
+                     "For more details, see "
+                     "http://chainermn.readthedocs.io/en/master/"
+                     "tutorial/tips_faqs.html#using-multiprocessiterator\n")
+    exit(-1)
 
 
 class PreprocessedDataset(chainer.dataset.DatasetMixin):
@@ -128,6 +142,15 @@ def main():
     comm = chainermn.create_communicator(args.communicator)
     device = comm.intra_rank
 
+    if comm.mpi_comm.rank == 0:
+        print('==========================================')
+        print('Num process (COMM_WORLD): {}'.format(comm.size))
+        print('Using {} communicator'.format(args.communicator))
+        print('Using {} arch'.format(args.arch))
+        print('Num Minibatch-size: {}'.format(args.batchsize))
+        print('Num epoch: {}'.format(args.epoch))
+        print('==========================================')
+
     model = archs[args.arch]()
     if args.initmodel:
         print('Load model from', args.initmodel)
@@ -146,7 +169,7 @@ def main():
     else:
         train = None
         val = None
-    train = chainermn.scatter_dataset(train, comm)
+    train = chainermn.scatter_dataset(train, comm, shuffle=True)
     val = chainermn.scatter_dataset(val, comm)
 
     # We need to change the start method of multiprocessing module if we are
@@ -168,8 +191,13 @@ def main():
     updater = training.StandardUpdater(train_iter, optimizer, device=device)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), args.out)
 
+    cpr_interval = (10, 'iteration') if args.test else (1, 'epoch')
     val_interval = (10, 'iteration') if args.test else (1, 'epoch')
     log_interval = (10, 'iteration') if args.test else (1, 'epoch')
+
+    cpr = chainermn.distributed_cpr(name='imagenet-example', comm=comm)
+    cpr.maybe_resume(trainer, optimizer)
+    trainer.extend(cpr, trigger=cpr_interval)
 
     # Create a multi node evaluator from an evaluator.
     evaluator = TestModeEvaluator(val_iter, model, device=device)

@@ -16,10 +16,15 @@ from chainermn.communicators.hierarchical_communicator \
     import HierarchicalCommunicator
 from chainermn.communicators.naive_communicator \
     import NaiveCommunicator
+from chainermn.communicators.non_cuda_aware_communicator \
+    import NonCudaAwareCommunicator
+from chainermn.communicators.pure_nccl_communicator \
+    import PureNcclCommunicator
 from chainermn.communicators.single_node_communicator \
     import SingleNodeCommunicator
 from chainermn.communicators.two_dimensional_communicator \
     import TwoDimensionalCommunicator
+from chainermn import nccl
 
 
 class ExampleModel(chainer.Chain):
@@ -62,6 +67,19 @@ class ExampleModel(chainer.Chain):
         'test_gpu': True,
         'multi_node': False,
         'nccl': True,
+    }, {
+        'communicator_class': NonCudaAwareCommunicator,
+        'test_cpu': False,
+        'test_gpu': True,
+        'multi_node': True,
+        'nccl': True,
+    }, {
+        'communicator_class': PureNcclCommunicator,
+        'test_cpu': False,
+        'test_gpu': True,
+        'multi_node': True,
+        'nccl': True,
+        'nccl1': False,
     }
 )
 class TestCommunicator(unittest.TestCase):
@@ -74,6 +92,9 @@ class TestCommunicator(unittest.TestCase):
             inter_size = ranks[4]
             if inter_size > 1:
                 raise nose.plugins.skip.SkipTest()
+        if hasattr(self, 'nccl1') and not self.nccl1 \
+           and nccl.get_version() < 2000:
+            raise nose.plugins.skip.SkipTest()
 
         self.communicator = self.communicator_class(self.mpi_comm)
 
@@ -87,6 +108,59 @@ class TestCommunicator(unittest.TestCase):
     def test_size(self):
         self.assertEqual(self.communicator.size,
                          self.mpi_comm.Get_size())
+
+    def check_send_and_recv(self, *shape):
+        if self.communicator.size < 2:
+            raise nose.plugins.skip.SkipTest()
+
+        if self.communicator.rank > 0:
+            rank_prev = (self.communicator.rank - 1) % self.communicator.size
+            data_recv = self.communicator.recv(source=rank_prev, tag=0)
+            chainer.testing.assert_allclose(
+                data_recv, rank_prev * np.ones((shape)))
+
+        if self.communicator.rank < self.communicator.size - 1:
+            rank_next = (self.communicator.rank + 1) % self.communicator.size
+            data_send = self.communicator.rank * \
+                np.ones((shape)).astype(np.float32)
+            self.communicator.send(data_send, dest=rank_next, tag=0)
+
+    def test_send_and_recv1(self):
+        self.check_send_and_recv(50)
+
+    def test_send_and_recv2(self):
+        self.check_send_and_recv(50, 20)
+
+    def test_send_and_recv3(self):
+        self.check_send_and_recv(50, 20, 5)
+
+    def test_send_and_recv4(self):
+        self.check_send_and_recv(50, 20, 5, 3)
+
+    def check_send_and_recv_tuple(self, data):
+        if self.communicator.size < 2:
+            raise nose.plugins.skip.SkipTest()
+
+        if self.communicator.rank > 0:
+            rank_prev = (self.communicator.rank - 1) % self.communicator.size
+            data_recv = self.communicator.recv(source=rank_prev, tag=0)
+            for array0, array1 in zip(data, data_recv):
+                chainer.testing.assert_allclose(array0, array1)
+
+        if self.communicator.rank < self.communicator.size - 1:
+            rank_next = (self.communicator.rank + 1) % self.communicator.size
+            self.communicator.send(data, dest=rank_next, tag=0)
+
+    def test_send_and_recv5(self):
+        data = [np.ones((50)).astype(np.float32)]
+        self.check_send_and_recv_tuple(data)
+
+    def test_send_and_recv6(self):
+        data = [
+            np.ones((50)).astype(np.float32),
+            np.ones((50, 20)).astype(np.float32),
+            np.ones((50, 20, 5)).astype(np.float32)]
+        self.check_send_and_recv_tuple(data)
 
     def check_broadcast_data(self, model):
         model.a.W.data[:] = self.communicator.rank

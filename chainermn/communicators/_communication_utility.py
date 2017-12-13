@@ -43,13 +43,18 @@ def init_ranks(mpi_comm):
 def init_comms(mpi_comm, intra_rank, intra_size, inter_rank, use_nccl=True):
     intra_mpi_comm = mpi_comm.Split(inter_rank, intra_rank)
     inter_mpi_comm = mpi_comm.Split(intra_rank, inter_rank)
-
     if use_nccl:
         from chainermn import nccl
-        nccl_comm_id = intra_mpi_comm.bcast(nccl.NcclCommunicatorId())
+        intra_nccl_comm_id = intra_mpi_comm.bcast(nccl.get_unique_id())
         intra_nccl_comm = nccl.NcclCommunicator(
-            intra_size, nccl_comm_id, intra_rank)
-        return intra_mpi_comm, inter_mpi_comm, intra_nccl_comm
+            intra_size, intra_nccl_comm_id, intra_rank)
+        if nccl.get_version() >= 2000:
+            nccl_comm_id = mpi_comm.bcast(nccl.get_unique_id())
+            nccl_comm = nccl.NcclCommunicator(
+                mpi_comm.size, nccl_comm_id, mpi_comm.rank)
+        else:
+            nccl_comm = None
+        return intra_mpi_comm, inter_mpi_comm, intra_nccl_comm, nccl_comm
     else:
         return intra_mpi_comm, inter_mpi_comm
 
