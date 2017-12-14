@@ -2,11 +2,11 @@ import chainer
 from chainer import cuda
 
 
-class Alltoall(chainer.Function):
+class AllToAll(chainer.Function):
     """Collective all-to-all communication."""
 
     def __init__(self, comm, device):
-        chainer.utils.experimental('chainermn.functions.Alltoall')
+        chainer.utils.experimental('chainermn.functions.AllToAll')
         self.comm = comm
         self.device = device
 
@@ -60,4 +60,4 @@ def all_to_all(comm, xs, device=-1):
     if len(xs) != comm.size:
         raise ValueError('The length of xs must be same as communicator size.')
 
-    return Alltoall(comm, device)(*xs)
+    return AllToAll(comm, device)(*xs)
