@@ -11,7 +11,7 @@ from chainer.training import extensions
 from mpi4py import MPI
 
 import chainermn
-from chainermn.extensions import distributed_cpr
+from chainermn.extensions import create_multi_node_checkpointer
 
 
 class MLP(chainer.Chain):
@@ -32,7 +32,8 @@ class MLP(chainer.Chain):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='ChainerMN example: MNIST with CPR enabled')
+        description='''\
+ChainerMN example: MNIST with automatic checkpoints enabled''')
     parser.add_argument('--batchsize', '-b', type=int, default=100,
                         help='Number of images in each mini-batch')
     parser.add_argument('--communicator', type=str,
@@ -101,12 +102,12 @@ def main():
     updater = training.StandardUpdater(train_iter, optimizer, device=device)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
 
-    # Enable CPR and recover from checkpoint if any checkpoint exists
-    cpr = distributed_cpr(name=args.run_id, comm=comm)
-    cpr.maybe_resume(trainer, optimizer)
+    # Enable checkpointer and recover from checkpoint if any checkpoint exists
+    checkpointer = create_multi_node_checkpointer(name=args.run_id, comm=comm)
+    checkpointer.maybe_load(trainer, optimizer)
     print("Rank", comm.rank, ": (Re)Starting from (epoch, iter) =",
           (trainer.updater.epoch, trainer.updater.iteration))
-    trainer.extend(cpr, trigger=(1000, 'iteration'))
+    trainer.extend(checkpointer, trigger=(1000, 'iteration'))
 
     # Create a multi node evaluator from a standard Chainer evaluator.
     evaluator = extensions.Evaluator(test_iter, model, device=device)
