@@ -12,8 +12,8 @@ import chainer.testing
 from chainer import training
 
 import chainermn
-from chainermn.extensions.checkpoint import _CPRStats
-from chainermn.extensions.checkpoint import distributed_cpr
+from chainermn.extensions.checkpoint import _CheckpointStats
+from chainermn.extensions.checkpoint import create_multi_node_checkpointer
 
 
 class MLP(chainer.Chain):
@@ -36,7 +36,7 @@ class TestCheckpoint(unittest.TestCase):
         self.communicator = chainermn.create_communicator('naive')
 
     def test_stats(self):
-        stats = _CPRStats()
+        stats = _CheckpointStats()
 
         for i in range(1024):
             stats.start()
@@ -44,23 +44,25 @@ class TestCheckpoint(unittest.TestCase):
 
         assert isinstance(stats.report(), str)
 
-        stats = _CPRStats()
+        stats = _CheckpointStats()
         assert isinstance(stats.report(), str)
 
     def test_filename_converters(self):
-        cpr = distributed_cpr(name='hoge', comm=self.communicator,
-                              cp_interval=23, gc_interval=32)
+        checkpointer = create_multi_node_checkpointer(name='hoge',
+                                                      comm=self.communicator,
+                                                      cp_interval=23,
+                                                      gc_interval=32)
         nums = [np.random.randint(4096) for _ in range(234)]
-        filenames = cpr._filenames(nums)
+        filenames = checkpointer._filenames(nums)
         nums2 = []
-        for n, r, i in cpr._parse_filenames(filenames):
+        for n, r, i in checkpointer._parse_filenames(filenames):
             assert self.communicator.rank == r
             assert 'hoge' == n
             nums2.append(i)
 
         assert set(nums) == set(nums2)
 
-        filenames2 = cpr._filenames(nums2)
+        filenames2 = checkpointer._filenames(nums2)
 
         assert set(filenames) == set(filenames2)
 
@@ -101,8 +103,10 @@ class TestCheckpoint(unittest.TestCase):
         path = tempfile.mkdtemp(dir='/tmp', prefix=__name__ + "-tmp-")
         if display_log:
             print("temporary file:", path)
-        cpr = distributed_cpr(name=__name__, comm=self.communicator, path=path)
-        cpr.maybe_resume(updater, optimizer)
+        checkpointer = create_multi_node_checkpointer(name=__name__,
+                                                      comm=self.communicator,
+                                                      path=path)
+        checkpointer.maybe_load(updater, optimizer)
 
         sum_accuracy = 0
         sum_loss = 0
@@ -125,17 +129,17 @@ class TestCheckpoint(unittest.TestCase):
                 sum_loss = 0
                 sum_accuracy = 0
 
-                cpr.checkpoint(updater, updater.iteration)
+                checkpointer.save(updater, updater.iteration)
 
         if display_log:
-            print(self.communicator.rank, cpr.get_stats())
+            print(self.communicator.rank, checkpointer.get_stats())
 
         # Allocate totally different set of training tools to avoid leakage
         data_2 = self.setup_mnist_trainer()
         updater2, optimizer2, train_iter2, test_iter2, model2 = data_2
-        cpr2 = distributed_cpr(
+        checkpointer2 = create_multi_node_checkpointer(
             name=__name__, comm=self.communicator, path=path)
-        cpr2.maybe_resume(updater2, optimizer2)
+        checkpointer2.maybe_load(updater2, optimizer2)
 
         # Check data properly resumed
         self.assertEqual(updater.epoch, updater2.epoch)
@@ -161,12 +165,12 @@ class TestCheckpoint(unittest.TestCase):
                 sum_loss = 0
                 sum_accuracy = 0
 
-                cpr2.checkpoint(updater2, updater2.iteration)
+                checkpointer2.save(updater2, updater2.iteration)
 
         if display_log:
-            print(self.communicator.rank, cpr2.get_stats())
-        cpr2.finalize()
-        cpr.finalize()
+            print(self.communicator.rank, checkpointer2.get_stats())
+        checkpointer2.finalize()
+        checkpointer.finalize()
 
         # Validate training
         sum_accuracy = 0
