@@ -31,15 +31,13 @@ class _MultiNodeOptimizer(object):
         super(_MultiNodeOptimizer, self).__setattr__(
             'target_params', [(name, param.data is not None)
                               for name, param in sorted(target.namedparams())])
-        if len(previous_params) == len(self.target_params):
-            for param1, param2 in zip(self.target_params, previous_params):
-                if param1[0] != param2[0]:
-                    return True
-                if param1[1] != param2[1]:
-                    return True
-            return False
-        else:
+        if len(previous_params) != len(self.target_params):
             return True
+
+        for param1, param2 in zip(self.target_params, previous_params):
+            if (param1[0] != param2[0]) or param1[1] != param2[1]:
+                return True
+        return False
 
     def __getattr__(self, attr_name):
         return getattr(self.actual_optimizer, attr_name)
