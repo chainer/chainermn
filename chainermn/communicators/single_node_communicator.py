@@ -41,7 +41,8 @@ class SingleNodeCommunicator(_base.NodeAwareCommunicatorBase):
         self._init_comms()
         stream = chainer.cuda.Stream.null
 
-        params = [param for _, param in sorted(model.namedparams())]
+        params = [param for _, param in sorted(model.namedparams())
+                  if param.grad is not None]
         itemsize = 4
         n_elems_total = sum(param.grad.size for param in params)
         n_bytes_total = n_elems_total * itemsize
