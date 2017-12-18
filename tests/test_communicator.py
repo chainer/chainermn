@@ -189,6 +189,22 @@ class TestCommunicator(unittest.TestCase):
             chainer.testing.assert_allclose(model.c.b.grad,
                                             (base + 2) * np.ones((5, )))
 
+    def check_allreduce_grad_none(self, model):
+        # We need to repeat twice for regressions on lazy initialization of
+        # sub communicators.
+        for _ in range(2):
+            model.a.W.grad[:] = self.communicator.rank
+            model.b.W.grad[:] = self.communicator.rank + 1
+            model.c.b.grad = None
+
+            self.communicator.allreduce_grad(model)
+            base = (self.communicator.size - 1.0) / 2
+
+            chainer.testing.assert_allclose(model.a.W.grad,
+                                            (base + 0) * np.ones((3, 2)))
+            chainer.testing.assert_allclose(model.b.W.grad,
+                                            (base + 1) * np.ones((4, 3)))
+
     def test_broadcast_data_cpu(self):
         if not self.test_cpu:
             raise nose.plugins.skip.SkipTest()
@@ -216,3 +232,17 @@ class TestCommunicator(unittest.TestCase):
         model = ExampleModel()
         model.to_gpu()
         self.check_allreduce_grad(model)
+
+    def test_allreduce_grad_none_cpu(self):
+        if not self.test_cpu:
+            raise nose.plugins.skip.SkipTest()
+        model = ExampleModel()
+        self.check_allreduce_grad_none(model)
+
+    @chainer.testing.attr.gpu
+    def test_allreduce_grad_none_gpu(self):
+        if not self.test_gpu:
+            raise nose.plugins.skip.SkipTest()
+        model = ExampleModel()
+        model.to_gpu()
+        self.check_allreduce_grad_none(model)
