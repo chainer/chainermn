@@ -6,7 +6,7 @@ class _MultiNodeOptimizer(object):
         super(_MultiNodeOptimizer, self).__setattr__(
             'actual_optimizer', actual_optimizer)
         super(_MultiNodeOptimizer, self).__setattr__(
-            'needs_broadcast', True)
+            'target_params', [])
 
     def update(self, lossfun=None, *args, **kwds):
         target = self.target
@@ -20,13 +20,24 @@ class _MultiNodeOptimizer(object):
             loss.backward()
             del loss
 
-        if self.needs_broadcast:
+        if self.is_changed(target):
             self.communicator.broadcast_data(target)
-            super(_MultiNodeOptimizer, self).__setattr__(
-                'needs_broadcast', False)
         else:
             self.communicator.allreduce_grad(target)
             self.actual_optimizer.update(None, *args, **kwds)
+
+    def is_changed(self, target):
+        previous_params = self.target_params
+        super(_MultiNodeOptimizer, self).__setattr__(
+            'target_params', [(name, param.data is not None)
+                              for name, param in sorted(target.namedparams())])
+        if len(previous_params) != len(self.target_params):
+            return True
+
+        for param1, param2 in zip(self.target_params, previous_params):
+            if (param1[0] != param2[0]) or param1[1] != param2[1]:
+                return True
+        return False
 
     def __getattr__(self, attr_name):
         return getattr(self.actual_optimizer, attr_name)

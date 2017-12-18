@@ -19,7 +19,7 @@ class MultiNodeChainList(chainer.ChainList):
     is invoked in forward computation according to the order they are added,
     and in backward computation according to the reversed order.
 
-    .. admonition:: Example
+    .. admonition:: Example (basic usage)
 
         This is a simple example of the model which sends its outputs to
         rank=1 machine::
@@ -50,7 +50,7 @@ class MultiNodeChainList(chainer.ChainList):
                         rank_in=None,
                         rank_out=1)
 
-    .. admonition:: Example
+    .. admonition:: Example (split MLP on 2 processes)
 
         This is the other example of two models interacting each other::
 
@@ -98,6 +98,39 @@ class MultiNodeChainList(chainer.ChainList):
         be on rank=1. The first ``MLP`` in ``Model0`` will send its outputs
         to ``Model1``, then ``MLP`` in ``Model1`` will receive it and send
         its outputs to the second ``MLP`` in ``Model0``.
+
+    .. admonition:: Example (sending tuples)
+
+        This is the example for sending a tuple::
+
+            import chainer
+            import chainer.functions as F
+            import chainermn
+
+            class NN0(chainer.Chain):
+                def __call__(self, x):
+                    y0 = some_calculation_nn0_0(x)
+                    y1 = some_calculation_nn1_1(x)
+                    return y0, y1
+
+            class NN1(chainer.Chain):
+                def __call__(self, y):
+                    y0, y1 = y  # unpack tuple from NN0
+                    return some_calculation_nn1(y0, y1)
+
+            class Model_on_Process_0(chainermn.MultiNodeChainList):
+                def __init__(self, comm):
+                    super(Model_on_Process_0, self).__init__(comm=comm)
+                    self.add_link(NN0(), rank_in=None, rank_out=1)
+
+            class Model_on_Process_1(chainermn.MultiNodeChainList):
+                def __init__(self, comm):
+                    super(Model_on_Process_1, self).__init__(comm=comm)
+                    self.add_link(NN1(), rank_in=0, rank_out=None)
+
+        In this example, ``Model_on_Process_0`` sends two elemental tuple
+        ``(y0, y1)`` (returned by ``NN0.__call__``) to ``Model_on_Process_1``,
+        which can be unpacked as shown in ``NN1.__call__``.
 
     Args:
         comm (chainermn.communicators._base.CommunicatorBase):

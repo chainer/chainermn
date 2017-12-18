@@ -1,5 +1,4 @@
 import chainer.cuda
-import math
 
 from chainermn.communicators import _base
 from chainermn.communicators import _communication_utility
@@ -12,7 +11,7 @@ class PureNcclCommunicator(_base.CommunicatorBase):
     def __init__(self, mpi_comm):
         if nccl.get_version() < 2000:
             raise RuntimeError(
-                'NcclCommunicator is only supported on NCCL 2.0+')
+                'PureNcclCommunicator is only supported on NCCL 2.0+')
 
         super(PureNcclCommunicator, self).__init__(mpi_comm)
         self._init_ranks()
@@ -58,21 +57,19 @@ class PureNcclCommunicator(_base.CommunicatorBase):
 
         params = [param for _, param in sorted(model.namedparams())]
         itemsize = 4
-        n_elems_total = sum(param.grad.size for param in params)
-        n_elems_per_node = int(math.ceil(n_elems_total / self.inter_size))
-        n_bytes_per_node = n_elems_per_node * itemsize
-        n_bytes_buffer = n_bytes_per_node * self.inter_size
+        n_elems = sum(param.grad.size for param in params)
+        n_bytes = itemsize * n_elems
 
-        self.gpu_buffer_a.assign(n_bytes_buffer)
-        self.gpu_buffer_b.assign(n_bytes_buffer)
+        self.gpu_buffer_a.assign(n_bytes)
+        self.gpu_buffer_b.assign(n_bytes)
         _memory_utility.pack_params(
             params, itemsize, 'grad', self.gpu_buffer_a)
         self.nccl_comm.allreduce(self.gpu_buffer_a.ptr(),
-                                 self.gpu_buffer_b.ptr(), n_elems_total,
+                                 self.gpu_buffer_b.ptr(), n_elems,
                                  nccl.NCCL_FLOAT, nccl.NCCL_SUM,
                                  stream.ptr)
         stream.synchronize()
-        ret = self.gpu_buffer_b.array(n_elems_total) * (1.0 / self.size)
-        self.gpu_buffer_b.from_device(ret, n_bytes_buffer)
+        ret = self.gpu_buffer_b.array(n_elems) * (1.0 / self.size)
+        self.gpu_buffer_b.from_device(ret, n_bytes)
         _memory_utility.unpack_params(
             params, itemsize, 'grad', self.gpu_buffer_b)
