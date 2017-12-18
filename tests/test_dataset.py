@@ -99,8 +99,6 @@ def test_scatter_large_dataset_naive():
 
     scatter_large_data(communicator)
 
-# FlatCommunicator requires GPU, not NCCL
-
 
 @testing.attr.gpu
 @testing.attr.slow
