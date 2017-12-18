@@ -14,9 +14,28 @@ def _namedpersistents(model):
 class AllreducePersistent(chainer.training.extension.Extension):
 
     trigger = 1, 'epoch'
-    priority = chainer.training.extension.PRIORITY_WRITER + 1  # earlier than evaluator
+
+    # This extension should be called earlier than evaluators.
+    priority = chainer.training.extension.PRIORITY_WRITER + 1
 
     def __init__(self, model, comm):
+        """Chainer extension to averagize persistents over workers.
+
+        When called, this extension invokes all-reduce communication among
+        workers to compute averages of persistent variables in the model.
+        Persistent variables are updated to the averages. Currently, we ignore
+        integer persistent variables, and only float persistent variables are
+        handled.
+
+        This extension is mainly to improve the running mean and variance of
+        BatchNormalization by increasing the effective number of examples.
+        We do not need to call this frequently; call just before storing or
+        evaluating the model.
+
+        Args:
+            model (chainer.link.Link): Target link object.
+            comm (ChainerMN communicator): communicator to compute averages.
+        """
         if hasattr(comm, 'mpi_comm'):
             comm = comm.mpi_comm
 
@@ -24,9 +43,11 @@ class AllreducePersistent(chainer.training.extension.Extension):
         self.comm = comm
 
     def __call__(self, trainer=None):
-        # We need to delay MPI4py import
+        # We need to delay MPI4py import. Please also note that _memory_utility
+        # module also imports MPI4py.
+        from chainermn.communicators._memory_utility \
+            import array_to_buffer_object
         import mpi4py.MPI
-        from chainermn.communicators._memory_utility import array_to_buffer_object
 
         for _, param in sorted(_namedpersistents(self.model)):
             if hasattr(param, 'dtype') and param.dtype == np.float32:
@@ -34,4 +55,4 @@ class AllreducePersistent(chainer.training.extension.Extension):
                 self.comm.Allreduce(mpi4py.MPI.IN_PLACE, buf)
                 param /= self.comm.size
             else:
-                pass  # TODO
+                pass  # Integer persistent variables are ignored
