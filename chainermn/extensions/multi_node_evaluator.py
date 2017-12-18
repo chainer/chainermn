@@ -1,7 +1,7 @@
-import types
+import six
 
 
-def create_multi_node_evaluator(evaluator, communicator):
+def create_multi_node_evaluator(actual_evaluator, communicator):
     """Create a multi node evaluator from a normal evaluator.
 
     Actually patches the evaluator to work in multinode
@@ -10,7 +10,7 @@ def create_multi_node_evaluator(evaluator, communicator):
     work correctly in non-MPI environment.
 
     Args:
-        evaluator: evaluator to be patched
+        actual_evaluator: evaluator to be patched
             (e.g., ``chainer.training.extensions.Evaluator``)
         communicator: ChainerMN communicator
 
@@ -19,8 +19,8 @@ def create_multi_node_evaluator(evaluator, communicator):
 
     """
 
-    evaluator._mn_original_evaluate = evaluator.evaluate
-    evaluator._mn_communicator = communicator
+    actual_evaluator._mn_original_evaluate = actual_evaluator.evaluate
+    actual_evaluator._mn_communicator = communicator
 
     def new_evaluate(self):
         local_mean_dict = self._mn_original_evaluate()
@@ -32,5 +32,6 @@ def create_multi_node_evaluator(evaluator, communicator):
         }
         return global_mean_dict
 
-    evaluator.evaluate = types.MethodType(new_evaluate, evaluator)
-    return evaluator
+    actual_evaluator.evaluate = six.create_bound_method(
+        new_evaluate, actual_evaluator)
+    return actual_evaluator
