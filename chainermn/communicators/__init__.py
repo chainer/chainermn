@@ -24,7 +24,7 @@ def create_communicator(
     +---------------+---+---+--------+--------------------------------------+
     |pure_nccl      |   |OK |Required|``pure_nccl`` is recommended when     |
     |               |   |   |(>= v2) |NCCL2 is available in the environment,|
-    |               |   |   |        | but it'sstill experimental support.  |
+    |               |   |   |        | but it's still experimental support. |
     +---------------+---+---+--------+--------------------------------------+
 
     Args:
