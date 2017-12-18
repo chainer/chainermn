@@ -6,10 +6,12 @@ import time
 
 import chainer
 from chainer.training import extension
+from chainer.utils import experimental
 
 
-def distributed_cpr(name, comm, cp_interval=5, gc_interval=5, path=None):
-    '''Create Distributed CPR Extension
+def create_multi_node_checkpointer(name, comm, cp_interval=5,
+                                   gc_interval=5, path=None):
+    '''Create multi-node checkpointer object
 
     Generational snapshot extension to allow fault tolerance;
     It keeps several old snapshots to rollback synchronized
@@ -26,12 +28,12 @@ def distributed_cpr(name, comm, cp_interval=5, gc_interval=5, path=None):
     As this object is a usual Chainer extension, users can just
     create this object and pass to the trainer as an extension::
 
-        cpr = distributed_cpr(name=run_id, comm=comm)
+        cpr = create_multi_node_checkpointer(name=run_id, comm=comm)
         trainer.extend(cpr, trigger=(25, 'iteration'))
 
     To run recovery at startup, before first iteration, run::
 
-        cpr.maybe_resume(trainer, optimizer)
+        cpr.maybe_load(trainer, optimizer)
 
     before ``trainer.run()`` . If nothing is recovered (i.e. no
     snapshot found), ``trainer.updater.iteration`` will remain ``0``
@@ -40,16 +42,16 @@ def distributed_cpr(name, comm, cp_interval=5, gc_interval=5, path=None):
     this will let multi node optimizer avoid initial broadcast when
     all snapshot data among nodes are all in sync.
 
-    Another example to use CPR *without* trainer would be::
+    Another example to use checkpointer *without* trainer would be::
 
-        cpr = distributed_cpr(name=run_id, comm=comm)
-        cpr.maybe_resume(obj_you_want_to_cpr, optimizer)
+        cpr = create_multi_node_checkpointer(name=run_id, comm=comm)
+        cpr.maybe_load(obj_you_want_to_cpr, optimizer)
 
         while True: ## Training loop
             ...
             updater.update()
             ...
-            cpr.checkpoint(obj_you_want_to_cpr)  # Update checkpoints
+            cpr.save(obj_you_want_to_cpr)  # Update checkpoints
 
     c.f. Taking snapshots in single node execution would be much simpler::
 
@@ -69,10 +71,11 @@ def distributed_cpr(name, comm, cp_interval=5, gc_interval=5, path=None):
         cp_interval (int): number of checkpoints to guarantee preserved
         gc_interval (int): interval to collect non-preserved checkpoints
     '''
-    return _DistCPRExtension(name, comm, cp_interval, gc_interval, path)
+    experimental('chainermn.extensions.create_multi_node_checkpointer')
+    return _MultiNodeCheckpointer(name, comm, cp_interval, gc_interval, path)
 
 
-class _CPRStats(object):
+class _CheckpointStats(object):
     def __init__(self):
         self.timings = []
         self.begin = None
@@ -100,7 +103,7 @@ class _CPRStats(object):
         return fmt_str.format(average, min(durations), max(durations))
 
 
-class _DistCPRExtension(extension.Extension):
+class _MultiNodeCheckpointer(extension.Extension):
 
     def __init__(self, name, comm, cp_interval, gc_interval, path):
         self.name = name
@@ -108,7 +111,7 @@ class _DistCPRExtension(extension.Extension):
         self.gc_interval = gc_interval
         self.comm = comm
         self.files = []
-        self.stats = _CPRStats()
+        self.stats = _CheckpointStats()
 
         # TODO(kuenishi): support path expression such as
         # 'path/{rank}/snapshot' or 'path/{host}/snapshot'
@@ -131,9 +134,9 @@ class _DistCPRExtension(extension.Extension):
             # shouldn't pass None at __init__().
             self.path = trainer.out
 
-        self.checkpoint(trainer, trainer.updater.iteration)
+        self.save(trainer, trainer.updater.iteration)
 
-    def checkpoint(self, target, iteration):
+    def save(self, target, iteration):
         filename = self._filename(iteration)
 
         self.stats.start()
@@ -225,7 +228,7 @@ class _DistCPRExtension(extension.Extension):
             return
         return name, int(rank), int(iter)
 
-    def maybe_resume(self, trainer, optimizer=None, path=None):
+    def maybe_load(self, trainer, optimizer=None, path=None):
         # If there's existing model, load, sync, and resume.
         if self.path is None:
             if path is not None:
@@ -254,9 +257,10 @@ class _DistCPRExtension(extension.Extension):
             # Adopt latest snapshot from iteration number
             i = max(iters)
 
-            # Note that CPR only verifies file name - if exception
-            # happens here, currently manual deletion of *latest*
-            # snapshot may CPR work sanely against one older snapshot
+            # Note that checkpointer only verifies file name - if
+            # exception happens here, currently manual deletion of
+            # *latest* snapshot may checkpointer work sanely against
+            # one older snapshot
             _load(self.path, self._filename(i), trainer)
 
             if optimizer is not None:

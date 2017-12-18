@@ -14,7 +14,7 @@ from chainer import training
 from chainer.training import extensions
 
 import chainermn
-from chainermn.extensions.checkpoint import distributed_cpr
+from chainermn.extensions.checkpoint import create_multi_node_checkpointer
 
 
 class MLP(chainer.Chain):
@@ -83,10 +83,12 @@ class TestMNIST(unittest.TestCase):
         evaluator = chainermn.create_multi_node_evaluator(evaluator, comm)
         trainer.extend(evaluator)
 
-        # Add CPR. This is just to check checkpointing runs without errors
+        # Add checkpointer. This is just to check checkpointing runs
+        # without errors
         path = tempfile.mkdtemp(dir='/tmp', prefix=__name__ + "-tmp-")
-        cpr = distributed_cpr(name=__name__, comm=comm, path=path)
-        trainer.extend(cpr, trigger=(1, 'epoch'))
+        checkpointer = create_multi_node_checkpointer(name=__name__, comm=comm,
+                                                      path=path)
+        trainer.extend(checkpointer, trigger=(1, 'epoch'))
 
         # Some display and output extensions are necessary only for one worker.
         # (Otherwise, there would just be repeated outputs.)
@@ -106,7 +108,7 @@ class TestMNIST(unittest.TestCase):
         err = evaluator()['validation/main/accuracy']
         self.assertGreaterEqual(err, 0.95)
 
-        # Check CPR successfully finalized snapshot directory
+        # Check checkpointer successfully finalized snapshot directory
         self.assertEqual(0, len(os.listdir(path)))
         os.removedirs(path)
 
