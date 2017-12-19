@@ -1,8 +1,9 @@
 import collections
-import mpi4py.MPI
-import nose.plugins.skip
 import os
 import unittest
+
+import mpi4py.MPI
+import pytest
 
 from chainermn.communicators import _base
 
@@ -20,7 +21,7 @@ class TestNodeAwareCommunicatorBase(unittest.TestCase):
         elif 'OMPI_COMM_WORLD_LOCAL_RANK' in os.environ:  # OpenMPI
             expected = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
         else:
-            raise nose.plugins.skip.SkipTest
+            pytest.skip('No MPI specified')
 
         self.assertEqual(self.communicator.intra_rank, expected)
 
@@ -30,7 +31,7 @@ class TestNodeAwareCommunicatorBase(unittest.TestCase):
         elif 'OMPI_COMM_WORLD_LOCAL_SIZE' in os.environ:  # OpenMPI
             expected = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
         else:
-            raise nose.plugins.skip.SkipTest
+            pytest.skip('No MPI specified')
 
         self.assertEqual(self.communicator.intra_rank, expected)
 

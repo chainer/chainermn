@@ -1,24 +1,18 @@
 import copy
 import functools
-import nose.plugins.skip
-import unittest
 
 import chainer
-import chainer.testing
-import chainer.testing.attr
 import numpy
+import pytest
 
 import chainermn
 import chainermn.functions
 
 
-@chainer.testing.parameterize(
-    {'gpu': True},
-    {'gpu': False},
-)
-class TestPointToPointCommunication(unittest.TestCase):
+class PointToPointCommunication(object):
 
-    def setUp(self):
+    def __init__(self, gpu):
+        self.gpu = gpu
         if self.gpu:
             self.communicator = chainermn.create_communicator('hierarchical')
             device = self.communicator.intra_rank
@@ -28,7 +22,7 @@ class TestPointToPointCommunication(unittest.TestCase):
             device = -1
 
         if self.communicator.size < 2:
-            raise nose.plugins.skip.SkipTest()
+            pytest.skip("This test is for multinode")
 
         self.rank_send = (self.communicator.rank + 1) % self.communicator.size
         self.rank_recv = (self.communicator.rank - 1) % self.communicator.size
@@ -121,7 +115,7 @@ class TestPointToPointCommunication(unittest.TestCase):
             err.backward()
 
             # self.x.grad is None if backprop stops in the middle.
-            self.assertIsNotNone(self.x.grad)
+            assert self.x.grad is not None
 
         else:
             # Intermediate processes.
@@ -146,7 +140,7 @@ class TestPointToPointCommunication(unittest.TestCase):
             y = chainermn.functions.recv(
                 self.communicator, self.rank_recv, device=self.device,
                 force_tuple=True)
-            self.assertTrue(isinstance(y, tuple))
+            assert isinstance(y, tuple)
             z = functools.reduce(lambda x, y: x + y, y)
             err = self.evaluation(z, self.x)
             err.backward()
@@ -163,3 +157,20 @@ class TestPointToPointCommunication(unittest.TestCase):
 
     def test_tuple_communication2(self):
         self.check_tuple_communication(2)
+
+
+def test_cpu():
+    p2pcom = PointToPointCommunication(False)
+    p2pcom.test_communication()
+    p2pcom.test_retain()
+    p2pcom.test_tuple_communication1()
+    p2pcom.test_tuple_communication2()
+
+
+@chainer.testing.attr.gpu
+def test_gpu():
+    p2pcom = PointToPointCommunication(True)
+    p2pcom.test_communication()
+    p2pcom.test_retain()
+    p2pcom.test_tuple_communication1()
+    p2pcom.test_tuple_communication2()
