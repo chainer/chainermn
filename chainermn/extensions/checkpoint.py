@@ -17,9 +17,10 @@ def create_multi_node_checkpointer(name, comm, cp_interval=5,
     It keeps several old snapshots to rollback synchronized
     snapshot at each MPI process. Snapshot files are identified
     as '<name>.<rank>.<iteration>'.
-    <name> ... identifier of the run where snapshot is kept for
-    <rank> ... which process owned the model
-    <iteration> ... number of iteration.
+
+    - <name> ... identifier of the run where snapshot is kept for
+    - <rank> ... which process owned the model
+    - <iteration> ... number of iteration.
 
     This extension keeps several files for each execution and allows
     users to resume the whole job at the latest snapshots of each MPI
@@ -28,12 +29,12 @@ def create_multi_node_checkpointer(name, comm, cp_interval=5,
     As this object is a usual Chainer extension, users can just
     create this object and pass to the trainer as an extension::
 
-        cpr = create_multi_node_checkpointer(name=run_id, comm=comm)
-        trainer.extend(cpr, trigger=(25, 'iteration'))
+        checkpointer = create_multi_node_checkpointer(name=run_id, comm=comm)
+        trainer.extend(checkpointer, trigger=(25, 'iteration'))
 
-    To run recovery at startup, before first iteration, run::
+    To run recovery at startup, before first iteration, run
 
-        cpr.maybe_load(trainer, optimizer)
+        checkpointer.maybe_load(trainer, optimizer)
 
     before ``trainer.run()`` . If nothing is recovered (i.e. no
     snapshot found), ``trainer.updater.iteration`` will remain ``0``
@@ -42,34 +43,34 @@ def create_multi_node_checkpointer(name, comm, cp_interval=5,
     this will let multi node optimizer avoid initial broadcast when
     all snapshot data among nodes are all in sync.
 
+    After training finished without errors all those temporary
+    checkpoints will be cleaned up at all nodes.
+
     Another example to use checkpointer *without* trainer would be::
 
-        cpr = create_multi_node_checkpointer(name=run_id, comm=comm)
-        cpr.maybe_load(obj_you_want_to_cpr, optimizer)
+        checkpointer = create_multi_node_checkpointer(name=run_id, comm=comm)
+        checkpointer.maybe_load(obj_you_want_to_snap, optimizer)
 
         while True: ## Training loop
             ...
             updater.update()
             ...
-            cpr.save(obj_you_want_to_cpr)  # Update checkpoints
-
-    c.f. Taking snapshots in single node execution would be much simpler::
-
-        trainer.extend(extensions.snapshot())
-
-    TODO(kuenishi): do we need checksum? ... snapshot_object is smart
-    that uses temporary files and then moving the file, which is
-    usually an atomic operation. If we assume external (malicious or
-    innocent) hands such as bit rot or file truncate we need this. In
-    current implementation manual removal of latest snapshot files will
-    let recovery happen against next-latest snapshot.
-    TODO(kuenishi): make non-distributed version and contribute to Chainer?
+            checkpointer.save(obj_you_want_to_snap)  # Make a checkpoint
 
     Args:
         name (str): unique id of the run
         comm: communicater in ChainerMN
-        cp_interval (int): number of checkpoints to guarantee preserved
+        cp_interval (int): minimum number of checkpoints to preserve
         gc_interval (int): interval to collect non-preserved checkpoints
+
+    TODO(kuenishi): Possibly taking checksum on snapshot file may help
+    model loading more reliable ... snapshot_object is smart that uses
+    temporary files and then moving the file, which prevents partial
+    write by atomic operation. If we assume external hands such as bit
+    rot or file truncate we need this. In current implementation
+    manual removal of latest snapshot files will let recovery happen
+    against next-latest snapshot.
+
     '''
     experimental('chainermn.extensions.create_multi_node_checkpointer')
     return _MultiNodeCheckpointer(name, comm, cp_interval, gc_interval, path)

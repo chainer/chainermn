@@ -1,5 +1,2 @@
 cython
-
-# Fix broken search link issue 
-# https://github.com/rtfd/readthedocs-sphinx-ext/issues/25
-sphinx ==1.4.*
+sphinx

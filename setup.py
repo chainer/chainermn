@@ -27,13 +27,15 @@ if '--no-nccl' in sys.argv:
 elif os.environ.get('READTHEDOCS', None) == 'True':
     ext_modules = []
     install_requires.remove('mpi4py')  # mpi4py cannot be installed without MPI
+else:
+    install_requires.append('cupy')
 
 setup(
     name='chainermn',
     version='1.0.0',
     description='ChainerMN: Multi-node distributed training with Chainer',
-    author='Takuya Akiba',
-    author_email='akiba@preferred.jp',
+    author='Takuya Akiba, Keisuke Fukuda, Shuji Suzuki, Kota Uenishi',
+    author_email='akiba@preferred.jp, kfukuda@preferred.jp, ssuzuki@preferred.jp, kota@preferred.jp',
     packages=find_packages(),
     ext_modules=ext_modules,
     cmdclass={'build_ext': build_ext},
