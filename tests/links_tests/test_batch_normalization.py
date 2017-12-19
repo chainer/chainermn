@@ -1,9 +1,7 @@
 import chainer
 import chainer.testing
-import chainer.testing.attr
 import chainer.utils
 import mpi4py.MPI
-import nose.plugins.skip
 import numpy
 import unittest
 
@@ -89,9 +87,6 @@ class TestMultiNodeBatchNormalization(unittest.TestCase):
         almost always different. Therefore, we also check that the results of
         (2) is different from them, to see that this test working correctly.
         """
-
-        if chainer.__version__.startswith('1.'):
-            raise nose.plugins.skip.SkipTest()
 
         comm = self.communicator
 

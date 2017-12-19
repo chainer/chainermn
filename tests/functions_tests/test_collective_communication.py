@@ -1,62 +1,56 @@
-import nose.plugins.skip
-import unittest
-
 import chainer
-import chainer.testing
-import chainer.testing.attr
 import numpy
+import pytest
 
 import chainermn
 import chainermn.functions
 
 
-@chainer.testing.parameterize(
-    {'gpu': True},
-    {'gpu': False},
-)
-class TestPointToPointCommunication(unittest.TestCase):
+def create_communicator_and_device(gpu):
+    if gpu:
+        communicator = chainermn.create_communicator('hierarchical')
+        device = communicator.intra_rank
+        chainer.cuda.get_device(device).use()
+    else:
+        communicator = chainermn.create_communicator('naive')
+        device = -1
 
-    def setUp(self):
-        if self.gpu:
-            self.communicator = chainermn.create_communicator('hierarchical')
-            device = self.communicator.intra_rank
-            chainer.cuda.get_device(device).use()
-        else:
-            self.communicator = chainermn.create_communicator('naive')
-            device = -1
+    if communicator.size < 2:
+        pytest.skip("This test is for multinode")
 
-        if self.communicator.size < 2:
-            raise nose.plugins.skip.SkipTest()
+    return communicator, device
 
-        self.device = device
 
-    def check_all_to_all(self, xs):
-        ys = chainermn.functions.all_to_all(self.communicator, xs, self.device)
+def check_all_to_all(communicator, device, xs):
+    ys = chainermn.functions.all_to_all(communicator, xs, device)
 
-        y = chainer.functions.sum(ys[0])
-        for _y in ys[1:]:
-            y += chainer.functions.sum(_y)
+    y = chainer.functions.sum(ys[0])
+    for _y in ys[1:]:
+        y += chainer.functions.sum(_y)
 
-        y.backward()
+    y.backward()
 
-        self.assertIsNotNone(xs[0].grad)
+    assert xs[0].grad is not None
 
-    def test_all_to_all_cpu(self):
-        data = [
-            chainer.Variable(numpy.zeros(
-                (self.communicator.rank, i), dtype=numpy.float32))
-            for i in range(self.communicator.size)]
-        self.check_all_to_all(data)
 
-    @chainer.testing.attr.gpu
-    def test_all_to_all_gpu(self):
-        if not self.gpu:
-            raise nose.plugins.skip.SkipTest()
-        chainer.cuda.get_device_from_id(self.device).use()
-        data = [
-            chainer.Variable(numpy.zeros(
-                (self.communicator.rank, i), dtype=numpy.float32))
-            for i in range(self.communicator.size)]
-        for x in data:
-            x.to_gpu()
-        self.check_all_to_all(data)
+def test_all_to_all_cpu():
+    communicator, device = create_communicator_and_device(False)
+    data = [
+        chainer.Variable(numpy.zeros(
+            (communicator.rank, i), dtype=numpy.float32))
+        for i in range(communicator.size)]
+    check_all_to_all(communicator, device, data)
+
+
+@chainer.testing.attr.gpu
+def test_all_to_all_gpu():
+    communicator, device = create_communicator_and_device(True)
+
+    chainer.cuda.get_device_from_id(device).use()
+    data = [
+        chainer.Variable(numpy.zeros(
+            (communicator.rank, i), dtype=numpy.float32))
+        for i in range(communicator.size)]
+    for x in data:
+        x.to_gpu()
+    check_all_to_all(communicator, device, data)
