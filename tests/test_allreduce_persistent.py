@@ -20,16 +20,18 @@ class ExampleModel(chainer.Chain):
 class TestAllreducePersistent(unittest.TestCase):
 
     def setUp(self):
-        self.comm = chainermn.create_communicator('naive')
+        self.comm = chainermn.create_communicator('hierarchical')
+        device = self.comm.intra_rank
+        chainer.cuda.get_device(device).use()
 
     def _test(self, model):
         xp = model.xp
         rank = self.comm.rank
 
-        model.bn1.avg_mean += xp.full_like(model.bn1.avg_mean, rank * 1)
-        model.bn2.avg_mean += xp.full_like(model.bn2.avg_mean, rank * 2)
-        model.bn1.avg_var += xp.full_like(model.bn1.avg_var, rank * 3)
-        model.bn2.avg_var += xp.full_like(model.bn2.avg_var, rank * 4)
+        model.bn1.avg_mean.fill(rank * 1)
+        model.bn2.avg_mean.fill(rank * 2)
+        model.bn1.avg_var.fill(rank * 3)
+        model.bn2.avg_var.fill(rank * 4)
 
         allreduce_persistent = \
             chainermn.extensions.AllreducePersistent(model, self.comm)
