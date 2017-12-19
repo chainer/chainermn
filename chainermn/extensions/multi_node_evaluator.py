@@ -15,7 +15,7 @@ def create_multi_node_evaluator(actual_evaluator, communicator):
         communicator: ChainerMN communicator
 
     Returns:
-        The multi node evaluator based on ``evaluator``.
+        The multi-node patched ``actual_evaluator``.
 
     """
 
