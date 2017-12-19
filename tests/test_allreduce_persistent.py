@@ -30,7 +30,7 @@ class TestAllreducePersistent(unittest.TestCase):
             chainermn.extensions.AllreducePersistent(model, comm)
         allreduce_persistent()
 
-        avg_rank = (comm.size - 1) / 2
+        avg_rank = (comm.size - 1) / 2.0
         chainer.testing.assert_allclose(model.bn1.avg_mean, avg_rank * 1)
         chainer.testing.assert_allclose(model.bn2.avg_mean, avg_rank * 2)
         chainer.testing.assert_allclose(model.bn1.avg_var, avg_rank * 3)
