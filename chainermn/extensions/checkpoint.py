@@ -63,14 +63,6 @@ def create_multi_node_checkpointer(name, comm, cp_interval=5,
         cp_interval (int): minimum number of checkpoints to preserve
         gc_interval (int): interval to collect non-preserved checkpoints
 
-    TODO(kuenishi): Possibly taking checksum on snapshot file may help
-    model loading more reliable ... snapshot_object is smart that uses
-    temporary files and then moving the file, which prevents partial
-    write by atomic operation. If we assume external hands such as bit
-    rot or file truncate we need this. In current implementation
-    manual removal of latest snapshot files will let recovery happen
-    against next-latest snapshot.
-
     '''
     experimental('chainermn.extensions.create_multi_node_checkpointer')
     return _MultiNodeCheckpointer(name, comm, cp_interval, gc_interval, path)
@@ -138,6 +130,21 @@ class _MultiNodeCheckpointer(extension.Extension):
         self.save(trainer, trainer.updater.iteration)
 
     def save(self, target, iteration):
+        '''Take snapshots of a target (mostly trainer) at each node
+
+        This must be called at all nodes synchronously at the same
+        timing of same iteration.
+
+        '''
+        # TODO(kuenishi): Possibly taking checksum on snapshot file
+        # may help model loading more reliable ... snapshot_object is
+        # smart that uses temporary files and then moving the file,
+        # which prevents partial write by atomic operation. If we
+        # assume external hands such as bit rot or file truncate we
+        # need this. In current implementation manual removal of
+        # latest snapshot files will let recovery happen against
+        # next-latest snapshot.
+
         filename = self._filename(iteration)
 
         self.stats.start()
@@ -151,6 +158,11 @@ class _MultiNodeCheckpointer(extension.Extension):
             self._sync_file_list(remove_remainder=True)
 
     def finalize(self):
+        '''Finalize checkpointer
+
+        Clean up all intermediate snapshots.
+
+        '''
         assert self.path is not None
 
         files2remove = self.files
@@ -164,6 +176,15 @@ class _MultiNodeCheckpointer(extension.Extension):
         self.files = []
 
     def get_stats(self):
+        '''Get statistics of taking snapshots
+
+        After or during training, checkpointer holds statistics on
+        saving checkpoints such as average time, minimum and maximum
+        time. With this stats users may identify slow nodes or disk,
+        or know average time penalty of taking snapshot and optmize
+        interval to take snapshots.
+
+        '''
         return self.stats.report()
 
     def _sync_file_list(self, remove_remainder=False):
@@ -230,7 +251,9 @@ class _MultiNodeCheckpointer(extension.Extension):
         return name, int(rank), int(iter)
 
     def maybe_load(self, trainer, optimizer=None, path=None):
-        # If there's existing model, load, sync, and resume.
+        '''If there's existing model, load, sync, and resume.
+
+        '''
         if self.path is None:
             if path is not None:
                 self.path = path
