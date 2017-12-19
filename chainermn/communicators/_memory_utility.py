@@ -76,7 +76,8 @@ class DeviceMemory(object):
 
 def extract_params(model):
     return [param for _, param in sorted(model.namedparams())
-                  if param.grad is not None]
+            if param.grad is not None]
+
 
 def pack_params(params, itemsize, attr_name, buffer):
     offset = 0
