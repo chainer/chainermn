@@ -1,2 +1,3 @@
 cython
+sphinx_rtd_theme
 sphinx
