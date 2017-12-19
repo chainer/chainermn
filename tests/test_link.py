@@ -1,13 +1,10 @@
-import nose.plugins.skip
-import unittest
-
 import chainer
 import chainer.cuda
 import chainer.links as L
 import chainer.testing
-import chainer.testing.attr
 import chainermn
 import numpy as np
+import pytest
 
 
 class Cycle0SubA(chainer.Chain):
@@ -205,67 +202,33 @@ class TupleDataChild(chainermn.MultiNodeChainList):
             TupleDataSubB(size), rank_in=rank_parent, rank_out=rank_parent)
 
 
-@chainer.testing.parameterize(
-    {'gpu': True},
-    {'gpu': False},
-)
-class TestMultiNodeChain(unittest.TestCase):
+def create_communicator(gpu):
+    if gpu:
+        communicator = chainermn.create_communicator('hierarchical')
+        chainer.cuda.get_device(communicator.intra_rank).use()
+    else:
+        communicator = chainermn.create_communicator('naive')
 
-    def setUp(self):
-        if self.gpu:
-            self.communicator = chainermn.create_communicator('hierarchical')
-            device = self.communicator.intra_rank
-            chainer.cuda.get_device(device).use()
-        else:
-            self.communicator = chainermn.create_communicator('naive')
-            device = -1
+    if communicator.size < 2:
+        pytest.skip("This test is for multinode only")
 
-        if self.communicator.size < 2:
-            raise nose.plugins.skip.SkipTest()
+    rank_next = (communicator.rank + 1) % communicator.size
+    rank_prev = (communicator.rank - 1) % communicator.size
+    return communicator, rank_next, rank_prev
 
-        self.rank_next = (self.communicator.rank + 1) % self.communicator.size
-        self.rank_prev = (self.communicator.rank - 1) % self.communicator.size
 
-    def test_cycle_model(self):
-        n, d = 100, 10
+def check_cycle_model(gpu):
+    communicator, rank_next, rank_prev = create_communicator(gpu)
 
-        if self.communicator.rank == 0:
-            X = np.random.randn(n, d).astype(np.float32)
-            Y = (np.random.rand(n) * 2).astype(np.int32)
-            model = L.Classifier(
-                Cycle0(d, self.communicator, self.rank_next, self.rank_prev))
+    n, d = 100, 10
 
-            if self.gpu:
-                model.to_gpu()
-                X = chainer.cuda.to_gpu(X)
-                Y = chainer.cuda.to_gpu(Y)
-
-            for i in range(n):
-                err = model(X[i:i + 1], Y[i:i + 1])
-                err.backward()
-        else:
-            model = Cycle1(
-                d, self.communicator, self.rank_next, self.rank_prev)
-            if self.gpu:
-                model.to_gpu()
-
-            for i in range(n):
-                err = model()
-                err.backward()
-
-    def test_crossing_model(self):
-        n, d = 100, 10
+    if communicator.rank == 0:
         X = np.random.randn(n, d).astype(np.float32)
         Y = (np.random.rand(n) * 2).astype(np.int32)
+        model = L.Classifier(
+            Cycle0(d, communicator, rank_next, rank_prev))
 
-        if self.communicator.rank == 0:
-            model = L.Classifier(Cross0(
-                d, self.communicator, self.rank_next, self.rank_prev))
-        else:
-            model = L.Classifier(Cross1(
-                d, self.communicator, self.rank_next, self.rank_prev))
-
-        if self.gpu:
+        if gpu:
             model.to_gpu()
             X = chainer.cuda.to_gpu(X)
             Y = chainer.cuda.to_gpu(Y)
@@ -273,61 +236,70 @@ class TestMultiNodeChain(unittest.TestCase):
         for i in range(n):
             err = model(X[i:i + 1], Y[i:i + 1])
             err.backward()
+    else:
+        model = Cycle1(
+            d, communicator, rank_next, rank_prev)
+        if gpu:
+            model.to_gpu()
 
-    def check_branching_model(self, parent_model):
-        n, d = 100, 10
-        X = np.random.randn(n, d).astype(np.float32)
-        Y = (np.random.rand(n) * 2).astype(np.int32)
+        for i in range(n):
+            err = model()
+            err.backward()
 
-        if self.communicator.rank == 0:
-            rank_children = [rank for rank in range(1, self.communicator.size)]
-            model = L.Classifier(parent_model(
-                d, self.communicator, rank_children))
-            if self.gpu:
-                model.to_gpu()
-                X = chainer.cuda.to_gpu(X)
-                Y = chainer.cuda.to_gpu(Y)
 
-            for i in range(n):
-                err = model(X[i:i + 1], Y[i:i + 1])
-                err.backward()
-        else:
-            model = BranchChild(d, self.communicator, 0)
-            if self.gpu:
-                model.to_gpu()
+def test_cycle_model_cpu():
+    check_cycle_model(False)
 
-            for i in range(n):
-                err = model()
-                err.backward()
 
-    def test_branching_model1(self):
-        self.check_branching_model(BranchParent1)
+@chainer.testing.attr.gpu
+def test_cycle_model_gpu():
+    check_cycle_model(True)
 
-    def test_branching_model2(self):
-        self.check_branching_model(BranchParent2)
 
-    def test_branching_model3(self):
-        self.check_branching_model(BranchParent3)
+def check_crossing_model(gpu):
+    communicator, rank_next, rank_prev = create_communicator(gpu)
 
-    def test_branching_model4(self):
-        self.check_branching_model(BranchParent4)
+    n, d = 100, 10
+    X = np.random.randn(n, d).astype(np.float32)
+    Y = (np.random.rand(n) * 2).astype(np.int32)
 
-    def test_twisting_model(self):
-        n, d = 100, 10
-        X = np.random.randn(n, d).astype(np.float32)
-        Y = (np.random.rand(n) * 2).astype(np.int32)
+    if communicator.rank == 0:
+        model = L.Classifier(Cross0(
+            d, communicator, rank_next, rank_prev))
+    else:
+        model = L.Classifier(Cross1(
+            d, communicator, rank_next, rank_prev))
 
-        if self.communicator.rank == 0:
-            model = L.Classifier(
-                TwistFirst(d, self.communicator, self.rank_next))
-        elif self.communicator.rank == self.communicator.size - 1:
-            model = L.Classifier(
-                TwistLast(d, self.communicator, self.rank_prev))
-        else:
-            model = L.Classifier(Twist(
-                d, self.communicator, self.rank_prev, self.rank_next))
+    if gpu:
+        model.to_gpu()
+        X = chainer.cuda.to_gpu(X)
+        Y = chainer.cuda.to_gpu(Y)
 
-        if self.gpu:
+    for i in range(n):
+        err = model(X[i:i + 1], Y[i:i + 1])
+        err.backward()
+
+
+def test_crossing_model_cpu():
+    check_crossing_model(False)
+
+
+@chainer.testing.attr.gpu
+def test_crossing_model_gpu():
+    check_crossing_model(True)
+
+
+def check_branching_model(gpu, communicator, rank_next, rank_prev,
+                          parent_model):
+    n, d = 100, 10
+    X = np.random.randn(n, d).astype(np.float32)
+    Y = (np.random.rand(n) * 2).astype(np.int32)
+
+    if communicator.rank == 0:
+        rank_children = [rank for rank in range(1, communicator.size)]
+        model = L.Classifier(parent_model(
+            d, communicator, rank_children))
+        if gpu:
             model.to_gpu()
             X = chainer.cuda.to_gpu(X)
             Y = chainer.cuda.to_gpu(Y)
@@ -335,26 +307,106 @@ class TestMultiNodeChain(unittest.TestCase):
         for i in range(n):
             err = model(X[i:i + 1], Y[i:i + 1])
             err.backward()
-
-    def test_tuple_data_model(self):
-        n, d = 100, 10
-        X = np.random.randn(n, d).astype(np.float32)
-        Y = (np.random.rand(n) * 2).astype(np.int32)
-
-        if self.communicator.rank == 0:
-            model = L.Classifier(
-                TupleDataParent(self.communicator, d, 1))
-        elif self.communicator.rank == 1:
-            model = TupleDataChild(self.communicator, d, 0)
-
-        if self.gpu:
+    else:
+        model = BranchChild(d, communicator, 0)
+        if gpu:
             model.to_gpu()
-            X = chainer.cuda.to_gpu(X)
-            Y = chainer.cuda.to_gpu(Y)
 
         for i in range(n):
-            if self.communicator.rank == 0:
-                err = model(X[i:i + 1], Y[i:i + 1])
-            elif self.communicator.rank == 1:
-                err = model()
+            err = model()
             err.backward()
+
+
+def check_branching_models(gpu):
+    communicator, rank_next, rank_prev = create_communicator(gpu)
+    check_branching_model(gpu, communicator, rank_next, rank_prev,
+                          BranchParent1)
+
+    check_branching_model(gpu, communicator, rank_next, rank_prev,
+                          BranchParent2)
+
+    check_branching_model(gpu, communicator, rank_next, rank_prev,
+                          BranchParent3)
+
+    check_branching_model(gpu, communicator, rank_next, rank_prev,
+                          BranchParent4)
+
+
+def test_branching_models_cpu():
+    check_branching_models(False)
+
+
+@chainer.testing.attr.gpu
+def test_branching_models_gpu():
+    check_branching_models(True)
+
+
+def check_twisting_model(gpu):
+    communicator, rank_next, rank_prev = create_communicator(gpu)
+
+    n, d = 100, 10
+    X = np.random.randn(n, d).astype(np.float32)
+    Y = (np.random.rand(n) * 2).astype(np.int32)
+
+    if communicator.rank == 0:
+        model = L.Classifier(
+            TwistFirst(d, communicator, rank_next))
+    elif communicator.rank == communicator.size - 1:
+        model = L.Classifier(
+            TwistLast(d, communicator, rank_prev))
+    else:
+        model = L.Classifier(Twist(
+            d, communicator, rank_prev, rank_next))
+
+    if gpu:
+        model.to_gpu()
+        X = chainer.cuda.to_gpu(X)
+        Y = chainer.cuda.to_gpu(Y)
+
+    for i in range(n):
+        err = model(X[i:i + 1], Y[i:i + 1])
+        err.backward()
+
+
+def test_twisting_model_cpu():
+    check_twisting_model(False)
+
+
+@chainer.testing.attr.gpu
+def test_twisting_model_gpu():
+    check_twisting_model(True)
+
+
+def check_tuple_data_model(gpu):
+    communicator, rank_next, rank_prev = create_communicator(gpu)
+
+    n, d = 100, 10
+    X = np.random.randn(n, d).astype(np.float32)
+    Y = (np.random.rand(n) * 2).astype(np.int32)
+
+    if communicator.rank == 0:
+        model = L.Classifier(
+            TupleDataParent(communicator, d, 1))
+    elif communicator.rank == 1:
+        model = TupleDataChild(communicator, d, 0)
+
+    if gpu:
+        model.to_gpu()
+        X = chainer.cuda.to_gpu(X)
+        Y = chainer.cuda.to_gpu(Y)
+
+    for i in range(n):
+        if communicator.rank == 0:
+            err = model(X[i:i + 1], Y[i:i + 1])
+        elif communicator.rank == 1:
+            err = model()
+        err.backward()
+
+
+def test_tuple_data_model_cpu():
+    check_tuple_data_model(False)
+
+
+@chainer.testing.attr.gpu
+def test_tuple_data_model_gpu():
+    check_tuple_data_model(True)
