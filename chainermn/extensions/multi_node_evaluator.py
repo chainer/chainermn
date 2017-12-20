@@ -4,10 +4,9 @@ import six
 def create_multi_node_evaluator(actual_evaluator, communicator):
     """Create a multi node evaluator from a normal evaluator.
 
-    Actually patches the evaluator to work in multinode
+    Actually this method patches the evaluator to work in multi node
     environment. This method adds several hidden attributes starting
-    with _mn_ prefix. After the patch, original evaluator does not
-    work correctly in non-MPI environment.
+    with `_mn_` prefix.
 
     Args:
         actual_evaluator: evaluator to be patched
@@ -16,6 +15,9 @@ def create_multi_node_evaluator(actual_evaluator, communicator):
 
     Returns:
         The multi-node patched ``actual_evaluator``.
+
+    .. note:: After patched, original evaluator does not work
+              correctly in non-MPI environment.
 
     """
 

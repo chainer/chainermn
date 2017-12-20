@@ -39,3 +39,8 @@ Functions
 .. autofunction:: chainermn.functions.recv
 .. autofunction:: chainermn.functions.pseudo_connect
 .. autofunction:: chainermn.functions.all_to_all
+
+Trainer extensions
+~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: chainermn.create_multi_node_checkpointer
