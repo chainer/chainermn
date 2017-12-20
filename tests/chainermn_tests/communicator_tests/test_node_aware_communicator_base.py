@@ -8,11 +8,11 @@ import pytest
 from chainermn.communicators import _base
 
 
-class TestNodeAwareCommunicatorBase(unittest.TestCase):
+class TestCommunicatorBase(unittest.TestCase):
 
     def setUp(self):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
-        self.communicator = _base.NodeAwareCommunicatorBase(
+        self.communicator = _base.CommunicatorBase(
             self.mpi_comm, use_nccl=False)
 
     def test_intra_rank_with_env(self):

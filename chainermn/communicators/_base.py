@@ -36,8 +36,27 @@ class _MessageType(object):
 
 class CommunicatorBase(object):
 
-    def __init__(self, mpi_comm):
+    def __init__(self, mpi_comm, use_nccl=False):
         self.mpi_comm = mpi_comm
+        self._init_ranks()
+
+        if use_nccl and not nccl._available:
+            raise RuntimeError(
+                'NCCL is not available. '
+                'Please confirm that NCCL can be found by dynamic linkers, '
+                'and ChainerMN is installed without --no-nccl flag.'
+            )
+
+        self.use_nccl = use_nccl
+
+        # We have to delay the initialization of communicators. This is because
+        # NCCL's communicators use the current CUDA devices at the time of
+        # initialization. Therefore, we have to initialize NCCL communicators
+        # after users set the devices to use.
+        self.inter_mpi_comm = None
+        self.intra_mpi_comm = None
+        if self.use_nccl:
+            self.intra_nccl_comm = None
 
     @property
     def rank(self):
@@ -202,32 +221,6 @@ class CommunicatorBase(object):
     def allreduce_grad(self, model):
         raise NotImplementedError()
 
-
-class NodeAwareCommunicatorBase(CommunicatorBase):
-
-    def __init__(self, mpi_comm, use_nccl):
-        super(NodeAwareCommunicatorBase, self).__init__(mpi_comm)
-
-        if use_nccl and not nccl._available:
-            raise RuntimeError(
-                'NCCL is not available. '
-                'Please confirm that NCCL can be found by dynamic linkers, '
-                'and ChainerMN is installed without --no-nccl flag.'
-            )
-
-        self.use_nccl = use_nccl
-
-        self._init_ranks()
-
-        # We have to delay the initialization of communicators. This is because
-        # NCCL's communicators use the current CUDA devices at the time of
-        # initialization. Therefore, we have to initialize NCCL communicators
-        # after users set the devices to use.
-        self.inter_mpi_comm = None
-        self.intra_mpi_comm = None
-        if self.use_nccl:
-            self.intra_nccl_comm = None
-
     def _init_ranks(self):
         my_ranks = _communication_utility.init_ranks(self.mpi_comm)
         assert my_ranks[0] == self.mpi_comm.rank
@@ -249,3 +242,4 @@ class NodeAwareCommunicatorBase(CommunicatorBase):
         self.inter_mpi_comm = comms[1]
         if self.use_nccl:
             self.intra_nccl_comm = comms[2]
+

@@ -3,7 +3,7 @@ from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
 
 
-class DummyCommunicator(_base.NodeAwareCommunicatorBase):
+class DummyCommunicator(_base.CommunicatorBase):
 
     """Dummy communicator that does not communicate at all.
 
