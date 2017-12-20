@@ -4,7 +4,7 @@ Installation Guide
 Requirements
 ------------
 In addition to Chainer, ChainerMN depends on the following software libraries:
-CUDA-Aware MPI, NVIDIA NCCL, and a few Python packages including MPI4py.
+CUDA-Aware MPI, NVIDIA NCCL, and a few Python packages including MPI4py and cupy.
 
 
 Chainer
