@@ -87,6 +87,11 @@ class CommunicatorBase(object):
             'chainermn.communicators.CommunicatorBase.send')
 
         msgtype = _MessageType(obj)
+        """We use ssend instead of send to pass unittest.
+        # If we not use it, a error occurs in
+        # test_point_to_point_communication.py
+        when using MVAPICH2-2.2 and GPU.
+        """
         self.mpi_comm.ssend(msgtype, dest=dest, tag=tag)
 
         if not msgtype.is_tuple:
@@ -97,6 +102,7 @@ class CommunicatorBase(object):
                 chainer.cuda.Stream.null.synchronize()
 
             buf = _memory_utility.array_to_buffer_object(array)
+            """We use Ssend for the same reason as using ssend."""
             self.mpi_comm.Ssend(buf, dest=dest, tag=tag)
 
     def recv(self, source, tag):
