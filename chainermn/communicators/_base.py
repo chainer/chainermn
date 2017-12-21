@@ -88,8 +88,8 @@ class CommunicatorBase(object):
 
         msgtype = _MessageType(obj)
         """We use ssend instead of send to pass unittest.
-        # If we not use it, a error occurs in
-        # test_point_to_point_communication.py
+        If we not use it, a error occurs in
+        test_point_to_point_communication.py
         when using MVAPICH2-2.2 and GPU.
         """
         self.mpi_comm.ssend(msgtype, dest=dest, tag=tag)
