@@ -74,6 +74,11 @@ class DeviceMemory(object):
         return cp.ndarray(shape, memptr=self.memory + offset, dtype=cp.float32)
 
 
+def extract_params(model):
+    return [param for _, param in sorted(model.namedparams())
+            if param.grad is not None]
+
+
 def pack_params(params, itemsize, attr_name, buffer):
     offset = 0
     for param in params:

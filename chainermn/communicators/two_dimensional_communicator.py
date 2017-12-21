@@ -23,7 +23,7 @@ class TwoDimensionalCommunicator(_base.NodeAwareCommunicatorBase):
         self._init_comms()
         stream = chainer.cuda.Stream.null
 
-        params = [param for _, param in sorted(model.namedparams())]
+        params = _memory_utility.extract_params(model)
         itemsize = 4
         n_elems_total = sum(param.grad.size for param in params)
         n_elems_per_node_2d = int(math.ceil(n_elems_total / self.size))

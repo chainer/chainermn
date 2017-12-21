@@ -22,7 +22,7 @@ class DummyCommunicator(_base.NodeAwareCommunicatorBase):
     def allreduce_grad(self, model):
         self._init_comms()
 
-        params = [param for _, param in sorted(model.namedparams())]
+        params = _memory_utility.extract_params(model)
         itemsize = 4
         n_elems_total = sum(param.grad.size for param in params)
         n_bytes_total = n_elems_total * itemsize

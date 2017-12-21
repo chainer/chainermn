@@ -14,7 +14,7 @@ class NaiveCommunicator(_base.CommunicatorBase):
         _communication_utility.broadcast_naive(self.mpi_comm, model)
 
     def allreduce_grad(self, model):
-        for _, param in sorted(model.namedparams()):
+        for param in _memory_utility.extract_params(model):
             buf = _memory_utility.array_to_buffer_object(param.grad)
             self.mpi_comm.Allreduce(mpi4py.MPI.IN_PLACE, buf)
             param.grad /= self.size
