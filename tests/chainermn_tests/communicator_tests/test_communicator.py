@@ -124,7 +124,7 @@ def check_send_and_recv_tuple(communicator, data):
         communicator.send(data, dest=rank_next, tag=0)
 
 
-def check_broadcast_data_0(communicator, model):
+def check_broadcast_data(communicator, model):
     model.a.W.data[:] = communicator.rank
     model.b.W.data[:] = communicator.rank + 1
     model.c.b.data[:] = communicator.rank + 2
@@ -153,6 +153,23 @@ def check_allreduce_grad(communicator, model):
                                         (base + 2) * np.ones((5, )))
 
 
+def check_allreduce_grad_empty(communicator, model):
+    # We need to repeat twice for regressions on lazy initialization of
+    # sub communicators.
+    for _ in range(2):
+        model.a.W.grad[:] = communicator.rank
+        model.b.W.grad[:] = communicator.rank + 1
+        model.c.b.grad = None
+
+        communicator.allreduce_grad(model)
+        base = (communicator.size - 1.0) / 2
+
+        chainer.testing.assert_allclose(model.a.W.grad,
+                                        (base + 0) * np.ones((3, 2)))
+        chainer.testing.assert_allclose(model.b.W.grad,
+                                        (base + 1) * np.ones((4, 3)))
+
+
 def check_send_recv(param, use_gpu):
     communicator = create_communicator(param, use_gpu)
 
@@ -175,25 +192,26 @@ def check_send_recv(param, use_gpu):
     check_send_and_recv_tuple(communicator, data)
 
 
-def check_broadcast_data(param, use_gpu):
+def check_collective_communication(param, use_gpu):
     communicator = create_communicator(param, use_gpu)
 
     model = ExampleModel()
     if use_gpu:
         model.to_gpu()
-    check_broadcast_data_0(communicator, model)
+    check_broadcast_data(communicator, model)
     check_allreduce_grad(communicator, model)
+    check_allreduce_grad_empty(communicator, model)
 
 
 # chainer.testing.parameterize is not available at functions
 @pytest.mark.parametrize('param', cpu_params)
 def test_communicator_cpu(param):
     check_send_recv(param, False)
-    check_broadcast_data(param, False)
+    check_collective_communication(param, False)
 
 
 @pytest.mark.parametrize('param', gpu_params)
 @chainer.testing.attr.gpu
 def test_communicator_gpu(param):
     check_send_recv(param, True)
-    check_broadcast_data(param, True)
+    check_collective_communication(param, True)
