@@ -87,7 +87,7 @@ class CommunicatorBase(object):
             'chainermn.communicators.CommunicatorBase.send')
 
         msgtype = _MessageType(obj)
-        self.mpi_comm.send(msgtype, dest=dest, tag=tag)
+        self.mpi_comm.ssend(msgtype, dest=dest, tag=tag)
 
         if not msgtype.is_tuple:
             obj = [obj]
@@ -97,7 +97,7 @@ class CommunicatorBase(object):
                 chainer.cuda.Stream.null.synchronize()
 
             buf = _memory_utility.array_to_buffer_object(array)
-            self.mpi_comm.Send(buf, dest=dest, tag=tag)
+            self.mpi_comm.Ssend(buf, dest=dest, tag=tag)
 
     def recv(self, source, tag):
         """A primitive of inter-process receiver.
