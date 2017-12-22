@@ -32,7 +32,7 @@ else:
 
 setup(
     name='chainermn',
-    version='1.0.0',
+    version='1.1.0',
     description='ChainerMN: Multi-node distributed training with Chainer',
     author='Takuya Akiba',
     author_email='akiba@preferred.jp',
