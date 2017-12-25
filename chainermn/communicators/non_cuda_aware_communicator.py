@@ -7,7 +7,7 @@ from chainermn.communicators import _memory_utility
 from chainermn import nccl
 
 
-class NonCudaAwareCommunicator(_base.NodeAwareCommunicatorBase):
+class NonCudaAwareCommunicator(_base.CommunicatorBase):
 
     def __init__(self, mpi_comm):
         super(NonCudaAwareCommunicator, self).__init__(mpi_comm, use_nccl=True)

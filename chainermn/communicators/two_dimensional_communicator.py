@@ -8,7 +8,7 @@ from chainermn.communicators import _memory_utility
 from chainermn import nccl
 
 
-class TwoDimensionalCommunicator(_base.NodeAwareCommunicatorBase):
+class TwoDimensionalCommunicator(_base.CommunicatorBase):
 
     def __init__(self, mpi_comm=mpi4py.MPI.COMM_WORLD):
         super(TwoDimensionalCommunicator, self).__init__(

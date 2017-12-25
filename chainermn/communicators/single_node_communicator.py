@@ -5,7 +5,7 @@ from chainermn.communicators import _memory_utility
 from chainermn import nccl
 
 
-class SingleNodeCommunicator(_base.NodeAwareCommunicatorBase):
+class SingleNodeCommunicator(_base.CommunicatorBase):
 
     def __init__(self, mpi_comm):
         super(SingleNodeCommunicator, self).__init__(mpi_comm, use_nccl=True)

@@ -86,7 +86,7 @@ def create_communicator(param, use_gpu):
 
     communicator = param.communicator_class(mpi_comm)
 
-    if hasattr(communicator, 'intra_rank'):
+    if use_gpu:
         chainer.cuda.get_device(communicator.intra_rank).use()
 
     return communicator

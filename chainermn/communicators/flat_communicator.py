@@ -5,7 +5,7 @@ from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
 
 
-class FlatCommunicator(_base.NodeAwareCommunicatorBase):
+class FlatCommunicator(_base.CommunicatorBase):
 
     def __init__(self, mpi_comm):
         super(FlatCommunicator, self).__init__(mpi_comm, False)
