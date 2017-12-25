@@ -242,4 +242,3 @@ class CommunicatorBase(object):
         self.inter_mpi_comm = comms[1]
         if self.use_nccl:
             self.intra_nccl_comm = comms[2]
-
