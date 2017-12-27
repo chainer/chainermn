@@ -1,9 +1,7 @@
-from setuptools import Extension
 from setuptools import find_packages
 from setuptools import setup
 
 import os
-import sys
 
 
 install_requires = [
