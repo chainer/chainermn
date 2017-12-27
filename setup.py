@@ -15,8 +15,6 @@ install_requires = [
 
 if os.environ.get('READTHEDOCS', None) == 'True':
     install_requires.remove('mpi4py')  # mpi4py cannot be installed without MPI
-else:
-    install_requires.append('cupy')
 
 setup(
     name='chainermn',
