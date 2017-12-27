@@ -63,7 +63,7 @@ class PureNcclCommunicator(_base.CommunicatorBase):
         self.gpu_buffer_b.assign(n_bytes)
         _memory_utility.pack_params(
             params, itemsize, 'grad', self.gpu_buffer_a)
-        self.nccl_comm.allreduce(self.gpu_buffer_a.ptr(),
+        self.nccl_comm.allReduce(self.gpu_buffer_a.ptr(),
                                  self.gpu_buffer_b.ptr(), n_elems,
                                  nccl.NCCL_FLOAT, nccl.NCCL_SUM,
                                  stream.ptr)

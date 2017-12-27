@@ -51,7 +51,7 @@ To enable efficient intra-node GPU-to-GPU communication,
 we use `NVIDIA Collective Communications Library (NCCL) <https://developer.nvidia.com/nccl>`_.
 See `the official instructions <http://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/index.html#downloadnccl>`_ for installation.
 
-ChainerMN requires NCCL even if you have only one GPU per node.  The
+ChainerMN requires NCCL even if you have only one GPU per node. The
 only exception is when you run ChainerMN on CPU-only environments. See
 :ref:`non-gpu-env` for more details.
 
