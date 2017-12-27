@@ -62,5 +62,5 @@ Please refer to [Chainer Contribution Guide](http://docs.chainer.org/en/latest/c
 Akiba, T., Fukuda, K. and Suzuki, S.,
 ChainerMN: Scalable Distributed Deep Learning Framework,
 *Proceedings of Workshop on ML Systems in
-The thirty-first Annual Conference on Neural Information Processing Systems (NIPS)*, (2017)
+The Thirty-first Annual Conference on Neural Information Processing Systems (NIPS)*, (2017)
 [URL](http://learningsys.org/nips17/assets/papers/paper_25.pdf), [BibTex](chainermn_bibtex.txt)
