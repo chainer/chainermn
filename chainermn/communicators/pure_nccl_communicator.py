@@ -68,7 +68,8 @@ class PureNcclCommunicator(_base.CommunicatorBase):
                                  self.gpu_buffer_b.ptr(), n_elems,
                                  nccl.NCCL_FLOAT, nccl.NCCL_SUM,
                                  stream.ptr)
-        stream.synchronize()
+        if stream != chainer.cuda.Stream.null:
+            stream.synchronize()
         ret = self.gpu_buffer_b.array(n_elems) * (1.0 / self.size)
         self.gpu_buffer_b.from_device(ret, n_bytes)
         _memory_utility.unpack_params(

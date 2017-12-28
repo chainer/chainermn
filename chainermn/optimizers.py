@@ -1,6 +1,6 @@
+import chainer
 import copy
 import multiprocessing.pool
-
 
 class _MultiNodeOptimizer(object):
 
@@ -161,8 +161,5 @@ def create_multi_node_optimizer(actual_optimizer, communicator,
             raise ValueError(
                 'This communicator does not support double buffering.')
         return _DoubleBufferingOptimizer(actual_optimizer, communicator)
-
-    from chainermn.optimizers.multi_node_optimizer \
-        import _MultiNodeOptimizer
     return _MultiNodeOptimizer(actual_optimizer, communicator)
 
