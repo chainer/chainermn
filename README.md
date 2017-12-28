@@ -56,3 +56,11 @@ Please refer to [Chainer Contribution Guide](http://docs.chainer.org/en/latest/c
 ## License
 
 [MIT License](LICENSE)
+
+## Reference
+
+Akiba, T., Fukuda, K. and Suzuki, S.,
+ChainerMN: Scalable Distributed Deep Learning Framework,
+*Proceedings of Workshop on ML Systems in
+The Thirty-first Annual Conference on Neural Information Processing Systems (NIPS)*, (2017)
+[URL](http://learningsys.org/nips17/assets/papers/paper_25.pdf), [BibTex](chainermn_bibtex.txt)

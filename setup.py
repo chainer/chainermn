@@ -9,7 +9,7 @@ import sys
 
 install_requires = [
     'cffi',
-    'chainer >=1.23, !=2.0.0a1, !=2.0.0b1',
+    'chainer >=3.0.0',
     'cython',
     'mpi4py',
 ]
@@ -27,10 +27,12 @@ if '--no-nccl' in sys.argv:
 elif os.environ.get('READTHEDOCS', None) == 'True':
     ext_modules = []
     install_requires.remove('mpi4py')  # mpi4py cannot be installed without MPI
+else:
+    install_requires.append('cupy')
 
 setup(
     name='chainermn',
-    version='1.0.0',
+    version='1.1.0',
     description='ChainerMN: Multi-node distributed training with Chainer',
     author='Takuya Akiba',
     author_email='akiba@preferred.jp',

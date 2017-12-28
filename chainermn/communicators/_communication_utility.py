@@ -5,6 +5,22 @@ from chainermn.communicators import _memory_utility
 
 
 def init_ranks(mpi_comm):
+    """Returns rank information of the local process in `mpi_comm`.
+
+    Args:
+        mpi_comm (type:TODO)
+                 MPI Communicator from mpi4py
+
+    Returns:
+        rank_info (list):
+            Elements are:
+                * rank (`mpi_comm.rank`)
+                * intra_rank (rank within the local computing node)
+                * intra_size (number of processes on the node)
+                * inter_rank (rank of the node)
+                * inter_size (number of computing nodes)
+    """
+
     global_names = mpi_comm.gather(mpi4py.MPI.Get_processor_name())
 
     if mpi_comm.rank == 0:

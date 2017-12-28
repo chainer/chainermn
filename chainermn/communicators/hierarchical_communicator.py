@@ -7,7 +7,7 @@ from chainermn.communicators import _memory_utility
 from chainermn import nccl
 
 
-class HierarchicalCommunicator(_base.NodeAwareCommunicatorBase):
+class HierarchicalCommunicator(_base.CommunicatorBase):
 
     def __init__(self, mpi_comm):
         super(HierarchicalCommunicator, self).__init__(mpi_comm, use_nccl=True)
@@ -21,7 +21,7 @@ class HierarchicalCommunicator(_base.NodeAwareCommunicatorBase):
         self._init_comms()
         stream = chainer.cuda.Stream.null
 
-        params = [param for _, param in sorted(model.namedparams())]
+        params = _memory_utility.extract_params(model)
         itemsize = 4
         n_elems_total = sum(param.grad.size for param in params)
         n_elems_per_node = int(math.ceil(n_elems_total / self.inter_size))

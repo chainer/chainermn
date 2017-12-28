@@ -12,7 +12,8 @@ def create_communicator(
     +---------------+---+---+--------+--------------------------------------+
     |Name           |CPU|GPU|NCCL    |Recommended Use Cases                 |
     +===============+===+===+========+======================================+
-    |naive          |OK |OK |        |Testing on CPU mode                   |
+    |pure_nccl      |   |OK |Required|``pure_nccl`` is recommended when     |
+    |               |   |   |(>= v2) |NCCL2 is available in the environment.|
     +---------------+---+---+--------+--------------------------------------+
     |hierarchical   |   |OK |Required|Each node has a single NIC or HCA     |
     +---------------+---+---+--------+--------------------------------------+
@@ -22,9 +23,7 @@ def create_communicator(
     +---------------+---+---+--------+--------------------------------------+
     |flat           |   |OK |        |N/A                                   |
     +---------------+---+---+--------+--------------------------------------+
-    |pure_nccl      |   |OK |Required|``pure_nccl`` is recommended when     |
-    |               |   |   |(>= v2) |NCCL2 is available in the environment,|
-    |               |   |   |        | but it'sstill experimental support.  |
+    |naive          |OK |OK |        |Testing on CPU mode                   |
     +---------------+---+---+--------+--------------------------------------+
 
     Args:

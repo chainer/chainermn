@@ -13,7 +13,7 @@ class PureNcclCommunicator(_base.CommunicatorBase):
             raise RuntimeError(
                 'PureNcclCommunicator is only supported on NCCL 2.0+')
 
-        super(PureNcclCommunicator, self).__init__(mpi_comm)
+        super(PureNcclCommunicator, self).__init__(mpi_comm, True)
         self._init_ranks()
 
         self.inter_mpi_comm = None
@@ -55,7 +55,7 @@ class PureNcclCommunicator(_base.CommunicatorBase):
         if stream is None:
             stream = chainer.cuda.Stream.null
 
-        params = [param for _, param in sorted(model.namedparams())]
+        params = _memory_utility.extract_params(model)
         itemsize = 4
         n_elems = sum(param.grad.size for param in params)
         n_bytes = itemsize * n_elems

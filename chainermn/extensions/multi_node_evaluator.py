@@ -1,40 +1,39 @@
+import six
+
+
 def create_multi_node_evaluator(actual_evaluator, communicator):
     """Create a multi node evaluator from a normal evaluator.
 
+    Actually this method patches the evaluator to work in multi node
+    environment. This method adds several hidden attributes starting
+    with `_mn_` prefix.
+
     Args:
-        actual_evaluator: evaluator
+        actual_evaluator: evaluator to be patched
             (e.g., ``chainer.training.extensions.Evaluator``)
         communicator: ChainerMN communicator
 
     Returns:
-        The multi node evaluator based on ``actual_evaluator``.
+        The multi-node patched ``actual_evaluator``.
+
+    .. note:: After patched, original evaluator does not work
+              correctly in non-MPI environment.
 
     """
 
-    class MultiNodeEvaluator(type(actual_evaluator)):
+    actual_evaluator._mn_original_evaluate = actual_evaluator.evaluate
+    actual_evaluator._mn_communicator = communicator
 
-        def __init__(self, actual_evaluator_, communicator_):
-            if hasattr(communicator_, 'mpi_comm'):
-                communicator_ = communicator_.mpi_comm
+    def new_evaluate(self):
+        local_mean_dict = self._mn_original_evaluate()
+        global_mean_dict = {
+            name:
+            self._mn_communicator.mpi_comm.allreduce(
+                value) / self._mn_communicator.size
+            for name, value in sorted(local_mean_dict.items())
+        }
+        return global_mean_dict
 
-            super(MultiNodeEvaluator, self).__setattr__(
-                'communicator', communicator_)
-            super(MultiNodeEvaluator, self).__setattr__(
-                'actual_evaluator', actual_evaluator_)
-
-        def __getattr__(self, attr_name):
-            return getattr(self.actual_evaluator, attr_name)
-
-        def __setattr__(self, attr_name, value):
-            setattr(self.actual_evaluator, attr_name, value)
-
-        def evaluate(self):
-            local_mean_dict = self.actual_evaluator.evaluate()
-            global_mean_dict = {
-                name:
-                    self.communicator.allreduce(value) / self.communicator.size
-                for name, value in sorted(local_mean_dict.items())
-            }
-            return global_mean_dict
-
-    return MultiNodeEvaluator(actual_evaluator, communicator)
+    actual_evaluator.evaluate = six.create_bound_method(
+        new_evaluate, actual_evaluator)
+    return actual_evaluator
