@@ -128,7 +128,9 @@ class _DoubleBufferingOptimizer(object):
 
     def swap_grad(self, target1_params, target2_params):
         for param1, param2 in zip(target1_params, target2_params):
-            param1.data.grad, param2.data.grad = param2.data.grad, param1.data.grad 
+            _, var1 = param1
+            _, var2 = param2
+            var1.grad, var2.grad = var2.grad, var1.grad 
 
     def wait(self):
         if self.allreduce_grad_res is not None:
