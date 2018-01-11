@@ -9,11 +9,10 @@ from chainermn import nccl
 class PureNcclCommunicator(_base.CommunicatorBase):
 
     def __init__(self, mpi_comm):
+        super(PureNcclCommunicator, self).__init__(mpi_comm, True)
         if nccl.get_version() < 2000:
             raise RuntimeError(
                 'PureNcclCommunicator is only supported on NCCL 2.0+')
-
-        super(PureNcclCommunicator, self).__init__(mpi_comm, True)
         self._init_ranks()
 
         self.inter_mpi_comm = None
