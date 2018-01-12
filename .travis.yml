@@ -43,19 +43,18 @@ install:
   - pip install -U pip wheel
   - pip install pytest hacking mock
   - pip install autopep8
-  - pip install cython mpi4py cffi
+  - pip install mpi4py cffi
   - pip install chainer==${CHAINER_VER}
-  - python setup.py develop --no-nccl
+  - python setup.py develop
 
 script:
   - flake8 .
-  - flake8 --config=.flake8.cython .
   - autopep8 -r . --global-config .pep8 | tee check_autopep8
   - test ! -s check_autopep8
   - export PYTHONWARNINGS='ignore::FutureWarning'
   - (for NP in 1 2; do mpiexec ${NOBIND} -n ${NP} pytest -s -v -m 'not gpu and not slow' || exit $?; done)
   - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
-      READTHEDOCS=True python setup.py develop --no-nccl;
+      READTHEDOCS=True python setup.py develop;
     fi
 
 dist: trusty

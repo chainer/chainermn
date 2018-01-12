@@ -43,8 +43,7 @@ class CommunicatorBase(object):
         if use_nccl and not nccl._available:
             raise RuntimeError(
                 'NCCL is not available. '
-                'Please confirm that NCCL can be found by dynamic linkers, '
-                'and ChainerMN is installed without --no-nccl flag.'
+                'Please confirm that NCCL is enabled in CuPy.'
             )
 
         self.use_nccl = use_nccl
