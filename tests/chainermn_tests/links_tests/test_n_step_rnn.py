@@ -84,3 +84,35 @@ def test_homogeneous_rnn_cpu():
 @chainer.testing.attr.gpu
 def test_homogeneous_rnn_gpu():
     check_homogeneous_rnn(True)
+
+
+def check_heterogeneous_rnn(gpu):
+    communicator, rank_next, rank_prev = create_communicator(gpu)
+
+    n, n_vocab, l = 100, 8, 10
+    # Number of model parameters are different among processes.
+    n_hid = (communicator.rank + 1) * 10
+
+    X = [np.random.randint(
+            0, n_vocab, size=np.random.randint(l//2, l+1), dtype=np.int32)
+         for _ in range(n)]
+    Y = (np.random.rand(n) * 2).astype(np.float32)
+    model = Model(n_vocab, n_hid, communicator, rank_next, rank_prev)
+
+    if gpu:
+        model.to_gpu()
+        X = chainer.cuda.to_gpu(X)
+        Y = chainer.cuda.to_gpu(Y)
+
+    for i in range(n):
+        err = model(X[i:i + 1], Y[i:i + 1])
+        err.backward()
+
+
+def test_heterogeneous_rnn_cpu():
+    check_homogeneous_rnn(False)
+
+
+@chainer.testing.attr.gpu
+def test_heterogeneous_rnn_gpu():
+    check_homogeneous_rnn(True)
