@@ -62,8 +62,8 @@ def check_homogeneous_rnn(gpu):
     n_hid = 2
 
     X = [np.random.randint(
-            0, n_vocab, size=np.random.randint(l//2, l+1), dtype=np.int32)
-         for _ in range(n)]
+        0, n_vocab, size=np.random.randint(l // 2, l + 1), dtype=np.int32)
+        for _ in range(n)]
     Y = (np.random.rand(n) * 2).astype(np.float32)
     model = Model(n_vocab, n_hid, communicator, rank_next, rank_prev)
 
@@ -94,8 +94,8 @@ def check_heterogeneous_rnn(gpu):
     n_hid = (communicator.rank + 1) * 10
 
     X = [np.random.randint(
-            0, n_vocab, size=np.random.randint(l//2, l+1), dtype=np.int32)
-         for _ in range(n)]
+        0, n_vocab, size=np.random.randint(l // 2, l + 1), dtype=np.int32)
+        for _ in range(n)]
     Y = (np.random.rand(n) * 2).astype(np.float32)
     model = Model(n_vocab, n_hid, communicator, rank_next, rank_prev)
 
