@@ -38,7 +38,7 @@ class TwoDimensionalCommunicator(_base.CommunicatorBase):
             params, itemsize, 'grad', self.gpu_buffer_a)
 
         # Intra-node reduce-scatter (1st dimension)
-        self.intra_nccl_comm.reduce_scatter(
+        self.intra_nccl_comm.reduceScatter(
             self.gpu_buffer_a.ptr(), self.gpu_buffer_b.ptr(),
             n_elems_per_node_1d, nccl.NCCL_FLOAT, nccl.NCCL_SUM, stream.ptr)
 
@@ -50,9 +50,9 @@ class TwoDimensionalCommunicator(_base.CommunicatorBase):
             n_bytes_per_node_2d, stream)
 
         # Intra-node allgather (1st dimension)
-        self.intra_nccl_comm.allgather(
-            self.gpu_buffer_b.ptr(), n_elems_per_node_1d, nccl.NCCL_FLOAT,
-            self.gpu_buffer_a.ptr(), stream.ptr)
+        self.intra_nccl_comm.allGather(
+            self.gpu_buffer_b.ptr(), self.gpu_buffer_a.ptr(),
+            n_elems_per_node_1d, nccl.NCCL_FLOAT, stream.ptr)
 
         _memory_utility.unpack_params(
             params, itemsize, 'grad', self.gpu_buffer_a)
