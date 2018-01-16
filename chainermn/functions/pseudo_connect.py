@@ -18,7 +18,10 @@ class PseudoConnect(chainer.Function):
 
         # delegate_variable do not need backward gradients, instead sending
         # back dummy grads in order to take consistency of shapes of grads.
-        grad_delegate_variable = xp.zeros_like(delegate_variable)
+        if delegate_variable is not None:
+            grad_delegate_variable = xp.zeros_like(delegate_variable)
+        else:
+            grad_delegate_variable = xp.array(0, dtype=xp.float32)
 
         # grad_outputs corresponds to grads of actual_variables.
         return tuple([grad_delegate_variable] + list(grad_outputs))

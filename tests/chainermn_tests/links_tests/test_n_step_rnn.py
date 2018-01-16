@@ -9,8 +9,7 @@ import pytest
 
 
 class Model(chainer.Chain):
-    def __init__(self, n_vocab, communicator, rank_next, rank_prev):
-        n_hid = 2
+    def __init__(self, n_vocab, n_hid, communicator, rank_next, rank_prev):
         n_layer = 1
         super(Model, self).__init__(
             l1=L.EmbedID(n_vocab, n_hid, ignore_label=-1),
@@ -58,10 +57,11 @@ def check_homogeneous_rnn(gpu):
     communicator, rank_next, rank_prev = create_communicator(gpu)
 
     n, n_vocab, l = 100, 8, 10
+    n_hid = 2
 
-    X = [np.random.randint(0, n_vocab, size=np.random.randint(l//2, l+1)) for _ in range(n)]
+    X = [np.random.randint(0, n_vocab, size=np.random.randint(l//2, l+1), dtype=np.int32) for _ in range(n)]
     Y = (np.random.rand(n) * 2).astype(np.float32)
-    model = Model(n_vocab, communicator, rank_next, rank_prev)
+    model = Model(n_vocab, n_hid, communicator, rank_next, rank_prev)
 
     if gpu:
         model.to_gpu()
