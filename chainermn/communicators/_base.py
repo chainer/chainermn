@@ -214,6 +214,101 @@ class CommunicatorBase(object):
 
         return tuple(ys)
 
+    def bcast(self, x, root=0):
+        """A primitive of inter-process broadcast communication.
+
+        This method tries to invoke broadcast communication within the
+        communicator. All processes in the communicator are expected to
+        invoke ``broadcast()``. This method relies on mpi4py fast communication
+        optimized for numpy arrays, as well as ``send()`` and ``recv()``.
+
+        Args:
+            x (numpy.array): Array to be broadcasted.
+
+        Returns:
+            ys (tuple of numpy.ndarray): Received arrays.
+        """
+        chainer.utils.experimental(
+            'chainermn.communicators.CommunicatorBase.bcast')
+
+        is_master = self.mpi_comm.rank == root
+
+        if is_master:
+            msgtype = _MessageType(x)
+        else:
+            msgtype = None
+
+        if msgtype.is_tuple:
+            raise ValueError('cannot broadcast tuple data')
+
+        msgtype = self.mpi_comm.bcast(msgtype, root)
+
+        shape = msgtype.shapes[0]
+
+        if is_master:
+            buf = _memory_utility.array_to_buffer_object(x)
+        else:
+            buf = numpy.empty(numpy.prod(shape), dtype=numpy.float32)
+        self.mpi_comm.Bcast(buf, root)
+        return buf.reshape(shape)
+
+    def gather(self, x, root=0):
+        """A primitive of inter-process gather communication.
+
+        This method tries to invoke gather communication within the
+        communicator. All processes in the communicator are expected to
+        invoke ``gather()``. This method relies on mpi4py fast communication
+        optimized for numpy arrays, as well as ``send()`` and ``recv()``.
+
+        Note that this method can only handle the same shapes of data
+        over all processes, and cannot handle tuple data.
+
+        Args:
+            x (numpy.array): Array to be gathered.
+
+        Returns:
+            ys (numpy.ndarray):
+                Received arrays with shape (#proc, [data-shape]).
+                ``None`` for non-root processes.
+        """
+        chainer.utils.experimental(
+            'chainermn.communicators.CommunicatorBase.gather')
+
+        is_master = self.mpi_comm.rank == root
+
+        if is_master:
+            msgtype = _MessageType(x)
+        else:
+            msgtype = None
+
+        msgtypes = self.mpi_comm.gather(msgtype, root)
+
+        # Type check.
+        shape = msgtype.shapes[0]
+        for msgtype in msgtypes:
+            if msgtype.is_tuple:
+                raise ValueError('gather cannot handle tuple data')
+
+            assert len(msgtype.shapes) == 1
+
+            if msgtype.shapes[0] != shape:
+                raise ValueError(
+                    'gather cannot handle different shapes of data')
+
+        # Gather data.
+        sbuf = _memory_utility.array_to_buffer_object(x)
+        if is_master:
+            shape = tuple([self.mpi_comm.size]) + shape
+            rbuf = numpy.empty(numpy.prod(shape), dtype=numpy.float32)
+        else:
+            rbuf = None
+        self.mpi_comm.Gather(sbuf, rbuf, root)
+
+        if is_master:
+            return rbuf.reshape(shape)
+        else:
+            return None
+
     def broadcast_data(self, model):
         raise NotImplementedError()
 
