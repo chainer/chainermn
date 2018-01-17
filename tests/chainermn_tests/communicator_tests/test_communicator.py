@@ -1,6 +1,7 @@
 import mpi4py.MPI
 import numpy as np
 import pytest
+import unittest
 
 import chainer
 import chainer.cuda
@@ -38,6 +39,7 @@ class Param(object):
     def __init__(self, param):
         self.gpu = False
         self.nccl1 = False
+        self.allreduce_grad_dtype = None
         self.__dict__.update(param)
 
 
@@ -69,6 +71,11 @@ gpu_params = [Param(p) for p in [
         'communicator_class': PureNcclCommunicator,
         'multi_node': True,
         'nccl1': False,
+    }, {
+        'communicator_class': PureNcclCommunicator,
+        'multi_node': True,
+        'nccl1': False,
+        'allreduce_grad_dtype': 'float16',
     }]]
 
 mpi_comm = mpi4py.MPI.COMM_WORLD
@@ -84,7 +91,10 @@ def create_communicator(param, use_gpu):
     if use_gpu and not param.nccl1 and nccl.get_version() < 2000:
         pytest.skip('This test requires NCCL version >= 2.0')
 
-    communicator = param.communicator_class(mpi_comm)
+    if param.allreduce_grad_dtype is not None:
+        communicator = param.communicator_class(mpi_comm, allreduce_grad_dtype=param.allreduce_grad_dtype)
+    else:
+        communicator = param.communicator_class(mpi_comm)
 
     if use_gpu:
         chainer.cuda.get_device(communicator.intra_rank).use()
@@ -215,3 +225,16 @@ def test_communicator_cpu(param):
 def test_communicator_gpu(param):
     check_send_recv(param, True)
     check_collective_communication(param, True)
+
+
+class TestPureNcclCommunicator(unittest.TestCase):
+
+    def setUp(self):
+        if nccl.get_version() < 2000:
+            pytest.skip('This test requires NCCL version >= 2.0')
+        self.mpi_comm = mpi4py.MPI.COMM_WORLD
+
+    @chainer.testing.attr.gpu
+    def test_invalid_allreduce_grad_dtype(self):
+        with self.assertRaises(ValueError):
+            comm = PureNcclCommunicator(self.mpi_comm, allreduce_grad_dtype='int32')

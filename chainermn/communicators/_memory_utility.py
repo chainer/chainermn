@@ -35,9 +35,9 @@ class HostPinnedMemory(object):
     def buffer(self, size):
         return self.ffi.buffer(self.cptr, size)
 
-    def array(self, count, offset=0):
+    def array(self, count, offset=0, dtype=cp.float32):
         return np.frombuffer(
-            self.memory, count=count, offset=offset, dtype=cp.float32)
+            self.memory, count=count, offset=offset, dtype=dtype)
 
 
 class DeviceMemory(object):
@@ -70,8 +70,8 @@ class DeviceMemory(object):
     def buffer(self, size):
         return self.ffi.buffer(self.ffi.cast('void *', self.memory.ptr), size)
 
-    def array(self, shape, offset=0):
-        return cp.ndarray(shape, memptr=self.memory + offset, dtype=cp.float32)
+    def array(self, shape, offset=0, dtype=cp.float32):
+        return cp.ndarray(shape, memptr=self.memory + offset, dtype=dtype)
 
 
 def extract_params(model):
