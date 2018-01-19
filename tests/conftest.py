@@ -11,6 +11,7 @@ else:
     else:
         _print_report = False
 
+
 def pytest_configure(config):
     if not _print_report:
         config.option.verbose = -1
