@@ -1,5 +1,5 @@
 def create_communicator(
-        communicator_name='hierarchical', mpi_comm=None):
+        communicator_name='hierarchical', mpi_comm=None, allreduce_grad_dtype=None):
     """Create a ChainerMN communicator.
 
     Different communicators provide different approaches of communication, so
@@ -31,6 +31,7 @@ def create_communicator(
           ``hierarchical``, ``two_dimensional``, ``pure_nccl``, or
           ``single_node``)
         mpi_comm: MPI4py communicator
+        allreduce_grad_dtype: Data type of gradient used in All-Reduce
 
     Returns:
         ChainerMN communicator
@@ -40,6 +41,10 @@ def create_communicator(
     if mpi_comm is None:
         import mpi4py.MPI
         mpi_comm = mpi4py.MPI.COMM_WORLD
+
+    if communicator_name != 'pure_nccl' and allreduce_grad_dtype is not None:
+        raise ValueError(
+            'allreduce_grad_dtype is not supported except for \'pure_nccl\'.')
 
     if communicator_name == 'naive':
         from chainermn.communicators.naive_communicator \
@@ -74,7 +79,8 @@ def create_communicator(
     elif communicator_name == 'pure_nccl':
         from chainermn.communicators.pure_nccl_communicator \
             import PureNcclCommunicator
-        return PureNcclCommunicator(mpi_comm=mpi_comm)
+        return PureNcclCommunicator(mpi_comm=mpi_comm, 
+                                    allreduce_grad_dtype=allreduce_grad_dtype)
 
     elif communicator_name == 'dummy':
         from chainermn.communicators.dummy_communicator \

@@ -103,9 +103,9 @@ class PureNcclCommunicator(_base.CommunicatorBase):
                                  _get_nccl_type_id(allreduce_grad_dtype), 
                                  nccl.NCCL_SUM,
                                  stream.ptr)
-        if stream != chainer.cuda.Stream.null:
-            stream.synchronize()
         if grad_dtype == allreduce_grad_dtype:
+            if stream != chainer.cuda.Stream.null:
+                stream.synchronize()
             ret = self.gpu_allreduce_grad_buffer_b.array(n_elems) * (1.0 / self.size)
             self.gpu_allreduce_grad_buffer_b.from_device(ret, allreduce_grad_n_bytes)
             _memory_utility.unpack_params(
@@ -119,6 +119,8 @@ class PureNcclCommunicator(_base.CommunicatorBase):
                 self.gpu_allreduce_grad_buffer_b.array(n_elems, dtype=allreduce_grad_dtype),
                 self.gpu_tmp_grad_buffer.array(n_elems, dtype=grad_dtype),
                 stream=stream)
+            if stream != chainer.cuda.Stream.null:
+                stream.synchronize()
             ret = self.gpu_tmp_grad_buffer.array(n_elems) * (1.0 / self.size)
             self.gpu_tmp_grad_buffer.from_device(ret, grad_n_bytes)
             _memory_utility.unpack_params(
