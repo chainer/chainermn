@@ -8,7 +8,6 @@ import re
 import sys
 import time
 
-from mpi4py import MPI
 from nltk.translate import bleu_score
 import numpy
 import six
@@ -367,7 +366,7 @@ def main():
 
     if comm.rank == 0:
         print('==========================================')
-        print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
+        print('Num process (COMM_WORLD): {}'.format(comm.size))
         if args.gpu:
             print('Using GPUs')
         print('Using {} communicator'.format(args.communicator))
@@ -437,8 +436,8 @@ def main():
         comm.mpi_comm.Barrier()
 
     # broadcast id -> word dictionary
-    source_ids = comm.mpi_comm.bcast(source_ids, root=0)
-    target_ids = comm.mpi_comm.bcast(target_ids, root=0)
+    source_ids = comm.bcast_obj(source_ids, root=0)
+    target_ids = comm.bcast_obj(target_ids, root=0)
 
     target_words = {i: w for w, i in target_ids.items()}
     source_words = {i: w for w, i in source_ids.items()}

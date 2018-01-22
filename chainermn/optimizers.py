@@ -25,7 +25,7 @@ class _MultiNodeOptimizer(object):
             del loss
 
         if self.is_changed(target):
-            self.communicator.broadcast_data(target)
+            self.communicator.bcast_data(target)
         else:
             self.communicator.allreduce_grad(target)
             self.actual_optimizer.update(None, *args, **kwds)
@@ -80,7 +80,7 @@ class _DoubleBufferingOptimizer(object):
 
         if self.is_changed(target, self.target_params_list[0]):
             self.wait()
-            self.communicator.broadcast_data(target)
+            self.communicator.bcast_data(target)
             super(_DoubleBufferingOptimizer, self).__setattr__(
                 'communicated_target', copy.deepcopy(target))
             super(_DoubleBufferingOptimizer, self).__setattr__(

@@ -135,7 +135,7 @@ def main():
     comm = chainermn.create_communicator(args.communicator)
     device = comm.intra_rank
 
-    if comm.mpi_comm.rank == 0:
+    if comm.rank == 0:
         print('==========================================')
         print('Num process (COMM_WORLD): {}'.format(comm.size))
         print('Using {} communicator'.format(args.communicator))

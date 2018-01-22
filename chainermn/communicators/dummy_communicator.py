@@ -1,9 +1,8 @@
-from chainermn.communicators import _base
-from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
+from chainermn.communicators import mpi_communicator_base
 
 
-class DummyCommunicator(_base.CommunicatorBase):
+class DummyCommunicator(mpi_communicator_base.MpiCommunicatorBase):
 
     """Dummy communicator that does not communicate at all.
 
@@ -15,9 +14,6 @@ class DummyCommunicator(_base.CommunicatorBase):
         super(DummyCommunicator, self).__init__(mpi_comm, use_nccl=True)
 
         self.gpu_buffer_a = _memory_utility.DeviceMemory()
-
-    def broadcast_data(self, model):
-        _communication_utility.broadcast_naive(self.mpi_comm, model)
 
     def allreduce_grad(self, model):
         self._init_comms()

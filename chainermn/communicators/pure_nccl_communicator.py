@@ -1,14 +1,14 @@
 import chainer.cuda
 
-from chainermn.communicators import _base
 from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
+from chainermn.communicators import mpi_communicator_base
 from chainermn import nccl
 
 import numpy as np
 
 
-class PureNcclCommunicator(_base.CommunicatorBase):
+class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
 
     def __init__(self, mpi_comm, allreduce_grad_dtype=None):
         super(PureNcclCommunicator, self).__init__(mpi_comm, True)
@@ -61,9 +61,6 @@ class PureNcclCommunicator(_base.CommunicatorBase):
         self.inter_mpi_comm = comms[1]
         self.intra_nccl_comm = comms[2]
         self.nccl_comm = comms[3]
-
-    def broadcast_data(self, model):
-        _communication_utility.broadcast_naive(self.mpi_comm, model)
 
     def allreduce_grad(self, model):
         stream = chainer.cuda.Stream.null
