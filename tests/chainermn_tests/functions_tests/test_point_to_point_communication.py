@@ -7,19 +7,14 @@ import pytest
 
 import chainermn
 import chainermn.functions
+from chainermn.testing import config
 
 
 class PointToPointCommunication(object):
 
     def __init__(self, gpu):
         self.gpu = gpu
-        if self.gpu:
-            self.communicator = chainermn.create_communicator('hierarchical')
-            device = self.communicator.intra_rank
-            chainer.cuda.get_device(device).use()
-        else:
-            self.communicator = chainermn.create_communicator('naive')
-            device = -1
+        self.communicator = config.get_communicator(gpu)
 
         if self.communicator.size < 2:
             pytest.skip("This test is for multinode")
