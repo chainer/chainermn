@@ -2,6 +2,7 @@ import chainer
 import copy
 import multiprocessing.pool
 
+
 class _MultiNodeOptimizer(object):
 
     def __init__(self, actual_optimizer, communicator):
@@ -83,7 +84,7 @@ class _DoubleBufferingOptimizer(object):
                 target.zerograds()
             loss.backward()
             del loss
-            
+
         if self.is_changed(target, self.target_params_list[0]):
             self.wait()
             self.communicator.broadcast_data(target)
@@ -130,7 +131,7 @@ class _DoubleBufferingOptimizer(object):
         for param1, param2 in zip(target1_params, target2_params):
             _, var1 = param1
             _, var2 = param2
-            var1.grad, var2.grad = var2.grad, var1.grad 
+            var1.grad, var2.grad = var2.grad, var1.grad
 
     def wait(self):
         if self.allreduce_grad_res is not None:
@@ -164,4 +165,3 @@ def create_multi_node_optimizer(actual_optimizer, communicator,
                 'This communicator does not support double buffering.')
         return _DoubleBufferingOptimizer(actual_optimizer, communicator)
     return _MultiNodeOptimizer(actual_optimizer, communicator)
-

@@ -10,11 +10,10 @@ import numpy as np
 class PureNcclCommunicator(_base.CommunicatorBase):
 
     def __init__(self, mpi_comm, allreduce_grad_dtype=None):
+        super(PureNcclCommunicator, self).__init__(mpi_comm, True)
         if nccl.get_version() < 2000:
             raise RuntimeError(
                 'PureNcclCommunicator is only supported on NCCL 2.0+')
-
-        super(PureNcclCommunicator, self).__init__(mpi_comm, True)
         self._init_ranks()
 
         self.inter_mpi_comm = None
@@ -98,7 +97,7 @@ class PureNcclCommunicator(_base.CommunicatorBase):
                 self.gpu_allreduce_grad_buffer_a.array(n_elems, dtype=allreduce_grad_dtype), 
                 stream=stream)
 
-        self.nccl_comm.allreduce(self.gpu_allreduce_grad_buffer_a.ptr(),
+        self.nccl_comm.allReduce(self.gpu_allreduce_grad_buffer_a.ptr(),
                                  self.gpu_allreduce_grad_buffer_b.ptr(), n_elems,
                                  _get_nccl_type_id(allreduce_grad_dtype), 
                                  nccl.NCCL_SUM,

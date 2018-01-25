@@ -185,6 +185,25 @@ configuration is ready.::
 
   OK (SKIP=10)
 
+.. _check-nccl:
+
+Check if NCCL is enabled in CuPy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+CuPy requires NCCL to be enabled. You can check it with the following command.::
+  
+  $ python -c 'from cupy.cuda import nccl'
+
+If you get an output like below, NCCL is not enabled in CuPy.
+Please check the installation guide of CuPy.::
+
+  Traceback (most recent call last):
+
+   File "<string>", line 1, in <module>
+
+  ImportError: cannot import name 'nccl'
+
+
 Multi-node environment
 -----------------------
 
