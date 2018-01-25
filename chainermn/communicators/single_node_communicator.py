@@ -51,7 +51,7 @@ class SingleNodeCommunicator(_base.CommunicatorBase):
         _memory_utility.pack_params(
             params, itemsize, 'grad', self.gpu_buffer_a)
 
-        self.intra_nccl_comm.allreduce(
+        self.intra_nccl_comm.allReduce(
             self.gpu_buffer_a.ptr(), self.gpu_buffer_b.ptr(), n_elems_total,
             nccl.NCCL_FLOAT, nccl.NCCL_SUM, stream.ptr)
 

@@ -2,6 +2,7 @@ import copy
 import functools
 
 import chainer
+import chainer.testing
 import numpy
 import pytest
 

@@ -7,6 +7,7 @@ import tempfile
 import chainer
 import chainer.functions as F
 import chainer.links as L
+import chainer.testing
 from chainer import training
 from chainer.training import extensions
 
