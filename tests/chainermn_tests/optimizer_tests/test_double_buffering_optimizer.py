@@ -5,6 +5,7 @@ import chainermn
 from chainermn import nccl
 import mock
 import numpy as np
+import pytest
 import unittest
 
 
@@ -23,7 +24,7 @@ class TestDoubleBufferingOptimizer(unittest.TestCase):
     def setup_gpu(self, device=None):
         self.comm = chainermn.create_communicator('pure_nccl')
         if nccl.get_version() < 2000:
-            raise nose.plugins.skip.SkipTest()
+            pytest.skip('This test requires NCCL version >= 2.0')
         device = self.comm.intra_rank
         chainer.cuda.get_device(device).use()
         self.target = ExampleModel()
@@ -100,7 +101,7 @@ class TestDoubleBufferingOptimizerWithDynamicModel(unittest.TestCase):
     def setup_gpu(self, device=None):
         self.comm = chainermn.create_communicator('pure_nccl')
         if nccl.get_version() < 2000:
-            raise nose.plugins.skip.SkipTest()
+            pytest.skip('This test requires NCCL version >= 2.0')
         device = self.comm.intra_rank
         chainer.cuda.get_device(device).use()
         self.target = DynamicExampleModel()
