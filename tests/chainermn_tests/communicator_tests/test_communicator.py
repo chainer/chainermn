@@ -91,7 +91,7 @@ def create_communicator(param, use_gpu):
     if use_gpu and not param.nccl1 and nccl.get_version() < 2000:
         pytest.skip('This test requires NCCL version >= 2.0')
 
-    if param.allreduce_grad_dtype is not None:
+    if param.dtype is not None:
         communicator = \
             param.communicator_class(mpi_comm,
                                      allreduce_grad_dtype=param.dtype)
