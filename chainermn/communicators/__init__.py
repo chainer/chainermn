@@ -1,5 +1,8 @@
+
+
 def create_communicator(
-        communicator_name='hierarchical', mpi_comm=None, allreduce_grad_dtype=None):
+        communicator_name='hierarchical', mpi_comm=None,
+        allreduce_grad_dtype=None):
     """Create a ChainerMN communicator.
 
     Different communicators provide different approaches of communication, so
@@ -79,7 +82,7 @@ def create_communicator(
     elif communicator_name == 'pure_nccl':
         from chainermn.communicators.pure_nccl_communicator \
             import PureNcclCommunicator
-        return PureNcclCommunicator(mpi_comm=mpi_comm, 
+        return PureNcclCommunicator(mpi_comm=mpi_comm,
                                     allreduce_grad_dtype=allreduce_grad_dtype)
 
     elif communicator_name == 'dummy':

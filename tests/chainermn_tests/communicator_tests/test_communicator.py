@@ -39,7 +39,7 @@ class Param(object):
     def __init__(self, param):
         self.gpu = False
         self.nccl1 = False
-        self.allreduce_grad_dtype = None
+        self.dtype = None
         self.__dict__.update(param)
 
 
@@ -75,7 +75,7 @@ gpu_params = [Param(p) for p in [
         'communicator_class': PureNcclCommunicator,
         'multi_node': True,
         'nccl1': False,
-        'allreduce_grad_dtype': 'float16',
+        'dtype': 'float16',
     }]]
 
 mpi_comm = mpi4py.MPI.COMM_WORLD
@@ -92,7 +92,9 @@ def create_communicator(param, use_gpu):
         pytest.skip('This test requires NCCL version >= 2.0')
 
     if param.allreduce_grad_dtype is not None:
-        communicator = param.communicator_class(mpi_comm, allreduce_grad_dtype=param.allreduce_grad_dtype)
+        communicator = \
+            param.communicator_class(mpi_comm,
+                                     allreduce_grad_dtype=param.dtype)
     else:
         communicator = param.communicator_class(mpi_comm)
 
@@ -237,4 +239,4 @@ class TestPureNcclCommunicator(unittest.TestCase):
     @chainer.testing.attr.gpu
     def test_invalid_allreduce_grad_dtype(self):
         with self.assertRaises(ValueError):
-            comm = PureNcclCommunicator(self.mpi_comm, allreduce_grad_dtype='int32')
+            PureNcclCommunicator(self.mpi_comm, allreduce_grad_dtype='int32')
