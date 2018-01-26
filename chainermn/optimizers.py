@@ -69,7 +69,7 @@ class _DoubleBufferingOptimizer(object):
         super(_DoubleBufferingOptimizer, self).__setattr__(
             'target_params_list', [[], []])
         super(_DoubleBufferingOptimizer, self).__setattr__(
-            'allreduce_grad_res', None)
+            'allreduce_grad_result', None)
         super(_DoubleBufferingOptimizer, self).__setattr__(
             'allreduce_grad_stream', chainer.cuda.Stream(non_blocking=True))
 
@@ -102,7 +102,7 @@ class _DoubleBufferingOptimizer(object):
             self.swap_grad(self.target_params_list[0],
                            self.target_params_list[1])
             super(_DoubleBufferingOptimizer, self).__setattr__(
-                'allreduce_grad_res',
+                'allreduce_grad_result',
                 self.thread_pool.apply_async(self.allreduce_grad))
             if self.needs_update:
                 self.actual_optimizer.update(None, *args, **kwds)
@@ -134,8 +134,8 @@ class _DoubleBufferingOptimizer(object):
             var1.grad, var2.grad = var2.grad, var1.grad
 
     def wait(self):
-        if self.allreduce_grad_res is not None:
-            self.allreduce_grad_res.get()
+        if self.allreduce_grad_result is not None:
+            self.allreduce_grad_result.get()
 
     def __getattr__(self, attr_name):
         return getattr(self.actual_optimizer, attr_name)
@@ -152,8 +152,13 @@ def create_multi_node_optimizer(actual_optimizer, communicator,
         actual_optimizer: Chainer optimizer
             (e.g., ``chainer.optimizers.Adam``).
         communicator: ChainerMN communicator.
-        double_buffering: double buffering flag. It is supported
-            by PureNcclCommunicator only.
+        double_buffering: If ``True``, all-reduce and other
+             processing (such as forward and backward) are
+             overlaped using double buffering.
+             There are cases where accuracy is affected because
+             the gradients of the previous iteration are used
+             for update. This flag is supported by
+             ``PureNcclCommunicator`` only.
     Returns:
         The multi node optimizer based on ``actual_optimizer``.
     """
