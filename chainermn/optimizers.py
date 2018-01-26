@@ -154,7 +154,7 @@ def create_multi_node_optimizer(actual_optimizer, communicator,
         communicator: ChainerMN communicator.
         double_buffering: If ``True``, all-reduce and other
              processing (such as forward and backward) are
-             overlaped using double buffering.
+             overlapped using double buffering.
              There are cases where accuracy is affected because
              the gradients of the previous iteration are used
              for update. This flag is supported by
