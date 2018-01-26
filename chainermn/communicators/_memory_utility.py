@@ -70,7 +70,7 @@ class DeviceMemory(object):
     def buffer(self, size):
         return self.ffi.buffer(self.ffi.cast('void *', self.memory.ptr), size)
 
-    def array(self, shape, offset=0, dtype=cp.float32):
+    def array(self, shape, offset=0, dtype=np.float32):
         return cp.ndarray(shape, memptr=self.memory + offset, dtype=dtype)
 
 
