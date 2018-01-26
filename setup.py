@@ -22,5 +22,6 @@ setup(
     author_email='akiba@preferred.jp',
     packages=find_packages(),
     install_requires=install_requires,
-    test_requires=['pytest']
+    tests_require=['mock',
+                   'pytest'],
 )
