@@ -35,7 +35,7 @@ class HostPinnedMemory(object):
     def buffer(self, size):
         return self.ffi.buffer(self.cptr, size)
 
-    def array(self, count, offset=0, dtype=cp.float32):
+    def array(self, count, offset=0, dtype=np.float32):
         return np.frombuffer(
             self.memory, count=count, offset=offset, dtype=dtype)
 
