@@ -31,7 +31,8 @@ class PureNcclCommunicator(_base.CommunicatorBase):
             if self.allreduce_grad_dtype.kind != 'f':
                 raise ValueError(
                     'allreduce_grad_dtype must be'
-                    'float16, float32, float64, or None.')
+                    'numpy.float16, numpy.float32,'
+                    'numpy.float64, or None.')
         else:
             self.allreduce_grad_dtype = None
         self.grad_dtype_to_allreduce_dtype_kernel = None

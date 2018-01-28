@@ -75,7 +75,7 @@ gpu_params = [Param(p) for p in [
         'communicator_class': PureNcclCommunicator,
         'multi_node': True,
         'nccl1': False,
-        'dtype': 'float16',
+        'dtype': np.float16,
     }]]
 
 mpi_comm = mpi4py.MPI.COMM_WORLD
@@ -239,4 +239,4 @@ class TestPureNcclCommunicator(unittest.TestCase):
     @chainer.testing.attr.gpu
     def test_invalid_allreduce_grad_dtype(self):
         with self.assertRaises(ValueError):
-            PureNcclCommunicator(self.mpi_comm, allreduce_grad_dtype='int32')
+            PureNcclCommunicator(self.mpi_comm, allreduce_grad_dtype=np.int32)
