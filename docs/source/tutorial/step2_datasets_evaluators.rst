@@ -49,8 +49,7 @@ from a standard evaluator by using method ``create_multi_node_evaluator``.
 It behaves exactly the same as the given original evaluator
 except that it reports the average of results over all workers.
 
-The following line from the original MNIST example adds an evalautor extension to the trainer::
-
+The following line from the original MNIST example adds an evaluator extension to the trainer::
   trainer.extend(extensions.Evaluator(test_iter, model, device=args.gpu))
 
 To create and use a multi-node evaluator, we modify that part as follows::
