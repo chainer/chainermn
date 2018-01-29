@@ -152,7 +152,6 @@ class TestDoubleBufferingOptimizerWithDynamicModel(unittest.TestCase):
             self.optimizer.communicated_target.b.W.grad,
             (base + 4) * np.ones((4, 3)))
 
-
         with self.target.init_scope():
             c = chainer.links.Linear(4, 4)
             c.to_gpu()
@@ -186,7 +185,7 @@ class TestDoubleBufferingOptimizerWithDynamicModel(unittest.TestCase):
             self.optimizer.communicated_target.c.W.grad,
             (base + 8) * np.ones((4, 4)))
 
-        self.optimizer.target.a.W.grad[:] = self.comm.rank + 9 
+        self.optimizer.target.a.W.grad[:] = self.comm.rank + 9
         self.optimizer.target.b.W.grad[:] = self.comm.rank + 10
         self.optimizer.target.c.W.grad[:] = self.comm.rank + 11
         self.optimizer.update()

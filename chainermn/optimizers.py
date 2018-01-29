@@ -98,7 +98,7 @@ class _DoubleBufferingOptimizer(object):
                     list(sorted(self.target.namedparams())),
                     list(sorted(self.communicated_target.namedparams()))])
             super(_DoubleBufferingOptimizer, self).__setattr__(
-                    'needs_update', False)
+                'needs_update', False)
         else:
             self.wait()
             self.swap_grad(self.target_params_list[0],
