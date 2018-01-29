@@ -6,7 +6,7 @@ import os
 
 install_requires = [
     'cffi',
-    'chainer >=3.0.0',
+    'chainer >=3.3.0',
     'mpi4py',
 ]
 
