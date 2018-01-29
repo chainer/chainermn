@@ -22,9 +22,9 @@ class ExampleModel(chainer.Chain):
 class TestDoubleBufferingOptimizer(unittest.TestCase):
 
     def setup_gpu(self, device=None):
-        self.comm = chainermn.create_communicator('pure_nccl')
         if nccl.get_version() < 2000:
             pytest.skip('This test requires NCCL version >= 2.0')
+        self.comm = chainermn.create_communicator('pure_nccl')
         device = self.comm.intra_rank
         chainer.cuda.get_device(device).use()
         self.target = ExampleModel()
@@ -99,9 +99,9 @@ class DynamicExampleModel(chainer.Chain):
 class TestDoubleBufferingOptimizerWithDynamicModel(unittest.TestCase):
 
     def setup_gpu(self, device=None):
-        self.comm = chainermn.create_communicator('pure_nccl')
         if nccl.get_version() < 2000:
             pytest.skip('This test requires NCCL version >= 2.0')
+        self.comm = chainermn.create_communicator('pure_nccl')
         device = self.comm.intra_rank
         chainer.cuda.get_device(device).use()
         self.target = DynamicExampleModel()
@@ -122,6 +122,37 @@ class TestDoubleBufferingOptimizerWithDynamicModel(unittest.TestCase):
         self.optimizer.update()
         self.assertEqual(self.actual_optimizer.t, 0)
 
+        self.optimizer.target.a.W.grad[:] = self.comm.rank
+        self.optimizer.target.b.W.grad[:] = self.comm.rank + 1
+
+        self.optimizer.update()
+        self.optimizer.wait()
+        self.assertEqual(self.actual_optimizer.t, 0)
+        base = (self.comm.size - 1.0) / 2
+        chainer.testing.assert_allclose(
+            self.optimizer.communicated_target.a.W.grad,
+            (base + 0) * np.ones((3, 2)))
+        chainer.testing.assert_allclose(
+            self.optimizer.communicated_target.b.W.grad,
+            (base + 1) * np.ones((4, 3)))
+
+        self.optimizer.target.a.W.grad[:] = self.comm.rank + 3
+        self.optimizer.target.b.W.grad[:] = self.comm.rank + 4
+        self.optimizer.update()
+        self.optimizer.wait()
+        self.assertEqual(self.actual_optimizer.t, 1)
+        self.optimizer.target.a.W.update_rule.update.assert_called_once_with(
+            self.optimizer.target.a.W)
+        self.optimizer.target.b.W.update_rule.update.assert_called_once_with(
+            self.optimizer.target.b.W)
+        chainer.testing.assert_allclose(
+            self.optimizer.communicated_target.a.W.grad,
+            (base + 3) * np.ones((3, 2)))
+        chainer.testing.assert_allclose(
+            self.optimizer.communicated_target.b.W.grad,
+            (base + 4) * np.ones((4, 3)))
+
+
         with self.target.init_scope():
             c = chainer.links.Linear(4, 4)
             c.to_gpu()
@@ -137,9 +168,9 @@ class TestDoubleBufferingOptimizerWithDynamicModel(unittest.TestCase):
         for i in range(1, self.comm.size):
             chainer.testing.assert_allclose(recv_buf[0], recv_buf[i])
 
-        self.optimizer.target.a.W.grad[:] = self.comm.rank
-        self.optimizer.target.b.W.grad[:] = self.comm.rank + 1
-        self.optimizer.target.c.W.grad[:] = self.comm.rank + 2
+        self.optimizer.target.a.W.grad[:] = self.comm.rank + 6
+        self.optimizer.target.b.W.grad[:] = self.comm.rank + 7
+        self.optimizer.target.c.W.grad[:] = self.comm.rank + 8
 
         self.optimizer.update()
         self.optimizer.wait()
@@ -147,17 +178,17 @@ class TestDoubleBufferingOptimizerWithDynamicModel(unittest.TestCase):
         base = (self.comm.size - 1.0) / 2
         chainer.testing.assert_allclose(
             self.optimizer.communicated_target.a.W.grad,
-            (base + 0) * np.ones((3, 2)))
+            (base + 6) * np.ones((3, 2)))
         chainer.testing.assert_allclose(
             self.optimizer.communicated_target.b.W.grad,
-            (base + 1) * np.ones((4, 3)))
+            (base + 7) * np.ones((4, 3)))
         chainer.testing.assert_allclose(
             self.optimizer.communicated_target.c.W.grad,
-            (base + 2) * np.ones((4, 4)))
+            (base + 8) * np.ones((4, 4)))
 
-        self.optimizer.target.a.W.grad[:] = self.comm.rank + 3
-        self.optimizer.target.b.W.grad[:] = self.comm.rank + 4
-        self.optimizer.target.c.W.grad[:] = self.comm.rank + 5
+        self.optimizer.target.a.W.grad[:] = self.comm.rank + 9 
+        self.optimizer.target.b.W.grad[:] = self.comm.rank + 10
+        self.optimizer.target.c.W.grad[:] = self.comm.rank + 11
         self.optimizer.update()
         self.optimizer.wait()
         self.assertEqual(self.actual_optimizer.t, 1)
@@ -169,10 +200,10 @@ class TestDoubleBufferingOptimizerWithDynamicModel(unittest.TestCase):
             self.optimizer.target.c.W)
         chainer.testing.assert_allclose(
             self.optimizer.communicated_target.a.W.grad,
-            (base + 3) * np.ones((3, 2)))
+            (base + 9) * np.ones((3, 2)))
         chainer.testing.assert_allclose(
             self.optimizer.communicated_target.b.W.grad,
-            (base + 4) * np.ones((4, 3)))
+            (base + 10) * np.ones((4, 3)))
         chainer.testing.assert_allclose(
             self.optimizer.communicated_target.c.W.grad,
-            (base + 5) * np.ones((4, 4)))
+            (base + 11) * np.ones((4, 4)))
