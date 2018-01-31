@@ -56,13 +56,19 @@ class DeviceMemory(object):
             self.size = size
             self.memory = cp.cuda.alloc(size)
 
-    def from_device(self, src, size, offset=0):
+    def from_device(self, src, size, offset=0, stream=None):
         dst = self.memory + offset
-        dst.copy_from_device(src.data, size)
+        if stream is None:
+            dst.copy_from_device(src.data, size)
+        else:
+            dst.copy_from_device_async(src.data, size, stream)
 
-    def to_device(self, dst, size, offset=0):
+    def to_device(self, dst, size, offset=0, stream=None):
         src = self.memory + offset
-        dst.data.copy_from_device(src, size)
+        if stream is None:
+            dst.data.copy_from_device(src, size)
+        else:
+            dst.data.copy_from_device_async(src, size, stream)
 
     def ptr(self):
         return self.memory.ptr
@@ -79,21 +85,21 @@ def extract_params(model):
             if param.grad is not None]
 
 
-def pack_params(params, itemsize, attr_name, buffer):
+def pack_params(params, itemsize, attr_name, buffer, stream=None):
     offset = 0
     for param in params:
         grad = getattr(param, attr_name)
         size = grad.size * itemsize
-        buffer.from_device(grad, size, offset)
+        buffer.from_device(grad, size, offset, stream)
         offset += size
 
 
-def unpack_params(params, itemsize, attr_name, buffer):
+def unpack_params(params, itemsize, attr_name, buffer, stream=None):
     offset = 0
     for param in params:
         grad = getattr(param, attr_name)
         size = grad.size * itemsize
-        buffer.to_device(grad, size, offset)
+        buffer.to_device(grad, size, offset, stream)
         offset += size
 
 
