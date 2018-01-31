@@ -102,6 +102,8 @@ class PureNcclCommunicator(_base.CommunicatorBase):
             _memory_utility.pack_params(
                 params, grad_dtype.itemsize, 'grad',
                 self.gpu_allreduce_buffer_a)
+            if stream != chainer.cuda.Stream.null:
+                chainer.cuda.Stream.null.synchronize()
         else:
             if self.grad_dtype_to_allreduce_dtype_kernel is None:
                 self.grad_dtype_to_allreduce_dtype_kernel = \
@@ -111,6 +113,8 @@ class PureNcclCommunicator(_base.CommunicatorBase):
             _memory_utility.pack_params(
                 params, grad_dtype.itemsize, 'grad',
                 self.gpu_tmp_buffer)
+            if stream != chainer.cuda.Stream.null:
+                chainer.cuda.Stream.null.synchronize()
             self.grad_dtype_to_allreduce_dtype_kernel(
                 self.gpu_tmp_buffer.array(n_elems, dtype=grad_dtype),
                 self.gpu_allreduce_buffer_a.array(n_elems,
