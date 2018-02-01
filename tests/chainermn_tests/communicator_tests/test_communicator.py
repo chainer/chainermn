@@ -107,9 +107,10 @@ def create_communicator(param, use_gpu):
         pytest.skip('This test requires NCCL version >= 2.0')
 
     if param.allreduce_grad_dtype is not None:
+        dtype = param.allreduce_grad_dtype
         communicator = \
             param.communicator_class(mpi_comm,
-                                     allreduce_grad_dtype=param.allreduce_grad_dtype)
+                                     allreduce_grad_dtype=dtype)
     else:
         communicator = param.communicator_class(mpi_comm)
 
@@ -255,4 +256,3 @@ class TestPureNcclCommunicator(unittest.TestCase):
     def test_invalid_allreduce_grad_dtype(self):
         with self.assertRaises(ValueError):
             PureNcclCommunicator(self.mpi_comm, allreduce_grad_dtype=np.int32)
-

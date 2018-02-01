@@ -85,7 +85,9 @@ class PureNcclCommunicator(_base.CommunicatorBase):
                                  nccl.NCCL_SUM, stream.ptr)
         if stream != chainer.cuda.Stream.null:
             stream.synchronize()
-        ret = self.gpu_allreduce_buffer_b.array(n_elems, dtype=allreduce_grad_dtype) * (1.0/self.size)
+        ret = self.gpu_allreduce_buffer_b.array(n_elems,
+                                                dtype=allreduce_grad_dtype) \
+            * (1.0/self.size)
         allreduce_grad_n_bytes = allreduce_grad_dtype.itemsize * n_elems
         self.gpu_allreduce_buffer_b.from_device(ret, allreduce_grad_n_bytes)
         self._unpack_params_from_buffer(params, grad_dtype,
@@ -109,9 +111,12 @@ class PureNcclCommunicator(_base.CommunicatorBase):
             _memory_utility.pack_params(
                 params, grad_dtype.itemsize, 'grad',
                 self.gpu_tmp_buffer)
-            ret = self.gpu_tmp_buffer.array(n_elems, dtype=grad_dtype).astype(allreduce_grad_dtype)
+            ret = self.gpu_tmp_buffer.array(n_elems,
+                                            dtype=grad_dtype).astype(
+                                                allreduce_grad_dtype)
             allreduce_grad_n_bytes = allreduce_grad_dtype.itemsize * n_elems
-            self.gpu_allreduce_buffer_a.from_device(ret, allreduce_grad_n_bytes)
+            self.gpu_allreduce_buffer_a.from_device(ret,
+                                                    allreduce_grad_n_bytes)
 
     def _unpack_params_from_buffer(self, params, grad_dtype,
                                    allreduce_grad_dtype, n_elems):
@@ -120,7 +125,9 @@ class PureNcclCommunicator(_base.CommunicatorBase):
                 params, allreduce_grad_dtype.itemsize, 'grad',
                 self.gpu_allreduce_buffer_b)
         else:
-            ret = self.gpu_allreduce_buffer_b.array(n_elems, dtype=allreduce_grad_dtype).astype(grad_dtype)
+            ret = self.gpu_allreduce_buffer_b.array(
+                n_elems,
+                dtype=allreduce_grad_dtype).astype(grad_dtype)
             grad_n_bytes = grad_dtype.itemsize * n_elems
             self.gpu_tmp_buffer.from_device(ret, grad_n_bytes)
             _memory_utility.unpack_params(
