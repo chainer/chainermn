@@ -39,6 +39,7 @@ Functions
 .. autofunction:: chainermn.functions.recv
 .. autofunction:: chainermn.functions.pseudo_connect
 .. autofunction:: chainermn.functions.all_to_all
+.. autofunction:: chainermn.functions.bcast
 
 
 Iterators
