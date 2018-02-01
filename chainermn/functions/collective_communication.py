@@ -64,9 +64,9 @@ class Bcast(chainer.Function):
                 gxs = cuda.to_gpu(gxs, device=self.device)
 
             if self.comm.rank == self.root:
-                return chainer.functions.sum(gxs, axis=0)
+                return gxs.sum(axis=0),
             else:
-                return None
+                return None,
 
 
 def all_to_all(comm, xs, device=-1):

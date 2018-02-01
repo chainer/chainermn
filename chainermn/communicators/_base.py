@@ -276,24 +276,21 @@ class CommunicatorBase(object):
 
         is_master = self.mpi_comm.rank == root
 
-        if is_master:
-            msgtype = _MessageType(x)
-        else:
-            msgtype = None
-
+        msgtype = _MessageType(x)
         msgtypes = self.mpi_comm.gather(msgtype, root)
 
         # Type check.
-        shape = msgtype.shapes[0]
-        for msgtype in msgtypes:
-            if msgtype.is_tuple:
-                raise ValueError('gather cannot handle tuple data')
+        if is_master:
+            shape = msgtype.shapes[0]
+            for msgtype in msgtypes:
+                if msgtype.is_tuple:
+                    raise ValueError('gather cannot handle tuple data')
 
-            assert len(msgtype.shapes) == 1
+                assert len(msgtype.shapes) == 1
 
-            if msgtype.shapes[0] != shape:
-                raise ValueError(
-                    'gather cannot handle different shapes of data')
+                if msgtype.shapes[0] != shape:
+                    raise ValueError(
+                        'gather cannot handle different shapes of data')
 
         # Gather data.
         sbuf = _memory_utility.array_to_buffer_object(x)

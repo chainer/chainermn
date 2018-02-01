@@ -11,7 +11,7 @@ import chainermn.functions
 
 class TestCollectiveCommunication(unittest.TestCase):
 
-    def create_communicator_and_device(self, gpu):
+    def setup(self, gpu):
         if gpu:
             self.communicator = chainermn.create_communicator('hierarchical')
             self.device = self.communicator.intra_rank
@@ -36,7 +36,7 @@ class TestCollectiveCommunication(unittest.TestCase):
         self.assertTrue(xs[0].grad is not None)
 
     def test_all_to_all_cpu(self):
-        self.create_communicator_and_device(False)
+        self.setup(False)
         data = [
             chainer.Variable(numpy.zeros(
                 (self.communicator.rank, i), dtype=numpy.float32))
@@ -45,7 +45,7 @@ class TestCollectiveCommunication(unittest.TestCase):
 
     @chainer.testing.attr.gpu
     def test_all_to_all_gpu(self):
-        self.create_communicator_and_device(True)
+        self.setup(True)
 
         chainer.cuda.get_device_from_id(self.device).use()
         data = [
@@ -55,3 +55,20 @@ class TestCollectiveCommunication(unittest.TestCase):
         for x in data:
             x.to_gpu()
         self.check_all_to_all(data)
+
+    def check_bcast(self, x):
+        root = 0
+        y = chainermn.functions.bcast(self.communicator, x, root=root)
+        e = chainer.functions.mean_squared_error(y, x)
+        e.backward()
+
+        # Check backward does not fall in deadlock, and error = 0 in root.
+        if self.communicator.rank == root:
+            self.assertEqual(e.data, 0)
+            self.assertEqual(e.grad, 1)
+
+    def test_bcast_cpu(self):
+        self.setup(False)
+        x = chainer.Variable(
+            numpy.random.normal(size=(100, 100)).astype(numpy.float32))
+        self.check_bcast(x)
