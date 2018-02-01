@@ -238,7 +238,7 @@ class CommunicatorBase(object):
         else:
             msgtype = None
 
-        if msgtype.is_tuple:
+        if msgtype is not None and msgtype.is_tuple:
             raise ValueError('cannot broadcast tuple data')
 
         msgtype = self.mpi_comm.bcast(msgtype, root)

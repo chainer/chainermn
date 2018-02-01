@@ -45,7 +45,7 @@ class Bcast(chainer.Function):
 
     def forward(self, inputs):
         if self.comm.rank == self.root:
-            x = inputs,
+            x, = inputs
         else:
             x = None
         x = self.comm.bcast(x, self.root)

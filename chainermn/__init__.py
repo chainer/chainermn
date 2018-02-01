@@ -4,6 +4,7 @@ from chainermn import communicators  # NOQA
 from chainermn import datasets  # NOQA
 from chainermn import extensions  # NOQA
 from chainermn import functions  # NOQA
+from chainermn import iterators  # NOQA
 from chainermn import links  # NOQA
 from chainermn import optimizers  # NOQA
 

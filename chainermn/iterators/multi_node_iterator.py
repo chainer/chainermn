@@ -1,3 +1,4 @@
+import numpy
 import chainer
 import chainermn
 
@@ -11,9 +12,26 @@ class _MultiNodeIterator_Master(object):
         self.device = device
 
     def __next__(self):
-        batch = self.actual_iterator.__next__()
-        return chainermn.functions.bcast(
-            self.communicator, batch, self.rank_master, self.device)
+        try:
+            batch = self.actual_iterator.__next__()
+            stop = False
+        except StopIteration:
+            stop = True
+
+        # Broadcast whether stop signal is received before broadcasting data.
+        # TODO(tsutsumi): should we prepare API to broadcast flag?
+        _stop = numpy.ones((1, ), dtype=numpy.float32) * int(stop)
+        self.communicator.bcast(_stop, root=self.rank_master)
+
+        if not stop:
+            if isinstance(batch, list):
+                batch = numpy.array(batch)
+            return chainermn.functions.bcast(
+                self.communicator, batch, self.rank_master, self.device)
+        else:
+            raise StopIteration
+
+    next = __next__
 
     def __getattr__(self, attr_name):
         return getattr(self.actual_iterator, attr_name)
@@ -22,7 +40,7 @@ class _MultiNodeIterator_Master(object):
         setattr(self.actual_iterator, attr_name, value)
 
 
-class _MultiNodeIterator_Slave(chainer.iterators.Iterator):
+class _MultiNodeIterator_Slave(chainer.dataset.iterator.Iterator):
 
     def __init__(self, communicator, rank_master, device):
         super(_MultiNodeIterator_Slave, self).__init__()
@@ -31,8 +49,15 @@ class _MultiNodeIterator_Slave(chainer.iterators.Iterator):
         self.device = device
 
     def __next__(self):
-        return chainermn.functions.bcast(
-            self.communicator, None, self.rank_master, self.device)
+        # Check if master iterator received stop signal.
+        stop = None
+        stop = self.communicator.bcast(stop, root=self.rank_master)
+
+        if not int(stop):
+            return chainermn.functions.bcast(
+                self.communicator, None, self.rank_master, self.device)
+        else:
+            raise StopIteration
 
 
 def create_multi_node_iterator(
