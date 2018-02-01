@@ -6,7 +6,7 @@ import os
 
 install_requires = [
     'cffi',
-    'chainer >=3.0.0',
+    'chainer >=3.3.0, !=4.0.0b2, != 4.0.0b1, != 4.0.0a1',
     'mpi4py',
 ]
 
@@ -22,5 +22,6 @@ setup(
     author_email='akiba@preferred.jp',
     packages=find_packages(),
     install_requires=install_requires,
-    test_requires=['pytest']
+    tests_require=['mock',
+                   'pytest'],
 )

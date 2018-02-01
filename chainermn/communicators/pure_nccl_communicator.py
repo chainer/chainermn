@@ -49,9 +49,10 @@ class PureNcclCommunicator(_base.CommunicatorBase):
     def broadcast_data(self, model):
         _communication_utility.broadcast_naive(self.mpi_comm, model)
 
-    def allreduce_grad(self, model):
+    def allreduce_grad(self, model, stream=None):
         self._init_comms()
-        stream = chainer.cuda.Stream.null
+        if stream is None:
+            stream = chainer.cuda.Stream.null
 
         params = _memory_utility.extract_params(model)
         itemsize = 4
@@ -66,6 +67,8 @@ class PureNcclCommunicator(_base.CommunicatorBase):
                                  self.gpu_buffer_b.ptr(), n_elems,
                                  nccl.NCCL_FLOAT, nccl.NCCL_SUM,
                                  stream.ptr)
+        if stream != chainer.cuda.Stream.null:
+            stream.synchronize()
         ret = self.gpu_buffer_b.array(n_elems) * (1.0 / self.size)
         self.gpu_buffer_b.from_device(ret, n_bytes)
         _memory_utility.unpack_params(
