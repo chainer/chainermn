@@ -58,7 +58,7 @@ class TestCollectiveCommunication(unittest.TestCase):
 
     def check_bcast(self, x):
         root = 0
-        y = chainermn.functions.bcast(self.communicator, x, root=root)
+        y = chainermn.functions.bcast(self.communicator, x, root, self.device)
         e = chainer.functions.mean_squared_error(y, x)
         e.backward()
 
@@ -71,4 +71,12 @@ class TestCollectiveCommunication(unittest.TestCase):
         self.setup(False)
         x = chainer.Variable(
             numpy.random.normal(size=(100, 100)).astype(numpy.float32))
+        self.check_bcast(x)
+
+    @chainer.testing.attr.gpu
+    def test_bcast_gpu(self):
+        self.setup(True)
+        x = chainer.Variable(
+            numpy.random.normal(size=(100, 100)).astype(numpy.float32))
+        x.to_gpu()
         self.check_bcast(x)

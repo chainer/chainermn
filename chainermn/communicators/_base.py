@@ -235,22 +235,21 @@ class CommunicatorBase(object):
 
         if is_master:
             msgtype = _MessageType(x)
+            if msgtype.is_tuple:
+                raise ValueError('cannot broadcast tuple data')
+
+            msgtype = self.mpi_comm.bcast(msgtype, root)
+            shape = msgtype.shapes[0]
+            buf = _memory_utility.array_to_buffer_object(x)
+            self.mpi_comm.Bcast(buf, root)
+            return x
         else:
             msgtype = None
-
-        if msgtype is not None and msgtype.is_tuple:
-            raise ValueError('cannot broadcast tuple data')
-
-        msgtype = self.mpi_comm.bcast(msgtype, root)
-
-        shape = msgtype.shapes[0]
-
-        if is_master:
-            buf = _memory_utility.array_to_buffer_object(x)
-        else:
+            msgtype = self.mpi_comm.bcast(msgtype, root)
+            shape = msgtype.shapes[0]
             buf = numpy.empty(numpy.prod(shape), dtype=numpy.float32)
-        self.mpi_comm.Bcast(buf, root)
-        return buf.reshape(shape)
+            self.mpi_comm.Bcast(buf, root)
+            return buf.reshape(shape)
 
     def gather(self, x, root=0):
         """A primitive of inter-process gather communication.

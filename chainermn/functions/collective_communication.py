@@ -60,10 +60,10 @@ class Bcast(chainer.Function):
             gx, = grad_outputs
             gxs = self.comm.gather(gx, self.root)
 
-            if isinstance(self.device, int) and self.device >= 0:
-                gxs = cuda.to_gpu(gxs, device=self.device)
-
             if self.comm.rank == self.root:
+                if isinstance(self.device, int) and self.device >= 0:
+                    gxs = cuda.to_gpu(gxs, device=self.device)
+
                 return gxs.sum(axis=0),
             else:
                 return None,
