@@ -64,10 +64,35 @@ def create_multi_node_iterator(
         actual_iterator, communicator, rank_master=0, device=-1):
     """Create a multi node iterator from a Chainer iterator.
 
-    This is used when you want to broadcast batches from a master process
-    to slave processes in each iteration.
-    The master process uses ``actual_iterator`` and sharing obtained batches
-    to slave processes at the same time.
+    This iterator shares the same batches on multiple processes, simply
+    broadcasting batches from master process to slave processes
+    in each iteration.
+    Master process obtains batches from ``actual_iterator``, which you can
+    specify any Chainer iterator (e.g. ``chainer.iterators.SerialIterator``).
+
+    Here is an example situation. When we train a sequence-to-sequence model,
+    where the encoder and the decoder is located on two different processes,
+    we want to share the same batches on each process, thus inputs for
+    the encoder and output teacher signals for the decoder become consistent.
+
+    In order to use the multi node iterator, first create the iterator
+    from Chainer iterator and ChainerMN communicator::
+
+        iterator = chainermn.iterators.create_multi_node_iterator(
+            chainer.iterators.SerialIterator(
+                dataset, batch_size, shuffle=True),
+            communicator)
+
+    Then you can use it as the ordinary Chainer iterator::
+
+        updater = chainer.training.StandardUpdater(iterator, optimizer)
+        trainer = training.Trainer(updater)
+        trainer.run()
+
+    Since this iterator shares batches through network in each iteration,
+    communication might be large. If you train your model-parallel network
+    on extremely large dataset, you can also consider to use
+    ``chainermn.iterators.create_synchronized_iterator``.
 
     Args:
         actual_iterator: Chainer iterator
