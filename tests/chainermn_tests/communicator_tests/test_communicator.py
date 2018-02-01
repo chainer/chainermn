@@ -226,8 +226,8 @@ def check_collective_communication(param, use_gpu):
     if use_gpu:
         model.to_gpu()
     check_broadcast_data(communicator, model)
-    check_allreduce_grad(communicator, model, param.grad_dtype)
-    check_allreduce_grad_empty(communicator, model, param.grad_dtype)
+    check_allreduce_grad(communicator, model)
+    check_allreduce_grad_empty(communicator, model)
 
 
 # chainer.testing.parameterize is not available at functions

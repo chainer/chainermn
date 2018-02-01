@@ -137,7 +137,7 @@ def _get_nccl_type_id(dtype):
     elif dtype == np.float32:
         return nccl.NCCL_FLOAT32
     elif dtype == np.float64:
-        return nccl.NCC_FLOAT64
+        return nccl.NCCL_FLOAT64
     else:
         raise ValueError(
             'dtype must be float16, float32, or float64.')
