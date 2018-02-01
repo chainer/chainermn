@@ -1,3 +1,5 @@
+import unittest
+
 import chainer
 import chainer.cuda
 import chainer.functions as F
@@ -33,86 +35,89 @@ class Model(chainer.Chain):
         return err
 
 
-def create_communicator(gpu):
-    if gpu:
-        communicator = chainermn.create_communicator('hierarchical')
-        chainer.cuda.get_device(communicator.intra_rank).use()
-    else:
-        communicator = chainermn.create_communicator('naive')
+class TestNStepRNN(unittest.TestCase):
 
-    if communicator.size < 2:
-        pytest.skip("This test is for multinode only")
+    def setup(self, gpu):
+        if gpu:
+            self.communicator = chainermn.create_communicator('hierarchical')
+            chainer.cuda.get_device(self.communicator.intra_rank).use()
+        else:
+            self.communicator = chainermn.create_communicator('naive')
 
-    rank_next = communicator.rank + 1
-    rank_prev = communicator.rank - 1
+        if self.communicator.size < 2:
+            pytest.skip("This test is for multinode only")
 
-    if rank_prev < 0:
-        rank_prev = None
+        self.rank_next = self.communicator.rank + 1
+        self.rank_prev = self.communicator.rank - 1
 
-    if rank_next >= communicator.size:
-        rank_next = None
+        if self.rank_prev < 0:
+            self.rank_prev = None
 
-    return communicator, rank_next, rank_prev
+        if self.rank_next >= self.communicator.size:
+            self.rank_next = None
 
+    def check_homogeneous_rnn(self, gpu):
+        self.setup(gpu)
 
-def check_homogeneous_rnn(gpu):
-    communicator, rank_next, rank_prev = create_communicator(gpu)
+        n, n_vocab, l = 100, 8, 10
+        # Number of model parameters are different among processes.
+        n_hid = 2
 
-    n, n_vocab, l = 100, 8, 10
-    n_hid = 2
+        X = [np.random.randint(
+            0, n_vocab, size=np.random.randint(l // 2, l + 1), dtype=np.int32)
+            for _ in range(n)]
+        Y = (np.random.rand(n) * 2).astype(np.float32)
+        model = Model(
+            n_vocab, n_hid, self.communicator, self.rank_next, self.rank_prev)
 
-    X = [np.random.randint(
-        0, n_vocab, size=np.random.randint(l // 2, l + 1), dtype=np.int32)
-        for _ in range(n)]
-    Y = (np.random.rand(n) * 2).astype(np.float32)
-    model = Model(n_vocab, n_hid, communicator, rank_next, rank_prev)
+        if gpu:
+            model.to_gpu()
+            X = chainer.cuda.to_gpu(X)
+            Y = chainer.cuda.to_gpu(Y)
 
-    if gpu:
-        model.to_gpu()
-        X = chainer.cuda.to_gpu(X)
-        Y = chainer.cuda.to_gpu(Y)
+        for i in range(n):
+            err = model(X[i:i + 1], Y[i:i + 1])
+            err.backward()
 
-    for i in range(n):
-        err = model(X[i:i + 1], Y[i:i + 1])
-        err.backward()
+        # Check if backprop finishes without deadlock.
+        self.assertTrue(True)
 
+    def test_homogeneous_rnn_cpu(self):
+        self.check_homogeneous_rnn(False)
 
-def test_homogeneous_rnn_cpu():
-    check_homogeneous_rnn(False)
+    @chainer.testing.attr.gpu
+    def test_homogeneous_rnn_gpu(self):
+        self.check_homogeneous_rnn(True)
 
+    def check_heterogeneous_rnn(self, gpu):
+        self.setup(gpu)
 
-@chainer.testing.attr.gpu
-def test_homogeneous_rnn_gpu():
-    check_homogeneous_rnn(True)
+        n, n_vocab, l = 100, 8, 10
+        # Number of model parameters are different among processes.
+        n_hid = (self.communicator.rank + 1) * 10
 
+        X = [np.random.randint(
+            0, n_vocab, size=np.random.randint(l // 2, l + 1), dtype=np.int32)
+            for _ in range(n)]
+        Y = (np.random.rand(n) * 2).astype(np.float32)
+        model = Model(
+            n_vocab, n_hid, self.communicator, self.rank_next, self.rank_prev)
 
-def check_heterogeneous_rnn(gpu):
-    communicator, rank_next, rank_prev = create_communicator(gpu)
+        if gpu:
+            model.to_gpu()
+            X = chainer.cuda.to_gpu(X)
+            Y = chainer.cuda.to_gpu(Y)
 
-    n, n_vocab, l = 100, 8, 10
-    # Number of model parameters are different among processes.
-    n_hid = (communicator.rank + 1) * 10
+        for i in range(n):
+            err = model(X[i:i + 1], Y[i:i + 1])
+            err.backward()
 
-    X = [np.random.randint(
-        0, n_vocab, size=np.random.randint(l // 2, l + 1), dtype=np.int32)
-        for _ in range(n)]
-    Y = (np.random.rand(n) * 2).astype(np.float32)
-    model = Model(n_vocab, n_hid, communicator, rank_next, rank_prev)
+        # Check if backprop finishes without deadlock.
+        self.assertTrue(True)
 
-    if gpu:
-        model.to_gpu()
-        X = chainer.cuda.to_gpu(X)
-        Y = chainer.cuda.to_gpu(Y)
+    def test_heterogeneous_rnn_cpu(self):
+        self.check_heterogeneous_rnn(False)
 
-    for i in range(n):
-        err = model(X[i:i + 1], Y[i:i + 1])
-        err.backward()
-
-
-def test_heterogeneous_rnn_cpu():
-    check_homogeneous_rnn(False)
-
-
-@chainer.testing.attr.gpu
-def test_heterogeneous_rnn_gpu():
-    check_homogeneous_rnn(True)
+    @chainer.testing.attr.gpu
+    def test_heterogeneous_rnn_gpu(self):
+        self.check_heterogeneous_rnn(True)
