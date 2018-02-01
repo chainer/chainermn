@@ -1,6 +1,6 @@
-import numpy
 import chainer
 import chainermn
+import numpy
 
 
 class _MultiNodeIterator_Master(object):
