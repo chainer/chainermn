@@ -13,15 +13,17 @@ import pytest
 class Model(chainer.Chain):
     def __init__(self, n_vocab, n_hid, communicator, rank_next, rank_prev):
         n_layer = 1
+        n_rnn_hid = 10
         super(Model, self).__init__(
-            l1=L.EmbedID(n_vocab, n_hid, ignore_label=-1),
+            l1=L.EmbedID(n_vocab, n_rnn_hid, ignore_label=-1),
             rnn=chainermn.links.create_multi_node_n_step_rnn(
                 L.NStepLSTM(
-                    n_layers=n_layer, in_size=n_hid, out_size=n_hid,
+                    n_layers=n_layer, in_size=n_rnn_hid, out_size=n_rnn_hid,
                     dropout=0.1),
                 communicator, rank_in=rank_prev, rank_out=rank_next,
             ),
-            l2=L.Linear(n_hid, 1))
+            l2=L.Linear(n_rnn_hid, n_hid),
+            l3=L.Linear(n_hid, 1))
 
     def __call__(self, xs, ts):
         h1 = [self.l1(x) for x in xs]
@@ -29,7 +31,8 @@ class Model(chainer.Chain):
         cell1, cell2, os, delegate_variable = self.rnn(h1)
         os = F.concat(os, axis=0)
         h2 = self.l2(os)
-        ys = F.sum(h2, axis=0)
+        h3 = self.l3(h2)
+        ys = F.sum(h3, axis=0)
         err = F.mean_squared_error(ys, ts)
         err = chainermn.functions.pseudo_connect(delegate_variable, err)
         return err
@@ -60,7 +63,7 @@ class TestNStepRNN(unittest.TestCase):
         self.setup(gpu)
 
         n, n_vocab, l = 100, 8, 10
-        # Number of model parameters are different among processes.
+        # Number of model parameters are same among processes.
         n_hid = 2
 
         X = [np.random.randint(
