@@ -75,7 +75,7 @@ class TestNStepRNN(unittest.TestCase):
 
         if gpu:
             model.to_gpu()
-            X = chainer.cuda.to_gpu(X)
+            X = [chainer.cuda.to_gpu(x) for x in X]
             Y = chainer.cuda.to_gpu(Y)
 
         for i in range(n):
@@ -108,7 +108,7 @@ class TestNStepRNN(unittest.TestCase):
 
         if gpu:
             model.to_gpu()
-            X = chainer.cuda.to_gpu(X)
+            X = [chainer.cuda.to_gpu(x) for x in X]
             Y = chainer.cuda.to_gpu(Y)
 
         for i in range(n):
