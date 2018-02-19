@@ -1,16 +1,29 @@
 import chainer
-import chainer.functions.connection as conn
+import chainer.functions.connection as fconn
+import chainer.links.connection as lconn
 import chainermn.functions
 
 
-_rnn_n_cells = {
-    conn.n_step_gru.n_step_bigru: 1,
-    conn.n_step_gru.n_step_gru: 1,
-    conn.n_step_lstm.n_step_bilstm: 2,
-    conn.n_step_lstm.n_step_lstm: 2,
-    conn.n_step_rnn.n_step_birnn: 1,
-    conn.n_step_rnn.n_step_rnn: 1,
-}
+try:
+    _rnn_n_cells = {
+        lconn.n_step_gru.NStepBiGRU.rnn: 1,
+        lconn.n_step_gru.NStepGRU.rnn: 1,
+        lconn.n_step_lstm.NStepBiLSTM.rnn: 2,
+        lconn.n_step_lstm.NStepLSTM.rnn: 2,
+        lconn.n_step_rnn.NStepBiRNNReLU.rnn: 1,
+        lconn.n_step_rnn.NStepBiRNNTanh.rnn: 1,
+        lconn.n_step_rnn.NStepRNNReLU.rnn: 1,
+        lconn.n_step_rnn.NStepRNNTanh.rnn: 1,
+    }
+except AttributeError:
+    _rnn_n_cells = {
+        fconn.n_step_gru.n_step_bigru: 1,
+        fconn.n_step_gru.n_step_gru: 1,
+        fconn.n_step_lstm.n_step_bilstm: 2,
+        fconn.n_step_lstm.n_step_lstm: 2,
+        fconn.n_step_rnn.n_step_birnn: 1,
+        fconn.n_step_rnn.n_step_rnn: 1,
+    }
 
 
 class _MultiNodeNStepRNN(chainer.Chain):
@@ -22,10 +35,22 @@ class _MultiNodeNStepRNN(chainer.Chain):
         self.rank_in = rank_in
         self.rank_out = rank_out
 
-        if not hasattr(link, 'rnn') or link.rnn not in _rnn_n_cells:
+        # Chainer's LSTM code was refactored in
+        # https://github.com/chainer/chainer/commit/f8e99052b84
+        # and the internal structure has been changed.
+        # So checking whether link is an NStepRNN is a little tricky.
+        try:
+            check_lstm = issubclass(
+                link.__class__, lconn.n_step_rnn.NStepRNNBase)
+            rnn = link.__class__.rnn
+        except AttributeError:
+            check_lstm = hasattr(link, 'rnn') and link.rnn in _rnn_n_cells
+            rnn = link.rnn
+
+        if not check_lstm:
             raise ValueError('link must be NStepRNN and its inherited link')
         else:
-            self.n_cells = _rnn_n_cells[link.rnn]
+            self.n_cells = _rnn_n_cells[rnn]
 
     def __call__(self, *inputs):
         cells = [None for _ in range(self.n_cells)]
