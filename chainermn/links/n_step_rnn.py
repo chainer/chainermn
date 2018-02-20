@@ -4,7 +4,11 @@ import chainer.links.connection as lconn
 import chainermn.functions
 
 
+# Chainer's LSTM code was refactored in this commit
+# https://github.com/chainer/chainer/commit/f8e99052b84
+# and the internal structure has been changed.
 try:
+    # Chainer >4.0.0b3
     _rnn_n_cells = {
         lconn.n_step_gru.NStepBiGRU.rnn: 1,
         lconn.n_step_gru.NStepGRU.rnn: 1,
@@ -16,6 +20,7 @@ try:
         lconn.n_step_rnn.NStepRNNTanh.rnn: 1,
     }
 except AttributeError:
+    # Chainer <=4.0.0b3
     _rnn_n_cells = {
         fconn.n_step_gru.n_step_bigru: 1,
         fconn.n_step_gru.n_step_gru: 1,
@@ -35,15 +40,13 @@ class _MultiNodeNStepRNN(chainer.Chain):
         self.rank_in = rank_in
         self.rank_out = rank_out
 
-        # Chainer's LSTM code was refactored in
-        # https://github.com/chainer/chainer/commit/f8e99052b84
-        # and the internal structure has been changed.
-        # So checking whether link is an NStepRNN is a little tricky.
         try:
+            # Chainer >4.0.0b3 (see the comments above)
             check_lstm = issubclass(
                 link.__class__, lconn.n_step_rnn.NStepRNNBase)
             rnn = link.__class__.rnn
         except AttributeError:
+            # Chainer <=4.0.0b3
             check_lstm = hasattr(link, 'rnn') and link.rnn in _rnn_n_cells
             rnn = link.rnn
 
