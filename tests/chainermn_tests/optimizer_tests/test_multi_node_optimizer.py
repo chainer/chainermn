@@ -6,6 +6,7 @@ import mock
 import numpy as np
 import unittest
 
+from mpi4py import MPI
 
 class ExampleModel(chainer.Chain):
 
@@ -181,11 +182,15 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
 
     @chainer.testing.attr.gpu
     def test_update_with_gpu(self):
+        rank = MPI.COMM_WORLD.rank
+
         self.setup_gpu()
         self.optimizer = chainermn.create_multi_node_optimizer(
             self.actual_optimizer, self.comm)
         self.optimizer.setup(self.target)
         self.optimizer.update()
+
+        print("Rank {} self.actual_optimizer.t = {}".format(rank, self.actual_optimizer.t))
         self.assertEqual(self.actual_optimizer.t, 0)
 
         with self.target.init_scope():
