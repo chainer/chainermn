@@ -106,16 +106,16 @@ class PureNcclCommunicator(_base.CommunicatorBase):
     def _assign(self, grad_dtype, allreduce_grad_dtype, n_elems):
         allreduce_grad_n_bytes = allreduce_grad_dtype.itemsize * n_elems
         needs_sync = False
-        if self.gpu_allreduce_buffer_a.size == allreduce_grad_n_bytes:
+        if self.gpu_allreduce_buffer_a.size != allreduce_grad_n_bytes:
             self.gpu_allreduce_buffer_a.assign(allreduce_grad_n_bytes)
             needs_sync = True
-        if self.gpu_allreduce_buffer_b.size == allreduce_grad_n_bytes:
+        if self.gpu_allreduce_buffer_b.size != allreduce_grad_n_bytes:
             self.gpu_allreduce_buffer_b.assign(allreduce_grad_n_bytes)
             needs_sync = True
 
         if grad_dtype != allreduce_grad_dtype:
             grad_n_bytes = grad_dtype.itemsize * n_elems
-            if self.gpu_tmp_buffer.size == grad_n_bytes:
+            if self.gpu_tmp_buffer.size != grad_n_bytes:
                 self.gpu_tmp_buffer.assign(grad_n_bytes)
                 needs_sync = True
         return needs_sync
