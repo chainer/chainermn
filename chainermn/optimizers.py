@@ -108,6 +108,11 @@ class _DoubleBufferingOptimizer(object):
     def allreduce_grad_async(self):
         self.communicator.allreduce_grad_async(
             self.communicated_target, self.allreduce_grad_stream)
+        #self.communicator.allreduce_grad_async(
+        #    self.communicated_target, )
+
+        #self.communicator.allreduce_grad(
+        #    self.communicated_target)
 
     def is_changed(self, target, previous_params):
         target_params = list(sorted(target.namedparams()))
@@ -129,6 +134,7 @@ class _DoubleBufferingOptimizer(object):
 
     def wait(self):
         self.allreduce_grad_stream.synchronize()
+        chainer.cuda.Stream.null.synchronize()
 
     def __getattr__(self, attr_name):
         return getattr(self.actual_optimizer, attr_name)

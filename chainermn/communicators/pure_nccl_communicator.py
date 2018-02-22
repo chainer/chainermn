@@ -71,7 +71,6 @@ class PureNcclCommunicator(_base.CommunicatorBase):
 
     def allreduce_grad_async(self, model, stream):
         self._init_comms()
-
         params = _memory_utility.extract_params(model)
         grad_dtype = _get_param_grad_dtype(params[0])
         if self.allreduce_grad_dtype is None:
@@ -82,8 +81,14 @@ class PureNcclCommunicator(_base.CommunicatorBase):
         needs_sync = self._assign(grad_dtype, allreduce_grad_dtype, n_elems)
         if stream != chainer.cuda.Stream.null and needs_sync:
             chainer.cuda.Stream.null.synchronize()
+
+
+        #stream.synchronize()
+        #stream = chainer.cuda.Stream.null
+            
         self._pack_params_to_buffer(params, grad_dtype, allreduce_grad_dtype,
                                     n_elems, stream)
+
         self.nccl_comm.allReduce(self.gpu_allreduce_buffer_a.ptr(),
                                  self.gpu_allreduce_buffer_b.ptr(), n_elems,
                                  _get_nccl_type_id(allreduce_grad_dtype),
@@ -100,6 +105,7 @@ class PureNcclCommunicator(_base.CommunicatorBase):
             self.gpu_allreduce_buffer_a.array(n_elems,
                                               dtype=allreduce_grad_dtype),
             stream=stream)
+
         self._unpack_params_from_buffer(params, grad_dtype,
                                         allreduce_grad_dtype, n_elems, stream)
 
@@ -132,15 +138,17 @@ class PureNcclCommunicator(_base.CommunicatorBase):
                     _get_converting_kernel(
                         grad_dtype, allreduce_grad_dtype,
                         'grad_dtype_to_allreduce_dtype_kernel')
-
+            
             _memory_utility.pack_params(
                 params, grad_dtype.itemsize, 'grad',
                 self.gpu_tmp_buffer, stream=stream)
+            
             self.grad_dtype_to_allreduce_dtype_kernel(
                 self.gpu_tmp_buffer.array(n_elems, dtype=grad_dtype),
                 self.gpu_allreduce_buffer_a.array(n_elems,
                                                   dtype=allreduce_grad_dtype),
                 stream=stream)
+
 
     def _unpack_params_from_buffer(self, params, grad_dtype,
                                    allreduce_grad_dtype, n_elems, stream):
@@ -161,10 +169,11 @@ class PureNcclCommunicator(_base.CommunicatorBase):
                                                   dtype=allreduce_grad_dtype),
                 self.gpu_tmp_buffer.array(n_elems, dtype=grad_dtype),
                 stream=stream)
+            
             grad_n_bytes = grad_dtype.itemsize * n_elems
             _memory_utility.unpack_params(
-                params, grad_dtype.itemsize, 'grad', self.gpu_tmp_buffer)
-
+                params, grad_dtype.itemsize, 'grad', self.gpu_tmp_buffer, stream=stream)
+            
 
 def _get_converting_kernel(src_dtype, dst_dtype, kernel_name):
     return chainer.cuda.cupy.ElementwiseKernel(
