@@ -81,7 +81,7 @@ class PureNcclCommunicator(_base.CommunicatorBase):
         n_elems = sum(param.grad.size for param in params)
         needs_sync = self._assign(grad_dtype, allreduce_grad_dtype, n_elems)
         if stream != chainer.cuda.Stream.null and needs_sync:
-                stream.synchronize()
+            chainer.cuda.Stream.null.synchronize()
         self._pack_params_to_buffer(params, grad_dtype, allreduce_grad_dtype,
                                     n_elems, stream)
         self.nccl_comm.allReduce(self.gpu_allreduce_buffer_a.ptr(),
