@@ -201,7 +201,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.optimizer.setup(self.target)
         self.optimizer.update()
 
-        self.debug_print("Rank {} self.actual_optimizer.t = {}".format(rank, self.actual_optimizer.t), flush=True)
+        self.debug_print("Rank {} self.actual_optimizer.t = {}".format(rank, self.actual_optimizer.t))
         self.assertEqual(self.actual_optimizer.t, 0)
 
         with self.target.init_scope():
@@ -212,14 +212,14 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
             self.target.c.W.data[:] = self.comm.rank + 2
         self.optimizer.setup(self.target)
         self.optimizer.update()
-        self.debug_print("Rank {}: self.actual_optimizer.t = {} (should be 0)".format(rank, self.actual_optimizer.t), flush=True)
+        self.debug_print("Rank {}: self.actual_optimizer.t = {} (should be 0)".format(rank, self.actual_optimizer.t))
         self.assertEqual(self.actual_optimizer.t, 0)
 
         send_buf = chainer.cuda.to_cpu(self.optimizer.target.c.W.data)
         recv_buf = self.comm.mpi_comm.allgather(send_buf)
         for i in range(1, self.comm.size):
             # Here?
-            self.debug_print("Rank {}: recv_buf[0]={}, recv_buf[{}]={}".format(rank, recv_buf[0], i, recv_buf[i]), flush=True)
+            self.debug_print("Rank {}: recv_buf[0]={}, recv_buf[{}]={}".format(rank, recv_buf[0], i, recv_buf[i]))
             try:
                 chainer.testing.assert_allclose(recv_buf[0], recv_buf[i])
             except AssertionError as e:
@@ -230,7 +230,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.optimizer.target.b.W.grad[:] = self.comm.rank + 1
         self.optimizer.target.c.W.grad[:] = self.comm.rank + 2
         self.optimizer.update()
-        self.debug_print("Rank {}: self.actual_optimizer.t = {} (should be 1)".format(rank, self.actual_optimizer.t), flush=True)
+        self.debug_print("Rank {}: self.actual_optimizer.t = {} (should be 1)".format(rank, self.actual_optimizer.t))
         self.assertEqual(self.actual_optimizer.t, 1)
         self.optimizer.target.a.W.update_rule.update.assert_called_once_with(
             self.optimizer.target.a.W)
