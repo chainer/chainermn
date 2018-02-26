@@ -5,6 +5,7 @@ import chainermn
 import mock
 import numpy as np
 import unittest
+import sys
 
 from mpi4py import MPI
 
@@ -188,12 +189,14 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
 
         for r in range(size):
             if r == rank:
-                print(msg, flush=True)
+                sys.stderr.write(msg + "\n")
             MPI.COMM_WORLD.Barrier()
 
     @chainer.testing.attr.gpu
     def test_update_with_gpu(self):
         rank = MPI.COMM_WORLD.rank
+        size = MPI.COMM_WORLD.size
+        self.debug_print("Rank {}: size={}".format(rank, size))
 
         self.setup_gpu()
         self.optimizer = chainermn.create_multi_node_optimizer(
