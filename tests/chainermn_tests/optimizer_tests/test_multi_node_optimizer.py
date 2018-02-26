@@ -4,6 +4,7 @@ import chainer.testing.attr
 import chainermn
 import mock
 import numpy as np
+import time
 import unittest
 import sys
 
@@ -189,8 +190,14 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
 
         for r in range(size):
             if r == rank:
-                sys.stderr.write(msg + "\n")
+                print(msg, flush=True)
             MPI.COMM_WORLD.Barrier()
+
+        if rank == 0:
+            print("\n", flush=True)
+        else:
+            time.sleep(1.0)
+        MPI.COMM_WORLD.Barrier()
 
     @chainer.testing.attr.gpu
     def test_update_with_gpu(self):
@@ -226,7 +233,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
             try:
                 chainer.testing.assert_allclose(recv_buf[0], recv_buf[i])
             except AssertionError as e:
-                print("Rank {}: Failed: i={}, error={}".format(i, e), flush=True)
+                self.debug_print("Rank {}: Failed: i={}, error={}".format(i, e), flush=True)
             chainer.testing.assert_allclose(recv_buf[0], recv_buf[i])
 
         self.optimizer.target.a.W.grad[:] = self.comm.rank
