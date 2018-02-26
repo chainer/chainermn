@@ -77,6 +77,21 @@ class TestMultiNodeOptimizer(unittest.TestCase):
         chainer.testing.assert_allclose(self.optimizer.target.c.W.grad,
                                         (base + 2) * np.ones((5, 4)))
 
+    def debug_print(self, msg):
+        rank = MPI.COMM_WORLD.rank
+        size = MPI.COMM_WORLD.size
+
+        for r in range(size):
+            if r == rank:
+                print("Rank {}:".format(rank) + msg, flush=True)
+            MPI.COMM_WORLD.Barrier()
+
+        if rank == 0:
+            print("\n", flush=True)
+        else:
+            time.sleep(3.0)
+        MPI.COMM_WORLD.Barrier()
+
     @chainer.testing.attr.gpu
     def test_update_with_gpu(self):
         self.setup_gpu()
@@ -84,25 +99,33 @@ class TestMultiNodeOptimizer(unittest.TestCase):
             self.actual_optimizer, self.comm)
         self.optimizer.setup(self.target)
         self.optimizer.update()
+        self.debug_print("actual_optimizer.t = {} (should be 0)")
         self.assertEqual(self.actual_optimizer.t, 0)
         self.optimizer.target.a.W.grad[:] = self.comm.rank
         self.optimizer.target.b.W.grad[:] = self.comm.rank + 1
         self.optimizer.target.c.W.grad[:] = self.comm.rank + 2
 
         self.optimizer.update()
+        self.debug_print("actual_optimizer.t = {} (should be 1)")
         self.assertEqual(self.actual_optimizer.t, 1)
+        self.debug_print("assert_called_once_with #1")
         self.optimizer.target.a.W.update_rule.update.assert_called_once_with(
             self.optimizer.target.a.W)
+        self.debug_print("assert_called_once_with #1")
         self.optimizer.target.b.W.update_rule.update.assert_called_once_with(
             self.optimizer.target.b.W)
+        self.debug_print("assert_called_once_with #1")
         self.optimizer.target.c.W.update_rule.update.assert_called_once_with(
             self.optimizer.target.c.W)
 
         base = (self.comm.size - 1.0) / 2
+        self.debug_print("assert_allclose #1")
         chainer.testing.assert_allclose(self.optimizer.target.a.W.grad,
                                         (base + 0) * np.ones((3, 2)))
+        self.debug_print("assert_allclose #1")
         chainer.testing.assert_allclose(self.optimizer.target.b.W.grad,
                                         (base + 1) * np.ones((4, 3)))
+        self.debug_print("assert_allclose #1")
         chainer.testing.assert_allclose(self.optimizer.target.c.W.grad,
                                         (base + 2) * np.ones((5, 4)))
 
@@ -196,7 +219,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         if rank == 0:
             print("\n", flush=True)
         else:
-            time.sleep(1.0)
+            time.sleep(3.0)
         MPI.COMM_WORLD.Barrier()
 
     @chainer.testing.attr.gpu
