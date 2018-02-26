@@ -214,13 +214,8 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
 
         for r in range(size):
             if r == rank:
-                print(msg, flush=True)
+                print("Rank {}:".format(rank) + msg, flush=True)
             MPI.COMM_WORLD.Barrier()
-
-        if rank == 0:
-            print("\n", flush=True)
-        else:
-            time.sleep(3.0)
         MPI.COMM_WORLD.Barrier()
 
     @chainer.testing.attr.gpu
