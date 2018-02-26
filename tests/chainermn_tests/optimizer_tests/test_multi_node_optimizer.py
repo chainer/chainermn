@@ -125,6 +125,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.target.b.W.grad[:] = 0
         self.actual_optimizer = chainer.GradientMethod()
         self.actual_optimizer.create_update_rule = mock.MagicMock
+        self.comm.mpi_comm.Barrier()
 
     def setup_gpu(self, device=None):
         self.comm = chainermn.create_communicator('hierarchical')
@@ -138,6 +139,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.target.b.W.grad[:] = 0
         self.actual_optimizer = chainer.GradientMethod()
         self.actual_optimizer.create_update_rule = mock.MagicMock
+        self.comm.mpi_comm.Barrier()
 
     def test_update_with_cpu(self):
         self.setup_cpu()
@@ -180,6 +182,15 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         chainer.testing.assert_allclose(self.optimizer.target.c.W.grad,
                                         (base + 2) * np.ones((4, 4)))
 
+    def debug_print(self, msg):
+        rank = MPI.COMM_WORLD.rank
+        size = MPI.COMM_WORLD.size
+
+        for r in range(size):
+            if r == rank:
+                print(msg, flush=True)
+            MPI.COMM_WORLD.Barrier()
+
     @chainer.testing.attr.gpu
     def test_update_with_gpu(self):
         rank = MPI.COMM_WORLD.rank
@@ -190,7 +201,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.optimizer.setup(self.target)
         self.optimizer.update()
 
-        print("Rank {} self.actual_optimizer.t = {}".format(rank, self.actual_optimizer.t), flush=True)
+        self.debug_print("Rank {} self.actual_optimizer.t = {}".format(rank, self.actual_optimizer.t), flush=True)
         self.assertEqual(self.actual_optimizer.t, 0)
 
         with self.target.init_scope():
@@ -201,20 +212,25 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
             self.target.c.W.data[:] = self.comm.rank + 2
         self.optimizer.setup(self.target)
         self.optimizer.update()
-        print("Rank {}: self.actual_optimizer.t = {} (should be 0)".format(rank, self.actual_optimizer.t), flush=True)
+        self.debug_print("Rank {}: self.actual_optimizer.t = {} (should be 0)".format(rank, self.actual_optimizer.t), flush=True)
         self.assertEqual(self.actual_optimizer.t, 0)
 
         send_buf = chainer.cuda.to_cpu(self.optimizer.target.c.W.data)
         recv_buf = self.comm.mpi_comm.allgather(send_buf)
         for i in range(1, self.comm.size):
-            print("Rank {}: recv_buf[0]={}, recv_buf[i]={}".format(rank, recv_buf[0], recv_buf[i]), flush=True)
+            # Here?
+            self.debug_print("Rank {}: recv_buf[0]={}, recv_buf[{}]={}".format(rank, recv_buf[0], i, recv_buf[i]), flush=True)
+            try:
+                chainer.testing.assert_allclose(recv_buf[0], recv_buf[i])
+            except AssertionError as e:
+                print("Rank {}: Failed: i={}, error={}".format(i, e), flush=True)
             chainer.testing.assert_allclose(recv_buf[0], recv_buf[i])
 
         self.optimizer.target.a.W.grad[:] = self.comm.rank
         self.optimizer.target.b.W.grad[:] = self.comm.rank + 1
         self.optimizer.target.c.W.grad[:] = self.comm.rank + 2
         self.optimizer.update()
-        print("Rank {}: self.actual_optimizer.t = {} (should be 1)".format(rank, self.actual_optimizer.t), flush=True)
+        self.debug_print("Rank {}: self.actual_optimizer.t = {} (should be 1)".format(rank, self.actual_optimizer.t), flush=True)
         self.assertEqual(self.actual_optimizer.t, 1)
         self.optimizer.target.a.W.update_rule.update.assert_called_once_with(
             self.optimizer.target.a.W)
@@ -224,12 +240,12 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
             self.optimizer.target.c.W)
 
         base = (self.comm.size - 1.0) / 2
-        print("Rank {}: Last assert_allclose 1".format(rank))
+        self.debug_print("Rank {}: Last assert_allclose 1".format(rank))
         chainer.testing.assert_allclose(self.optimizer.target.a.W.grad,
                                         (base + 0) * np.ones((3, 2)))
-        print("Rank {}: Last assert_allclose 2".format(rank))
+        self.debug_print("Rank {}: Last assert_allclose 2".format(rank))
         chainer.testing.assert_allclose(self.optimizer.target.b.W.grad,
                                         (base + 1) * np.ones((4, 3)))
-        print("Rank {}: Last assert_allclose 3".format(rank))
+        self.debug_print("Rank {}: Last assert_allclose 3".format(rank))
         chainer.testing.assert_allclose(self.optimizer.target.c.W.grad,
                                         (base + 2) * np.ones((4, 4)))
