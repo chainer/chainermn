@@ -190,7 +190,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.optimizer.setup(self.target)
         self.optimizer.update()
 
-        print("Rank {} self.actual_optimizer.t = {}".format(rank, self.actual_optimizer.t))
+        print("Rank {} self.actual_optimizer.t = {}".format(rank, self.actual_optimizer.t), flush=True)
         self.assertEqual(self.actual_optimizer.t, 0)
 
         with self.target.init_scope():
@@ -201,17 +201,20 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
             self.target.c.W.data[:] = self.comm.rank + 2
         self.optimizer.setup(self.target)
         self.optimizer.update()
+        print("Rank {}: self.actual_optimizer.t = {} (should be 0)".format(rank, self.actual_optimizer.t), flush=True)
         self.assertEqual(self.actual_optimizer.t, 0)
 
         send_buf = chainer.cuda.to_cpu(self.optimizer.target.c.W.data)
         recv_buf = self.comm.mpi_comm.allgather(send_buf)
         for i in range(1, self.comm.size):
+            print("Rank {}: recv_buf[0]={}, recv_buf[i]={}".format(rank, recv_buf[0], recv_buf[i]), flush=True)
             chainer.testing.assert_allclose(recv_buf[0], recv_buf[i])
 
         self.optimizer.target.a.W.grad[:] = self.comm.rank
         self.optimizer.target.b.W.grad[:] = self.comm.rank + 1
         self.optimizer.target.c.W.grad[:] = self.comm.rank + 2
         self.optimizer.update()
+        print("Rank {}: self.actual_optimizer.t = {} (should be 1)".format(rank, self.actual_optimizer.t), flush=True)
         self.assertEqual(self.actual_optimizer.t, 1)
         self.optimizer.target.a.W.update_rule.update.assert_called_once_with(
             self.optimizer.target.a.W)
@@ -221,9 +224,12 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
             self.optimizer.target.c.W)
 
         base = (self.comm.size - 1.0) / 2
+        print("Rank {}: Last assert_allclose 1".format(rank))
         chainer.testing.assert_allclose(self.optimizer.target.a.W.grad,
                                         (base + 0) * np.ones((3, 2)))
+        print("Rank {}: Last assert_allclose 2".format(rank))
         chainer.testing.assert_allclose(self.optimizer.target.b.W.grad,
                                         (base + 1) * np.ones((4, 3)))
+        print("Rank {}: Last assert_allclose 3".format(rank))
         chainer.testing.assert_allclose(self.optimizer.target.c.W.grad,
                                         (base + 2) * np.ones((4, 4)))
