@@ -222,7 +222,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
     def test_update_with_gpu(self):
         rank = MPI.COMM_WORLD.rank
         size = MPI.COMM_WORLD.size
-        self.debug_print("size={}".format(rank, size))
+        self.debug_print("size={}".format(size))
 
         self.setup_gpu()
         self.optimizer = chainermn.create_multi_node_optimizer(
