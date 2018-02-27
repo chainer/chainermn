@@ -1,3 +1,11 @@
+# This test is based on Chainer's iterator compatibility test.
+# The major changed point is that we do not test
+#   the order SerialIterator -> MultiNodeIterator,
+# because slave iterator must synchronize the batch order with master
+# thus should not accept overwriting the batch order by serialization.
+# See: chainer/tests/chainer_tests/
+#      iterators_tests/test_iterator_compatibility.py (7e8f6cc)
+
 import numpy
 import pytest
 import unittest
@@ -93,7 +101,7 @@ class TestIteratorCompatibility(unittest.TestCase):
         self.assertEqual(len(batch3), self.bs)
         self.assertIsInstance(batch3, list)
         self.assertTrue(it.is_new_epoch)
-        concated_batches = numpy.concatenate([batch1, batch2, batch3])
-        chainer.testing.assert_allclose(
-            numpy.sort(concated_batches), self.dataset)
+        self.assertEqual(
+            sorted(batch1 + batch2 + batch3),
+            self.dataset.tolist())
         self.assertAlmostEqual(it.epoch_detail, 3 * bs_n_ratio)
