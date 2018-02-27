@@ -63,11 +63,11 @@ class TestIteratorCompatibility(unittest.TestCase):
     def test_iterator_compatibility(self):
         iters = (
             lambda: chainermn.iterators.create_multi_node_iterator(
-                        chainer.iterators.SerialIterator(
-                            self.dataset, batch_size=self.bs),
-                        self.communicator),
+                chainer.iterators.SerialIterator(
+                    self.dataset, batch_size=self.bs),
+                self.communicator),
             lambda: chainer.iterators.SerialIterator(
-                        self.dataset, batch_size=self.bs),
+                self.dataset, batch_size=self.bs),
         )
 
         bs_n_ratio = self.bs / self.N
