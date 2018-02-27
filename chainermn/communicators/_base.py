@@ -112,8 +112,13 @@ class CommunicatorBase(object):
         """
         self.mpi_comm.ssend(msgtype, dest=dest, tag=tag)
 
+        # Type check.
         if not msgtype.is_tuple:
             obj = [obj]
+
+        for x in obj:
+            if x.dtype != numpy.float32:
+                raise ValueError('send only support dtype == numpy.float32')
 
         for array in obj:
             if chainer.cuda.get_array_module(array) is not numpy:
@@ -180,6 +185,12 @@ class CommunicatorBase(object):
         if len(xs) != self.size:
             raise ValueError(
                 'The length of data must be same as communicator size.')
+
+        # Type check.
+        for x in xs:
+            if x.dtype != numpy.float32:
+                raise ValueError(
+                    'alltoall only support dtype == numpy.float32')
 
         # Mediate #axes of arrays.
         sndims = numpy.array([x.ndim for x in xs], dtype=numpy.int32)
