@@ -4,6 +4,7 @@ import chainer.testing.attr
 import chainermn
 import numpy as np
 import pytest
+from six.moves import range
 import unittest
 
 
