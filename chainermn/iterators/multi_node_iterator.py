@@ -5,16 +5,18 @@ import numpy
 
 class _MultiNodeIterator_Master(object):
 
-    def __init__(self, actual_iterator, communicator, rank_master, device):
+    def __init__(self, actual_iterator, communicator, rank_master):
         self.communicator = communicator
         self.rank_master = rank_master
         self.actual_iterator = actual_iterator
-        self.device = device
 
         _dataset_size = numpy.ones((1, )).astype(numpy.float32) \
             * len(self.actual_iterator.dataset)
         # TODO(tsutsumi): potential deadlock?
         self.communicator.bcast(_dataset_size, root=self.rank_master)
+        self.communicator.bcast(
+            self.actual_iterator._order.astype(numpy.float32),
+            root=self.rank_master)
 
     def __next__(self):
         try:
@@ -38,8 +40,8 @@ class _MultiNodeIterator_Master(object):
         if not stop:
             if isinstance(batch, list):
                 batch = numpy.array(batch)
-            return chainermn.functions.bcast(
-                self.communicator, batch, self.rank_master, self.device)
+            batch = self.communicator.bcast(batch, root=self.rank_master)
+            return batch.tolist()
         else:
             raise StopIteration
 
@@ -60,11 +62,10 @@ class _MultiNodeIterator_Master(object):
 
 class _MultiNodeIterator_Slave(chainer.dataset.iterator.Iterator):
 
-    def __init__(self, communicator, rank_master, device):
+    def __init__(self, communicator, rank_master):
         super(_MultiNodeIterator_Slave, self).__init__()
         self.communicator = communicator
         self.rank_master = rank_master
-        self.device = device
 
         # Compatibility to Chainer iterators.
         self.epoch = 0
@@ -74,6 +75,8 @@ class _MultiNodeIterator_Slave(chainer.dataset.iterator.Iterator):
         # TODO(tsutsumi): potential deadlock?
         _size = self.communicator.bcast(None, root=self.rank_master)
         self.dataset_size = int(_size)
+        self._order = self.communicator.bcast(None, root=self.rank_master)
+        self._order = self._order.astype(numpy.int64)
 
     def __next__(self):
         # Check if master iterator received stop signal.
@@ -86,8 +89,8 @@ class _MultiNodeIterator_Slave(chainer.dataset.iterator.Iterator):
             self.epoch += 1
 
         if not stop:
-            return chainermn.functions.bcast(
-                self.communicator, None, self.rank_master, self.device)
+            batch = self.communicator.bcast(None, root=self.rank_master)
+            return batch.tolist()
         else:
             raise StopIteration
 
@@ -109,15 +112,13 @@ class _MultiNodeIterator_Slave(chainer.dataset.iterator.Iterator):
         )
 
         try:
-            # In order to make data type compatible in serializer.
-            dummy_order = numpy.random.permutation(self.dataset_size)
-            self.order = serializer('order', _serializer('order', dummy_order))
+            self._order = serializer('order', _serializer('order', self._order))
         except KeyError:
             pass
 
 
 def create_multi_node_iterator(
-        actual_iterator, communicator, rank_master=0, device=-1):
+        actual_iterator, communicator, rank_master=0):
     """Create a multi node iterator from a Chainer iterator.
 
     This iterator shares the same batches on multiple processes, simply
@@ -155,13 +156,12 @@ def create_multi_node_iterator(
             (e.g., ``chainer.iterators.SerialIterator``).
         communicator: ChainerMN communicator.
         rank_master: process rank to be master.
-        device: Target device specifier.
 
     Returns:
         The master-slave iterator based on ``actual_iterator``.
     """
     if communicator.rank == rank_master:
         return _MultiNodeIterator_Master(
-            actual_iterator, communicator, rank_master, device)
+            actual_iterator, communicator, rank_master)
     else:
-        return _MultiNodeIterator_Slave(communicator, rank_master, device)
+        return _MultiNodeIterator_Slave(communicator, rank_master)
