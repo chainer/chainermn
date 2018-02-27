@@ -1,5 +1,4 @@
 import chainer
-import chainermn
 import numpy
 
 
@@ -103,16 +102,21 @@ class _MultiNodeIterator_Slave(chainer.dataset.iterator.Iterator):
         _serializer = self.communicator.mpi_comm.bcast(
             None, root=self.rank_master)
 
-        self.current_position = serializer('current_position',
+        self.current_position = serializer(
+            'current_position',
             _serializer('current_position', self.current_position)
         )
         self.epoch = serializer('epoch', _serializer('epoch', self.epoch))
-        self.is_new_epoch = serializer('is_new_epoch',
+        self.is_new_epoch = serializer(
+            'is_new_epoch',
             _serializer('is_new_epoch', self.is_new_epoch)
         )
 
         try:
-            self._order = serializer('order', _serializer('order', self._order))
+            self._order = serializer(
+                'order',
+                _serializer('order', self._order)
+            )
         except KeyError:
             pass
 

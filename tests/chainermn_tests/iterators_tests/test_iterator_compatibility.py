@@ -1,4 +1,3 @@
-import itertools
 import numpy
 import pytest
 import unittest
