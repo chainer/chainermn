@@ -135,7 +135,8 @@ class TestMultiNodeIterator(unittest.TestCase):
                 continue
 
     def test_overwrite_order(self):
-        """
+        """ Tests behavior on serialization.
+
         This test confirms that master's batch order can be overwritten,
         while slave's batch order cannot be overwritten, since slave must
         always distribute the completely same batch as master.
