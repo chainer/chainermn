@@ -160,6 +160,8 @@ def create_multi_node_iterator(
     Returns:
         The master-slave iterator based on ``actual_iterator``.
     """
+    chainer.utils.experimental(
+        'chainermn.iterators.create_multi_node_iterator')
     if communicator.rank == rank_master:
         return _MultiNodeIterator_Master(
             actual_iterator, communicator, rank_master)
