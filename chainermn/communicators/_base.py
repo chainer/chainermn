@@ -238,6 +238,9 @@ class CommunicatorBase(object):
             if msgtype.is_tuple:
                 raise ValueError('cannot broadcast tuple data')
 
+            elif x.dtype != numpy.float32:
+                raise ValueError('bcast only support dtype == numpy.float32')
+
             msgtype = self.mpi_comm.bcast(msgtype, root)
             shape = msgtype.shapes[0]
             buf = _memory_utility.array_to_buffer_object(x)
@@ -290,6 +293,9 @@ class CommunicatorBase(object):
                 if msgtype.shapes[0] != shape:
                     raise ValueError(
                         'gather cannot handle different shapes of data')
+
+        if x.dtype != numpy.float32:
+            raise ValueError('gather only support dtype == numpy.float32')
 
         # Gather data.
         sbuf = _memory_utility.array_to_buffer_object(x)
