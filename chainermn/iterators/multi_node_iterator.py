@@ -11,17 +11,29 @@ class _MultiNodeIterator_Master(object):
         self.actual_iterator = actual_iterator
         self.device = device
 
+        _dataset_size = numpy.ones((1, )).astype(numpy.float32) \
+            * len(self.actual_iterator.dataset)
+        # TODO(tsutsumi): potential deadlock?
+        self.communicator.bcast(_dataset_size, root=self.rank_master)
+
     def __next__(self):
         try:
             batch = self.actual_iterator.__next__()
             stop = False
         except StopIteration:
             stop = True
+        is_new_epoch = self.actual_iterator.is_new_epoch
 
-        # Broadcast whether stop signal is received before broadcasting data.
-        # TODO(tsutsumi): should we prepare API to broadcast flag?
-        _stop = numpy.ones((1, ), dtype=numpy.float32) * int(stop)
-        self.communicator.bcast(_stop, root=self.rank_master)
+        # Notify the followings to slave iterators:
+        # 1. whether stop signal is received before broadcasting data.
+        # 2. is_new_epoch.
+        # 3. current_position.
+        _info = numpy.ones((3, )) \
+            * [int(stop),
+               int(is_new_epoch),
+               int(self.actual_iterator.current_position)]
+        _info = _info.astype(numpy.float32)
+        self.communicator.bcast(_info, root=self.rank_master)
 
         if not stop:
             if isinstance(batch, list):
@@ -39,6 +51,12 @@ class _MultiNodeIterator_Master(object):
     def __setattr_(self, attr_name, value):
         setattr(self.actual_iterator, attr_name, value)
 
+    def serialize(self, serializer):
+        # Master's and Slave's serialize must be called at the same time.
+        self.actual_iterator.serialize(serializer)
+        self.communicator.mpi_comm.bcast(
+            serializer, root=self.rank_master)
+
 
 class _MultiNodeIterator_Slave(chainer.dataset.iterator.Iterator):
 
@@ -48,16 +66,54 @@ class _MultiNodeIterator_Slave(chainer.dataset.iterator.Iterator):
         self.rank_master = rank_master
         self.device = device
 
+        # Compatibility to Chainer iterators.
+        self.epoch = 0
+        self.current_position = 0
+        self.is_new_epoch = False
+
+        # TODO(tsutsumi): potential deadlock?
+        _size = self.communicator.bcast(None, root=self.rank_master)
+        self.dataset_size = int(_size)
+
     def __next__(self):
         # Check if master iterator received stop signal.
-        stop = None
-        stop = self.communicator.bcast(stop, root=self.rank_master)
+        _info = self.communicator.bcast(None, root=self.rank_master)
+        stop = bool(_info[0])
+        self.is_new_epoch = bool(_info[1])
+        self.current_position = int(_info[2])
 
-        if not int(stop):
+        if self.is_new_epoch:
+            self.epoch += 1
+
+        if not stop:
             return chainermn.functions.bcast(
                 self.communicator, None, self.rank_master, self.device)
         else:
             raise StopIteration
+
+    @property
+    def epoch_detail(self):
+        return self.epoch + self.current_position / self.dataset_size
+
+    def serialize(self, serializer):
+        # Master's and Slave's serialize must be called at the same time.
+        _serializer = self.communicator.mpi_comm.bcast(
+            None, root=self.rank_master)
+
+        self.current_position = serializer('current_position',
+            _serializer('current_position', self.current_position)
+        )
+        self.epoch = serializer('epoch', _serializer('epoch', self.epoch))
+        self.is_new_epoch = serializer('is_new_epoch',
+            _serializer('is_new_epoch', self.is_new_epoch)
+        )
+
+        try:
+            # In order to make data type compatible in serializer.
+            dummy_order = numpy.random.permutation(self.dataset_size)
+            self.order = serializer('order', _serializer('order', dummy_order))
+        except KeyError:
+            pass
 
 
 def create_multi_node_iterator(
