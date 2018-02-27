@@ -70,7 +70,7 @@ class TestIteratorCompatibility(unittest.TestCase):
                 self.dataset, batch_size=self.bs),
         )
 
-        bs_n_ratio = self.bs / self.N
+        bs_n_ratio = 1. * self.bs / self.N
 
         it_before, it_after = iters
 

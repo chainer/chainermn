@@ -95,7 +95,7 @@ class _MultiNodeIterator_Slave(chainer.dataset.iterator.Iterator):
 
     @property
     def epoch_detail(self):
-        return self.epoch + self.current_position / self.dataset_size
+        return self.epoch + 1. * self.current_position / self.dataset_size
 
     def serialize(self, serializer):
         # Master's and Slave's serialize must be called at the same time.
