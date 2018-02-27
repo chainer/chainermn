@@ -155,6 +155,11 @@ def create_multi_node_iterator(
     on extremely large dataset, you can also consider to use
     ``chainermn.iterators.create_synchronized_iterator``.
 
+    .. note:: ``create_multi_node_iterator`` and ``serialize`` of created
+              iterators must be called at the same time by master and slaves,
+              unless it falls into deadlock because they synchronize internal
+              states of iterators.
+
     Args:
         actual_iterator: Chainer iterator
             (e.g., ``chainer.iterators.SerialIterator``).
