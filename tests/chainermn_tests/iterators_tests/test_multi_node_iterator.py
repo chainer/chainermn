@@ -140,6 +140,7 @@ class TestMultiNodeIterator(unittest.TestCase):
         while slave's batch order cannot be overwritten, since slave must
         always distribute the completely same batch as master.
         """
+
         bs = 4
         rank_master = 0
         iterator = chainermn.iterators.create_multi_node_iterator(
