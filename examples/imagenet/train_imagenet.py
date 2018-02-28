@@ -16,18 +16,11 @@ from chainer.training import extensions
 import chainermn
 
 
-if chainer.__version__.startswith('1.'):
-    import models_v1.alex as alex
-    import models_v1.googlenet as googlenet
-    import models_v1.googlenetbn as googlenetbn
-    import models_v1.nin as nin
-    import models_v1.resnet50 as resnet50
-else:
-    import models_v2.alex as alex
-    import models_v2.googlenet as googlenet
-    import models_v2.googlenetbn as googlenetbn
-    import models_v2.nin as nin
-    import models_v2.resnet50 as resnet50
+import models.alex as alex
+import models.googlenet as googlenet
+import models.googlenetbn as googlenetbn
+import models.nin as nin
+import models.resnet50 as resnet50
 
 # Check Python version if it supports multiprocessing.set_start_method,
 # which was introduced in Python 3.4
