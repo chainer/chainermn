@@ -5,16 +5,14 @@ import warnings
 
 
 def _check_mp_start_method(comm):
-    """
-    Show a warning if 'forkserver' is not used as multiprocessing's start method.
-    :return:
-    """
+    """Show a warning if multiprocessing's start_method is not 'forkserver'."""
     method = multiprocessing.get_start_method()
 
-    if comm.size > 1:
+    if comm.size > 1 and comm.rank:
         if method is not 'forkserver':
-            warnings.warn("multiprocessing's `start_method` must be 'forkserver' "
-                          "(now it's '{}')".format(method), stacklevel=2)
+            warnings.warn("multiprocessing's `start_method` must be "
+                          "'forkserver' (now it's '{}')".format(method),
+                          stacklevel=2)
 
 
 class _MultiNodeOptimizer(object):
