@@ -1,4 +1,5 @@
 import collections
+import numpy
 
 import chainer
 from chainer import cuda
@@ -23,22 +24,27 @@ class Send(chainer.Function):
     def forward(self, inputs):
         xp = cuda.get_array_module(*inputs)
 
-        if len(inputs) == 1:
-            inputs = inputs[0]
+        # The last input is dummy variable, to retain gradient computation
+        # of this function.
+        xs = inputs[:-1]
 
-        self.comm.send(inputs, self.peer_rank, self.peer_tag)
+        if len(xs) == 1:
+            xs = xs[0]
+
+        self.comm.send(xs, self.peer_rank, self.peer_tag)
 
         # Return an empty variable, which serves as "delegate_variable."
         return xp.array([], dtype=xp.float32),
 
     def backward(self, inputs, grad_outputs):
         xp = cuda.get_array_module(*inputs)
+        dummy_grad = xp.array([], dtype=xp.float32)
         with cuda.get_device_from_array(*inputs):
             grad = self.comm.recv(self.peer_rank, self.peer_tag)
             if isinstance(grad, tuple):
-                return tuple([xp.array(gy) for gy in grad])
+                return tuple([xp.array(gy) for gy in grad] + [dummy_grad])
             else:
-                return xp.array(grad),
+                return xp.array(grad), dummy_grad
 
 
 class Recv(chainer.Function):
@@ -135,12 +141,17 @@ def send(x, communicator, rank, tag=0):
             'rank must be different from communicator rank, '
             'otherwise deadlock occurs')
 
+    # Dummy variable to retain gradient computation of send,
+    # otherwise the corresponding recv will cause deadlock in backward
+    # in the case where all inputs for this function does not require_grad.
+    dummy_var = chainer.Variable(numpy.array([], dtype=numpy.float32))
+
     if isinstance(x, collections.Iterable):
         delegate_variable = Send(
-            communicator, peer_rank=rank, peer_tag=tag)(*x)
+            communicator, peer_rank=rank, peer_tag=tag)(*x, dummy_var)
     else:
         delegate_variable = Send(
-            communicator, peer_rank=rank, peer_tag=tag)(x)
+            communicator, peer_rank=rank, peer_tag=tag)(x, dummy_var)
 
     delegate_variable.name = 'delegate_variable'
     return delegate_variable
