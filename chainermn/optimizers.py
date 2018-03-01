@@ -1,6 +1,19 @@
 import chainer
 import copy
 import multiprocessing.pool
+import warnings
+
+
+def _check_mp_start_method():
+    """
+    Show a warning if 'forkserver' is not used as multiprocessing's start method.
+    :return:
+    """
+    method = multiprocessing.get_start_method()
+
+    if method is not 'forkserver':
+        warnings.warn("multiprocessing's `start_method` must be 'forkserver' "
+                      "(now it's '{}')".format(method), stacklevel=2)
 
 
 class _MultiNodeOptimizer(object):
