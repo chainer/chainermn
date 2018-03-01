@@ -8,7 +8,7 @@ def _check_mp_start_method(comm):
     """Show a warning if multiprocessing's start_method is not 'forkserver'."""
     method = multiprocessing.get_start_method()
 
-    if comm.size > 1 and comm.rank:
+    if comm.size > 1 and comm.rank == 0:
         if method is not 'forkserver':
             warnings.warn("multiprocessing's `start_method` must be "
                           "'forkserver' (now it's '{}')".format(method),
