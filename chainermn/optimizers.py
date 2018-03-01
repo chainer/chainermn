@@ -13,7 +13,7 @@ def _check_mp_start_method():
 
     if method is not 'forkserver':
         warnings.warn("multiprocessing's `start_method` must be 'forkserver' "
-                      "(now it's '{}')".format(method), stacklevel=2)
+                      "(now it's '{}')".format(method), stacklevel=1)
 
 
 class _MultiNodeOptimizer(object):
@@ -177,6 +177,8 @@ def create_multi_node_optimizer(actual_optimizer, communicator,
     Returns:
         The multi node optimizer based on ``actual_optimizer``.
     """
+    _check_mp_start_method()
+
     if double_buffering:
         from chainermn.communicators.pure_nccl_communicator \
             import PureNcclCommunicator
