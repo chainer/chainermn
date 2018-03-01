@@ -103,7 +103,7 @@ def unpack_params(params, itemsize, attr_name, buffer):
 
 def array_to_buffer_object(array):
     xp = chainer.cuda.get_array_module(array)
-    array = xp.require(array, dtype=xp.float32, requirements=['C_CONTIGUOUS'])
+    array = xp.ascontiguousarray(array)
 
     if xp is np:
         return array
