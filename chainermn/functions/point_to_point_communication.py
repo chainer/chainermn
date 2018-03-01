@@ -141,10 +141,12 @@ def send(x, communicator, rank, tag=0):
             'rank must be different from communicator rank, '
             'otherwise deadlock occurs')
 
+    xp = cuda.get_array_module(*x)
+
     # Dummy variable to retain gradient computation of send,
     # otherwise the corresponding recv will cause deadlock in backward
     # in the case where all inputs for this function does not require_grad.
-    dummy_var = chainer.Variable(numpy.array([], dtype=numpy.float32))
+    dummy_var = chainer.Variable(xp.array([], dtype=xp.float32))
 
     if isinstance(x, collections.Iterable):
         delegate_variable = Send(
