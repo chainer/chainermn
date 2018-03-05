@@ -196,6 +196,10 @@ class TestNonVariableInput(unittest.TestCase):
 
     def setUp(self):
         self.communicator = chainermn.create_communicator('naive')
+
+        if self.communicator.size < 2:
+            pytest.skip("This test is for multinode")
+
         self.rank_send = (self.communicator.rank + 1) % self.communicator.size
         self.rank_recv = (self.communicator.rank - 1) % self.communicator.size
 
