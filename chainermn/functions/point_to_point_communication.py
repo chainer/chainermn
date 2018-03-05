@@ -1,5 +1,4 @@
 import collections
-import numpy
 
 import chainer
 from chainer import cuda
@@ -148,9 +147,10 @@ def send(x, communicator, rank, tag=0):
     # in the case where all inputs for this function does not require_grad.
     dummy_var = chainer.Variable(xp.array([], dtype=xp.float32))
 
-    if isinstance(x, collections.Iterable):
+    if isinstance(x, list) or isinstance(x, tuple):
+        inputs = x + type(x)([dummy_var])
         delegate_variable = Send(
-            communicator, peer_rank=rank, peer_tag=tag)(*x, dummy_var)
+            communicator, peer_rank=rank, peer_tag=tag)(*inputs)
     else:
         delegate_variable = Send(
             communicator, peer_rank=rank, peer_tag=tag)(x, dummy_var)

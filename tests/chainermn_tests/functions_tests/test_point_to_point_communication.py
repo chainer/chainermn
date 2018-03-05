@@ -209,9 +209,9 @@ class TestNonVariableInput(unittest.TestCase):
         modification.
         """
         if self.communicator.rank == 0:
-#            x = chainer.Variable(numpy.ones((1, 10)).astype(numpy.float32))
             x = numpy.ones((1, 10)).astype(numpy.float32)
-            phi = chainermn.functions.send(x, self.communicator, rank=self.rank_send)
+            phi = chainermn.functions.send(
+                x, self.communicator, rank=self.rank_send)
             x = chainermn.functions.pseudo_connect(phi, x)
             y = chainer.functions.sum(x)
             t = numpy.array(0).astype(numpy.float32)
@@ -219,13 +219,16 @@ class TestNonVariableInput(unittest.TestCase):
             z.backward()
 
         elif self.communicator.rank == self.communicator.size - 1:
-            x = chainermn.functions.recv(self.communicator, rank=self.rank_recv)
+            x = chainermn.functions.recv(
+                self.communicator, rank=self.rank_recv)
             y = chainer.functions.sum(x)
             t = numpy.array(0).astype(numpy.float32)
             z = chainer.functions.mean_squared_error(y, t)
             z.backward()
 
         else:
-            x = chainermn.functions.recv(self.communicator, rank=self.rank_recv)
-            phi = chainermn.functions.send(x, self.communicator, rank=self.rank_next)
+            x = chainermn.functions.recv(
+                self.communicator, rank=self.rank_recv)
+            phi = chainermn.functions.send(
+                x, self.communicator, rank=self.rank_next)
             phi.backward()
