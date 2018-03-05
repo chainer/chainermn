@@ -247,7 +247,7 @@ class CommunicatorBase(object):
         if is_master:
             msgtype = _MessageType(x)
             if msgtype.is_tuple:
-                raise ValueError('cannot broadcast tuple data')
+                raise TypeError('cannot broadcast tuple data')
 
             elif x.dtype != numpy.float32:
                 raise ValueError('bcast only support dtype == numpy.float32')
@@ -297,7 +297,7 @@ class CommunicatorBase(object):
             shape = msgtype.shapes[0]
             for msgtype in msgtypes:
                 if msgtype.is_tuple:
-                    raise ValueError('gather cannot handle tuple data')
+                    raise TypeError('gather cannot handle tuple data')
 
                 assert len(msgtype.shapes) == 1
 
