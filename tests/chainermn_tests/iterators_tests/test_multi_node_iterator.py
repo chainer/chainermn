@@ -41,6 +41,10 @@ class DummyDeserializer(chainer.serializer.Deserializer):
         return value
 
 
+@chainer.testing.parameterize(
+    {'iterator_class': chainer.iterators.SerialIterator},
+    {'iterator_class': chainer.iterators.MultiprocessIterator},
+)
 class TestMultiNodeIterator(unittest.TestCase):
 
     def setUp(self):
@@ -56,7 +60,7 @@ class TestMultiNodeIterator(unittest.TestCase):
         # Datasize is a multiple of batchsize.
         bs = 4
         iterator = chainermn.iterators.create_multi_node_iterator(
-            chainer.iterators.SerialIterator(
+            self.iterator_class(
                 self.dataset, batch_size=bs, shuffle=True),
             self.communicator)
 
@@ -75,7 +79,7 @@ class TestMultiNodeIterator(unittest.TestCase):
         # Batasize is not a multiple of batchsize.
         bs = 7
         iterator = chainermn.iterators.create_multi_node_iterator(
-            chainer.iterators.SerialIterator(
+            self.iterator_class(
                 self.dataset, batch_size=bs, shuffle=True),
             self.communicator)
 
@@ -95,7 +99,7 @@ class TestMultiNodeIterator(unittest.TestCase):
         rank_master = 1
         bs = 4
         iterator = chainermn.iterators.create_multi_node_iterator(
-            chainer.iterators.SerialIterator(
+            self.iterator_class(
                 self.dataset, batch_size=bs, shuffle=True),
             self.communicator, rank_master)
 
@@ -116,7 +120,7 @@ class TestMultiNodeIterator(unittest.TestCase):
         # Do not repeat iterator to test if we can catch StopIteration.
         bs = 4
         iterator = chainermn.iterators.create_multi_node_iterator(
-            chainer.iterators.SerialIterator(
+            self.iterator_class(
                 self.dataset, batch_size=bs, shuffle=True, repeat=False),
             self.communicator)
 
@@ -145,7 +149,7 @@ class TestMultiNodeIterator(unittest.TestCase):
         bs = 4
         rank_master = 0
         iterator = chainermn.iterators.create_multi_node_iterator(
-            chainer.iterators.SerialIterator(
+            self.iterator_class(
                 self.dataset, batch_size=bs, shuffle=True, repeat=False),
             self.communicator,
             rank_master=rank_master)

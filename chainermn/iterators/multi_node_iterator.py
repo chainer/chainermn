@@ -162,7 +162,8 @@ def create_multi_node_iterator(
 
     Args:
         actual_iterator: Chainer iterator
-            (e.g., ``chainer.iterators.SerialIterator``).
+            (``chainer.iterators.SerialIterator`` and
+            ``chainer.iterators.MultiprocessIterator`` are supported).
         communicator: ChainerMN communicator.
         rank_master: process rank to be master.
 

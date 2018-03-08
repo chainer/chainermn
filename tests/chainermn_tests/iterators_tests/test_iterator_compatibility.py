@@ -48,6 +48,10 @@ class DummyDeserializer(chainer.serializer.Deserializer):
         return value
 
 
+@chainer.testing.parameterize(
+    {'iterator_class': chainer.iterators.SerialIterator},
+    {'iterator_class': chainer.iterators.MultiprocessIterator},
+)
 class TestIteratorCompatibility(unittest.TestCase):
 
     def setUp(self):
@@ -63,10 +67,10 @@ class TestIteratorCompatibility(unittest.TestCase):
     def test_iterator_compatibility(self):
         iters = (
             lambda: chainermn.iterators.create_multi_node_iterator(
-                chainer.iterators.SerialIterator(
+                self.iterator_class(
                     self.dataset, batch_size=self.bs),
                 self.communicator),
-            lambda: chainer.iterators.SerialIterator(
+            lambda: self.iterator_class(
                 self.dataset, batch_size=self.bs),
         )
 
