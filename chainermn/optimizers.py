@@ -108,11 +108,6 @@ class _DoubleBufferingOptimizer(object):
     def allreduce_grad_async(self):
         self.communicator.allreduce_grad_async(
             self.communicated_target, self.allreduce_grad_stream)
-        #self.communicator.allreduce_grad_async(
-        #    self.communicated_target, )
-
-        #self.communicator.allreduce_grad(
-        #    self.communicated_target)
 
     def is_changed(self, target, previous_params):
         target_params = list(sorted(target.namedparams()))
