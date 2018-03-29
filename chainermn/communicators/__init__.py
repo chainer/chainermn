@@ -34,7 +34,8 @@ def create_communicator(
           ``hierarchical``, ``two_dimensional``, ``pure_nccl``, or
           ``single_node``)
         mpi_comm: MPI4py communicator
-        allreduce_grad_dtype: Data type of gradient used in All-Reduce
+        allreduce_grad_dtype: Data type of gradient used in All-Reduce.
+          If ``None``, the dtype of a model is used.
 
     Returns:
         ChainerMN communicator
@@ -47,7 +48,8 @@ def create_communicator(
 
     if communicator_name != 'pure_nccl' and allreduce_grad_dtype is not None:
         raise ValueError(
-            'allreduce_grad_dtype is not supported except for \'pure_nccl\'.')
+            'allreduce_grad_dtype is only available'
+            'at \'pure_nccl\' communicator.')
 
     if communicator_name == 'naive':
         from chainermn.communicators.naive_communicator \

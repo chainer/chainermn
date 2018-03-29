@@ -36,6 +36,8 @@ class HostPinnedMemory(object):
         return self.ffi.buffer(self.cptr, size)
 
     def array(self, count, offset=0, dtype=np.float32):
+        if dtype is None:
+            raise TypeError('dtype must be an instance of numpy.dtype class')
         return np.frombuffer(
             self.memory, count=count, offset=offset, dtype=dtype)
 
@@ -77,6 +79,8 @@ class DeviceMemory(object):
         return self.ffi.buffer(self.ffi.cast('void *', self.memory.ptr), size)
 
     def array(self, shape, offset=0, dtype=np.float32):
+        if dtype is None:
+            raise TypeError('dtype must be an instance of numpy.dtype class')
         return cp.ndarray(shape, memptr=self.memory + offset, dtype=dtype)
 
 

@@ -99,7 +99,7 @@ Copying datasets
 
 In the MNIST example, the rank 0 process reads the entire portion of
 the dataset and scatters it to other processes. In some applications,
-such as the ImageNet ChainerMN exmaple, however, only the pathes to
+such as the ImageNet ChainerMN example, however, only the pathes to
 each data file are scattered and each process reads the actual data
 files. In such cases, all datasets must be readable on all computing
 nodes in the same location. You don't need to worry about this if you
