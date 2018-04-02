@@ -7,6 +7,8 @@ import chainer
 import chainer.cuda
 import chainer.links
 import chainer.testing
+import chainer.testing.attr
+import chainermn
 from chainermn.communicators import _communication_utility
 from chainermn.communicators.flat_communicator \
     import FlatCommunicator
@@ -256,3 +258,52 @@ class TestPureNcclCommunicator(unittest.TestCase):
     def test_invalid_allreduce_grad_dtype(self):
         with self.assertRaises(ValueError):
             PureNcclCommunicator(self.mpi_comm, allreduce_grad_dtype=np.int32)
+
+
+class TestNonContiguousArray(unittest.TestCase):
+
+    def setup(self, gpu):
+        if gpu:
+            self.communicator = chainermn.create_communicator('hierarchical')
+            self.device = self.communicator.rank
+        else:
+            self.communicator = chainermn.create_communicator('naive')
+            self.device = -1
+
+        if self.communicator.size != 2:
+            pytest.skip('This test is for two processes')
+
+    def check_send(self):
+        if self.communicator.rank == 0:
+            x = np.arange(18).reshape(3, 3, 2).astype(np.float32)
+            # slicing operator destruct both C-/Fortran-contiguousness
+            self.communicator.send(x[:, 1, :], dest=1, tag=0)
+
+        elif self.communicator.rank == 1:
+            self.communicator.recv(source=0, tag=0)
+
+    def test_send_cpu(self):
+        self.setup(False)
+        self.check_send()
+
+    @chainer.testing.attr.gpu
+    def test_send_gpu(self):
+        self.setup(True)
+        self.check_send()
+
+    def check_alltoall(self):
+        self.setup(False)
+        x = np.arange(18).reshape(3, 3, 2).astype(np.float32)
+        # slicing operator destruct both C-/Fortran-contiguousness
+        x = x[:, 1, :]
+        xs = (x, x)
+        self.communicator.alltoall(xs)
+
+    def test_alltoall_cpu(self):
+        self.setup(False)
+        self.check_alltoall()
+
+    @chainer.testing.attr.gpu
+    def test_alltoall_gpu(self):
+        self.setup(True)
+        self.check_alltoall()
