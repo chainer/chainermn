@@ -35,8 +35,7 @@ class _MultiNodeNStepRNN(chainer.Chain):
                 self.n_cells = _rnn_n_cells[link.rnn]
 
         else:  # expect Chainer >4.0.0b3
-            check_lstm = issubclass(
-                link.__class__, lconn.n_step_rnn.NStepRNNBase)
+            check_lstm = issubclass(link, lconn.n_step_rnn.NStepRNNBase)
             if not check_lstm:
                 raise ValueError(
                     'link must be NStepRNN and its inherited link')
