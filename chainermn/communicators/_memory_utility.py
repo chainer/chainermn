@@ -102,7 +102,10 @@ def unpack_params(params, itemsize, attr_name, buffer):
 
 
 def array_to_buffer_object(array):
-    if chainer.cuda.get_array_module(array) is np:
+    xp = chainer.cuda.get_array_module(array)
+    array = xp.ascontiguousarray(array)
+
+    if xp is np:
         return array
     else:
         ffi = cffi.FFI()
