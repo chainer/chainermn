@@ -1,3 +1,5 @@
+This is a dummy PR to test CI toolchain.
+
 <div align="center"><img src="docs/image/chainermn1000px.png" width="800"/></div>
 
 [![Build Status](https://travis-ci.org/chainer/chainermn.svg?branch=master)](https://travis-ci.org/chainer/chainermn)
