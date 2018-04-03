@@ -58,7 +58,12 @@ class TestCollectiveCommunication(unittest.TestCase):
 
     def check_bcast(self, x):
         root = 0
-        y = chainermn.functions.bcast(self.communicator, x, root, self.device)
+        if self.communicator.rank == root:
+            y = chainermn.functions.bcast(
+                self.communicator, x, root, self.device)
+        else:
+            y = chainermn.functions.bcast(
+                self.communicator, None, root, self.device)
         e = chainer.functions.mean_squared_error(y, x)
         e.backward()
 

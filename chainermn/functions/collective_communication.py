@@ -43,6 +43,19 @@ class Bcast(chainer.Function):
         self.root = root
         self.device = device
 
+    def __call__(self, *inputs):
+        xp = cuda.get_array_module(*inputs)
+
+        if inputs == ():
+            # Without dummy variable, this function does not "require_grad",
+            # thus back propagation will not be invoked.
+            dummy_var = chainer.Variable(xp.array([], dtype=xp.float32))
+            dummy_var.name = 'dummy_var'
+            return super(Bcast, self).__call__(dummy_var)
+
+        else:
+            return super(Bcast, self).__call__(*inputs)
+
     def forward(self, inputs):
         if self.comm.rank == self.root:
             x, = inputs
@@ -116,4 +129,7 @@ def bcast(comm, x, root=0, device=-1):
     """
     chainer.utils.experimental('chainermn.functions.bcast')
 
-    return Bcast(comm, root, device)(x)
+    if comm.rank == root:
+        return Bcast(comm, root, device)(x)
+    else:
+        return Bcast(comm, root, device)()
