@@ -9,14 +9,14 @@ python:
   - "3.6"
 
 env:
-  - MPI="mpich-3.0.4"    CHAINER_VER="3.3.0"
-  - MPI="mpich-3.0.4"    CHAINER_VER="4.0.0b3"
-  - MPI="mpich-3.2"      CHAINER_VER="3.3.0"
-  - MPI="mpich-3.2"      CHAINER_VER="4.0.0b3"
-  - MPI="openmpi-1.6.5"  CHAINER_VER="3.3.0"
-  - MPI="openmpi-1.6.5"  CHAINER_VER="4.0.0b3"
-  - MPI="openmpi-1.10.3" CHAINER_VER="3.3.0"
-  - MPI="openmpi-1.10.3" CHAINER_VER="4.0.0b3"
+  - MPI="mpich-3.0.4"    CHAINER_VER="3.5.0"
+  - MPI="mpich-3.0.4"    CHAINER_VER="4.0.0rc1"
+  - MPI="mpich-3.2"      CHAINER_VER="3.5.0"
+  - MPI="mpich-3.2"      CHAINER_VER="4.0.0rc1"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="3.5.0"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="4.0.0rc1"
+  - MPI="openmpi-1.10.3" CHAINER_VER="3.5.0"
+  - MPI="openmpi-1.10.3" CHAINER_VER="4.0.0rc1"
 
 cache:
   - pip
