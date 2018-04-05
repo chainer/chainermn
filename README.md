@@ -1,4 +1,4 @@
-This is a dummy PR to test CI toolchain. another edit. The brown fox jumps
+This is a dummy PR to test CI toolchain. another edit. The brown fox jumps over
 
 <div align="center"><img src="docs/image/chainermn1000px.png" width="800"/></div>
 
