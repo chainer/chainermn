@@ -67,9 +67,9 @@ class PureNcclCommunicator(_base.CommunicatorBase):
 
     def allreduce_grad(self, model):
         stream = chainer.cuda.Stream.null
-        self.allreduce_grad_async(model, stream)
+        self._allreduce_grad_async(model, stream)
 
-    def allreduce_grad_async(self, model, stream):
+    def _allreduce_grad_async(self, model, stream):
         self._init_comms()
         params = _memory_utility.extract_params(model)
         grad_dtype = _get_param_grad_dtype(params[0])
@@ -184,7 +184,7 @@ def _get_nccl_type_id(dtype):
     elif dtype == np.float32:
         return nccl.NCCL_FLOAT32
     elif dtype == np.float64:
-        return nccl.NCC_FLOAT64
+        return nccl.NCCL_FLOAT64
     else:
         raise ValueError(
             'dtype must be float16, float32, or float64.')

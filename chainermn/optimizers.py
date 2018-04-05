@@ -60,8 +60,6 @@ class _DoubleBufferingOptimizer(object):
         super(_DoubleBufferingOptimizer, self).__setattr__(
             'needs_update', False)
         super(_DoubleBufferingOptimizer, self).__setattr__(
-            'device', None)
-        super(_DoubleBufferingOptimizer, self).__setattr__(
             'communicated_target', None)
         super(_DoubleBufferingOptimizer, self).__setattr__(
             'target_params_list', [[], []])
@@ -84,9 +82,6 @@ class _DoubleBufferingOptimizer(object):
             self.wait()
             self.communicator.broadcast_data(target)
             super(_DoubleBufferingOptimizer, self).__setattr__(
-                'device',
-                chainer.cuda.get_device_from_id(target._device_id))
-            super(_DoubleBufferingOptimizer, self).__setattr__(
                 'communicated_target', copy.deepcopy(target))
             super(_DoubleBufferingOptimizer, self).__setattr__(
                 'target_params_list', [
@@ -106,7 +101,7 @@ class _DoubleBufferingOptimizer(object):
                     'needs_update', True)
 
     def allreduce_grad_async(self):
-        self.communicator.allreduce_grad_async(
+        self.communicator._allreduce_grad_async(
             self.communicated_target, self.allreduce_grad_stream)
 
     def is_changed(self, target, previous_params):
