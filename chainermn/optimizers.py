@@ -1,6 +1,5 @@
 import chainer
 import copy
-import multiprocessing.pool
 
 
 class _MultiNodeOptimizer(object):
@@ -61,15 +60,9 @@ class _DoubleBufferingOptimizer(object):
         super(_DoubleBufferingOptimizer, self).__setattr__(
             'needs_update', False)
         super(_DoubleBufferingOptimizer, self).__setattr__(
-            'device', None)
-        super(_DoubleBufferingOptimizer, self).__setattr__(
-            'thread_pool', multiprocessing.pool.ThreadPool(1))
-        super(_DoubleBufferingOptimizer, self).__setattr__(
             'communicated_target', None)
         super(_DoubleBufferingOptimizer, self).__setattr__(
             'target_params_list', [[], []])
-        super(_DoubleBufferingOptimizer, self).__setattr__(
-            'allreduce_grad_result', None)
         super(_DoubleBufferingOptimizer, self).__setattr__(
             'allreduce_grad_stream', chainer.cuda.Stream(non_blocking=True))
 
@@ -89,9 +82,6 @@ class _DoubleBufferingOptimizer(object):
             self.wait()
             self.communicator.broadcast_data(target)
             super(_DoubleBufferingOptimizer, self).__setattr__(
-                'device',
-                chainer.cuda.get_device_from_id(target._device_id))
-            super(_DoubleBufferingOptimizer, self).__setattr__(
                 'communicated_target', copy.deepcopy(target))
             super(_DoubleBufferingOptimizer, self).__setattr__(
                 'target_params_list', [
@@ -103,18 +93,15 @@ class _DoubleBufferingOptimizer(object):
             self.wait()
             self.swap_grad(self.target_params_list[0],
                            self.target_params_list[1])
-            super(_DoubleBufferingOptimizer, self).__setattr__(
-                'allreduce_grad_result',
-                self.thread_pool.apply_async(self.allreduce_grad))
+            self.allreduce_grad_async()
             if self.needs_update:
                 self.actual_optimizer.update(None, *args, **kwds)
             else:
                 super(_DoubleBufferingOptimizer, self).__setattr__(
                     'needs_update', True)
 
-    def allreduce_grad(self):
-        chainer.cuda.get_device(self.device).use()
-        self.communicator.allreduce_grad(
+    def allreduce_grad_async(self):
+        self.communicator._allreduce_grad_async(
             self.communicated_target, self.allreduce_grad_stream)
 
     def is_changed(self, target, previous_params):
@@ -136,8 +123,8 @@ class _DoubleBufferingOptimizer(object):
             var1.grad, var2.grad = var2.grad, var1.grad
 
     def wait(self):
-        if self.allreduce_grad_result is not None:
-            self.allreduce_grad_result.get()
+        self.allreduce_grad_stream.synchronize()
+        chainer.cuda.Stream.null.synchronize()
 
     def __getattr__(self, attr_name):
         return getattr(self.actual_optimizer, attr_name)

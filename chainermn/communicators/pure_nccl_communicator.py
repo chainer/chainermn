@@ -35,6 +35,9 @@ class PureNcclCommunicator(_base.CommunicatorBase):
                     'numpy.float64, or None.')
         else:
             self.allreduce_grad_dtype = None
+        self.grad_dtype_to_allreduce_dtype_kernel = None
+        self.allreduce_dtype_to_grad_dtype_kernel = None
+        self.div_by_size = None
 
     def _init_ranks(self):
         my_ranks = _communication_utility.init_ranks(self.mpi_comm)
@@ -62,11 +65,12 @@ class PureNcclCommunicator(_base.CommunicatorBase):
     def broadcast_data(self, model):
         _communication_utility.broadcast_naive(self.mpi_comm, model)
 
-    def allreduce_grad(self, model, stream=None):
-        self._init_comms()
-        if stream is None:
-            stream = chainer.cuda.Stream.null
+    def allreduce_grad(self, model):
+        stream = chainer.cuda.Stream.null
+        self._allreduce_grad_async(model, stream)
 
+    def _allreduce_grad_async(self, model, stream):
+        self._init_comms()
         params = _memory_utility.extract_params(model)
         grad_dtype = _get_param_grad_dtype(params[0])
         if self.allreduce_grad_dtype is None:
@@ -74,64 +78,100 @@ class PureNcclCommunicator(_base.CommunicatorBase):
         else:
             allreduce_grad_dtype = self.allreduce_grad_dtype
         n_elems = sum(param.grad.size for param in params)
-        self._assign(grad_dtype, allreduce_grad_dtype, n_elems)
-        self._pack_params_to_buffer(params, grad_dtype, allreduce_grad_dtype,
-                                    n_elems)
-        if stream != chainer.cuda.Stream.null:
+        needs_sync = self._assign(grad_dtype, allreduce_grad_dtype, n_elems)
+        if stream != chainer.cuda.Stream.null and needs_sync:
             chainer.cuda.Stream.null.synchronize()
+
+        self._pack_params_to_buffer(params, grad_dtype, allreduce_grad_dtype,
+                                    n_elems, stream)
         self.nccl_comm.allReduce(self.gpu_allreduce_buffer_a.ptr(),
                                  self.gpu_allreduce_buffer_b.ptr(), n_elems,
                                  _get_nccl_type_id(allreduce_grad_dtype),
-                                 nccl.NCCL_SUM, stream.ptr)
-        if stream != chainer.cuda.Stream.null:
-            stream.synchronize()
-        ret = self.gpu_allreduce_buffer_b.array(n_elems,
-                                                dtype=allreduce_grad_dtype) \
-            * (1.0/self.size)
-        allreduce_grad_n_bytes = allreduce_grad_dtype.itemsize * n_elems
-        self.gpu_allreduce_buffer_b.from_device(ret, allreduce_grad_n_bytes)
+                                 nccl.NCCL_SUM,
+                                 stream.ptr)
+        if self.div_by_size is None:
+            self.div_by_size = chainer.cuda.cupy.ElementwiseKernel(
+                '{} x'.format(allreduce_grad_dtype.name),
+                '{} y'.format(allreduce_grad_dtype.name),
+                'y = x*(1.0/{})'.format(self.size), 'div_by_size')
+        self.div_by_size(
+            self.gpu_allreduce_buffer_b.array(n_elems,
+                                              dtype=allreduce_grad_dtype),
+            self.gpu_allreduce_buffer_a.array(n_elems,
+                                              dtype=allreduce_grad_dtype),
+            stream=stream)
         self._unpack_params_from_buffer(params, grad_dtype,
-                                        allreduce_grad_dtype, n_elems)
+                                        allreduce_grad_dtype, n_elems, stream)
 
     def _assign(self, grad_dtype, allreduce_grad_dtype, n_elems):
         allreduce_grad_n_bytes = allreduce_grad_dtype.itemsize * n_elems
-        self.gpu_allreduce_buffer_a.assign(allreduce_grad_n_bytes)
-        self.gpu_allreduce_buffer_b.assign(allreduce_grad_n_bytes)
+        needs_sync = False
+        if self.gpu_allreduce_buffer_a.size != allreduce_grad_n_bytes:
+            self.gpu_allreduce_buffer_a.assign(allreduce_grad_n_bytes)
+            needs_sync = True
+        if self.gpu_allreduce_buffer_b.size != allreduce_grad_n_bytes:
+            self.gpu_allreduce_buffer_b.assign(allreduce_grad_n_bytes)
+            needs_sync = True
+
         if grad_dtype != allreduce_grad_dtype:
             grad_n_bytes = grad_dtype.itemsize * n_elems
-            self.gpu_tmp_buffer.assign(grad_n_bytes)
+            if self.gpu_tmp_buffer.size != grad_n_bytes:
+                self.gpu_tmp_buffer.assign(grad_n_bytes)
+                needs_sync = True
+        return needs_sync
 
     def _pack_params_to_buffer(self, params, grad_dtype, allreduce_grad_dtype,
-                               n_elems):
+                               n_elems, stream):
         if grad_dtype == allreduce_grad_dtype:
-            _memory_utility.pack_params(
-                params, allreduce_grad_dtype.itemsize, 'grad',
-                self.gpu_allreduce_buffer_a)
-        else:
             _memory_utility.pack_params(
                 params, grad_dtype.itemsize, 'grad',
-                self.gpu_tmp_buffer)
-            ret = self.gpu_tmp_buffer.array(n_elems,
-                                            dtype=grad_dtype).astype(
-                                                allreduce_grad_dtype)
-            allreduce_grad_n_bytes = allreduce_grad_dtype.itemsize * n_elems
-            self.gpu_allreduce_buffer_a.from_device(ret,
-                                                    allreduce_grad_n_bytes)
+                self.gpu_allreduce_buffer_a, stream=stream)
+        else:
+            if self.grad_dtype_to_allreduce_dtype_kernel is None:
+                self.grad_dtype_to_allreduce_dtype_kernel = \
+                    _get_converting_kernel(
+                        grad_dtype, allreduce_grad_dtype,
+                        'grad_dtype_to_allreduce_dtype_kernel')
+
+            _memory_utility.pack_params(
+                params, grad_dtype.itemsize, 'grad',
+                self.gpu_tmp_buffer, stream=stream)
+
+            self.grad_dtype_to_allreduce_dtype_kernel(
+                self.gpu_tmp_buffer.array(n_elems, dtype=grad_dtype),
+                self.gpu_allreduce_buffer_a.array(n_elems,
+                                                  dtype=allreduce_grad_dtype),
+                stream=stream)
 
     def _unpack_params_from_buffer(self, params, grad_dtype,
-                                   allreduce_grad_dtype, n_elems):
+                                   allreduce_grad_dtype, n_elems, stream):
         if grad_dtype == allreduce_grad_dtype:
             _memory_utility.unpack_params(
                 params, allreduce_grad_dtype.itemsize, 'grad',
-                self.gpu_allreduce_buffer_b)
+                self.gpu_allreduce_buffer_a, stream)
+
         else:
-            ret = self.gpu_allreduce_buffer_b.array(
-                n_elems,
-                dtype=allreduce_grad_dtype).astype(grad_dtype)
-            grad_n_bytes = grad_dtype.itemsize * n_elems
-            self.gpu_tmp_buffer.from_device(ret, grad_n_bytes)
+            if self.allreduce_dtype_to_grad_dtype_kernel is None:
+                self.allreduce_dtype_to_grad_dtype_kernel = \
+                    _get_converting_kernel(
+                        allreduce_grad_dtype, grad_dtype,
+                        'allreduce_dtype_to_grad_dtype_kernel')
+            self.allreduce_dtype_to_grad_dtype_kernel(
+                self.gpu_allreduce_buffer_a.array(n_elems,
+                                                  dtype=allreduce_grad_dtype),
+                self.gpu_tmp_buffer.array(n_elems, dtype=grad_dtype),
+                stream=stream)
+
             _memory_utility.unpack_params(
-                params, grad_dtype.itemsize, 'grad', self.gpu_tmp_buffer)
+                params, grad_dtype.itemsize, 'grad', self.gpu_tmp_buffer,
+                stream=stream)
+
+
+def _get_converting_kernel(src_dtype, dst_dtype, kernel_name):
+    return chainer.cuda.cupy.ElementwiseKernel(
+        '{} x'.format(src_dtype.name),
+        '{} y'.format(dst_dtype.name),
+        'y = x', kernel_name)
 
 
 def _get_param_grad_dtype(param):
