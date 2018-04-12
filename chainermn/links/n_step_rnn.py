@@ -4,8 +4,18 @@ import chainer.links.connection as lconn
 import chainermn.functions
 
 
-# Chainer <=v3
-CHAINER_VERSION_OLD_RNN = (int(chainer.__version__.split('.')[0]) <= 3)
+def _is_old_rnn():
+    major_version = int(chainer.__version__.split('.')[0])
+    if major_version <= 3:
+        return True
+    elif chainer.__version__.startswith('4.0.0b'):
+        return True
+    else:
+        return False
+
+
+CHAINER_VERSION_OLD_RNN = _is_old_rnn()
+
 
 if CHAINER_VERSION_OLD_RNN:
     _rnn_n_cells = {
