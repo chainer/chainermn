@@ -38,13 +38,16 @@ class _MultiNodeNStepRNN(chainer.Chain):
         self.rank_out = rank_out
 
         if CHAINER_VERSION_OLD_RNN:
+            print('hasattr(link, rnn)', hasattr(link, 'rnn'))
+            print(' link.rnn',  link.rnn)
+            print('link.rnn not in _rnn_n_cells', link.rnn not in _rnn_n_cells)
             if not hasattr(link, 'rnn') or link.rnn not in _rnn_n_cells:
                 raise ValueError(
                     'link must be NStepRNN and its inherited link')
             else:
                 self.n_cells = _rnn_n_cells[link.rnn]
 
-        else:  # expect Chainer >4.0.0b3
+        else:  # expect Chainer >=4.0.0rc1
             check_lstm = isinstance(link, lconn.n_step_rnn.NStepRNNBase)
             if not check_lstm:
                 raise ValueError(
