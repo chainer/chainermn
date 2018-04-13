@@ -23,7 +23,7 @@ class _MultiNodeNStepRNN(chainer.Chain):
     def __init__(self, link, communicator, rank_in, rank_out):
         if chainer.__version__.startswith('4.0.0b'):
             raise ValueError(
-                'Multi node stacked RNN link is not support '
+                'Multi node stacked RNN link does not support '
                 'Chainer 4.0.0b1-4.0.0b4 versions.')
 
         super(_MultiNodeNStepRNN, self).__init__(actual_rnn=link)
