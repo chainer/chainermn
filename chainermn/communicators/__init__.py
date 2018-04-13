@@ -1,3 +1,5 @@
+from chainermn.communicators.communicator_base import CommunicatorBase  # NOQA
+from chainermn.communicators.mpi_communicator_base import MpiCommunicatorBase  # NOQA
 
 
 def create_communicator(
@@ -38,7 +40,8 @@ def create_communicator(
           If ``None``, the dtype of a model is used.
 
     Returns:
-        ChainerMN communicator
+        ChainerMN communicator that implements methods defined in
+        :class:`chainermn.CommunicatorBase`
 
     """
 

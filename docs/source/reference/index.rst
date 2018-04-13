@@ -8,7 +8,13 @@ Communicators
 ~~~~~~~~~~~~~
 
 .. autofunction:: create_communicator
+.. autoclass:: CommunicatorBase
+    :members: rank, intra_rank, size, alltoall, send, recv, bcast,
+              gather, allreduce, send_obj, recv_obj, bcast_obj,
+              gather_obj, allreduce_obj, bcast_data, allreduce_grad
 
+.. autoclass:: chainermn.communicators.MpiCommunicatorBase
+    :members: split
 
 Optimizers and Evaluators
 ~~~~~~~~~~~~~~~~~~~~~~~~~

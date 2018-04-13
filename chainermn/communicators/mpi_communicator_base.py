@@ -5,10 +5,10 @@ import numpy
 
 import chainer.cuda
 import chainer.utils
-from chainermn.communicators import _base
 from chainermn.communicators import _communication_utility
 from chainermn.communicators._communication_utility import chunked_bcast_obj
 from chainermn.communicators import _memory_utility
+from chainermn.communicators import communicator_base
 from chainermn import nccl
 
 
@@ -36,7 +36,18 @@ class _MessageType(object):
                 'Message object must be numpy/cupy array or tuple.')
 
 
-class MpiCommunicatorBase(_base.CommunicatorBase):
+class MpiCommunicatorBase(communicator_base.CommunicatorBase):
+    '''MpiCommunicatorBase
+
+    Implementation of communicator interface defined by
+    :class:`CommunicatorBase`. This communicator assumes MPI4py and
+    all ChainerMN processes are invoked by ``mpirun`` (``mpiexec``)
+    command. Although this lacks several important methods such as
+    ``allreduce_grad`` to be impelmented with speficic algorithm. See
+    hierarcical communicator or pure_nccl communicator for example.
+
+    '''
+
     def __init__(self, mpi_comm, use_nccl=False):
         self.mpi_comm = mpi_comm
         self._init_ranks()
@@ -108,7 +119,7 @@ class MpiCommunicatorBase(_base.CommunicatorBase):
                 the communicator size.
         """
         chainer.utils.experimental(
-            'chainermn.communicators.CommunicatorBase.all_to_all')
+            'chainermn.communicators.CommunicatorBase.alltoall')
 
         if len(xs) != self.size:
             raise ValueError(
@@ -352,6 +363,7 @@ class MpiCommunicatorBase(_base.CommunicatorBase):
             buf = _memory_utility.array_to_buffer_object(param.data)
             self.mpi_comm.Bcast(buf)
 
+    # Private methods
     def _init_ranks(self):
         my_ranks = _communication_utility.init_ranks(self.mpi_comm)
         assert my_ranks[0] == self.mpi_comm.rank
