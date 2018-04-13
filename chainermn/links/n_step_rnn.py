@@ -4,18 +4,8 @@ import chainer.links.connection as lconn
 import chainermn.functions
 
 
-def _is_old_rnn():
-    major_version = int(chainer.__version__.split('.')[0])
-    if major_version <= 3:
-        return True
-    elif chainer.__version__.startswith('4.0.0b'):
-        return True
-    else:
-        return False
-
-
-CHAINER_VERSION_OLD_RNN = _is_old_rnn()
-
+# Chainer <=v3
+CHAINER_VERSION_OLD_RNN = (int(chainer.__version__.split('.')[0]) <= 3)
 
 if CHAINER_VERSION_OLD_RNN:
     _rnn_n_cells = {
@@ -31,6 +21,11 @@ if CHAINER_VERSION_OLD_RNN:
 class _MultiNodeNStepRNN(chainer.Chain):
 
     def __init__(self, link, communicator, rank_in, rank_out):
+        if chainer.__version__.startswith('4.0.0b'):
+            raise ValueError(
+                'Multi node stacked RNN link is not support '
+                'Chainer 4.0.0b1-4.0.0b4 versions.')
+
         super(_MultiNodeNStepRNN, self).__init__(actual_rnn=link)
 
         self.communicator = communicator
@@ -38,9 +33,6 @@ class _MultiNodeNStepRNN(chainer.Chain):
         self.rank_out = rank_out
 
         if CHAINER_VERSION_OLD_RNN:
-            print('hasattr(link, rnn)', hasattr(link, 'rnn'))
-            print(' link.rnn',  link.rnn)
-            print('link.rnn not in _rnn_n_cells', link.rnn not in _rnn_n_cells)
             if not hasattr(link, 'rnn') or link.rnn not in _rnn_n_cells:
                 raise ValueError(
                     'link must be NStepRNN and its inherited link')
