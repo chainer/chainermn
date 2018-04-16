@@ -42,7 +42,7 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
     def _init_ranks(self):
         my_ranks = _communication_utility.init_ranks(self.mpi_comm)
         assert my_ranks[0] == self.mpi_comm.rank
-        self.intra_rank = my_ranks[1]
+        self._intra_rank = my_ranks[1]
         self.intra_size = my_ranks[2]
         self.inter_rank = my_ranks[3]
         self.inter_size = my_ranks[4]
