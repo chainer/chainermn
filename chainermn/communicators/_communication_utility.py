@@ -1,7 +1,7 @@
 import collections
-import mpi4py.MPI
+import pickle
 
-from chainermn.communicators import _memory_utility
+import mpi4py.MPI
 
 
 def init_ranks(mpi_comm):
@@ -75,12 +75,6 @@ def init_comms(mpi_comm, intra_rank, intra_size, inter_rank, use_nccl=True):
         return intra_mpi_comm, inter_mpi_comm
 
 
-def broadcast_naive(mpi_comm, model):
-    for _, param in sorted(model.namedparams()):
-        buf = _memory_utility.array_to_buffer_object(param.data)
-        mpi_comm.Bcast(buf)
-
-
 def inter_allreduce_gpu(
         inter_mpi_comm, size, gpu_buffer_a, gpu_buffer_b,
         n_bytes_buffer, n_elems_per_node, n_bytes_per_node, cuda_stream):
@@ -106,3 +100,73 @@ def inter_allreduce_gpu(
     inter_mpi_comm.Alltoall(
         [gpu_buffer_a.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT],
         [gpu_buffer_b.buffer(n_bytes_buffer), mpi4py.MPI.FLOAT])
+
+
+INT_MAX = 2147483647
+
+
+def chunked_bcast_obj(obj, mpi_comm, max_buf_len=256 * 1024 * 1024,
+                      root=0):
+    '''Split object to max_buf_len size chunks and send them out
+
+    As mpi4py does not accept an object whose pickled size is larger
+    than signed integer max (2147483647) the object is pickled and
+    split into chunks.
+
+    Another hack could be try with mpi_comm.bcast(obj) then rank 0
+    node will receive OverflowError from mpi4py. But in that case rank
+    > 0 nodes shall block busy waiting forever at mpi_comm.bcast(obj).
+
+    Args:
+        obj: A Python object that is to be broadcasted.
+        comm: ChainerMN communicator or MPI4py communicator.
+        root (int): The root process of the scatter operation.
+        max_buf_len (int): Max buffer size to be used at broadcasting
+            binaries. Must not be larger than 2147483647 (INT_MAX).
+            Default value is 256MB.
+    Returns:
+        Broadcasted object.
+
+    '''
+    assert max_buf_len < INT_MAX
+    assert max_buf_len > 0
+
+    # check XOR condition of obj is None and rank==0
+    # rank \ obj | None | not None |
+    #   == 0     |  NG  |   OK     |
+    #    > 0     |  OK  |   NG     |
+    assert not (obj is None and mpi_comm.rank == root)
+    assert not (obj is not None and mpi_comm.rank != root)
+
+    if obj is not None and mpi_comm.rank == root:
+        pickled_bytes = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        pickled_bytes = bytearray()
+
+    total_bytes = len(pickled_bytes)
+    total_chunk_num = total_bytes // max_buf_len
+    if (total_bytes % max_buf_len) > 0:
+        total_chunk_num += 1
+
+    data = mpi_comm.bcast((total_chunk_num, max_buf_len, total_bytes))
+    assert data is not None
+    (total_chunk_num, max_buf_len, total_bytes) = data
+
+    for i in range(total_chunk_num):
+        b = i * max_buf_len
+        e = min(b + max_buf_len, total_bytes)
+
+        if mpi_comm.rank == root:
+            buf = pickled_bytes[b:e]
+        else:
+            buf = bytearray(e - b)
+
+        mpi_comm.Bcast(buf, root=root)
+
+        if mpi_comm.rank != root:
+            pickled_bytes[b:e] = buf
+
+    if mpi_comm.rank > root:
+        obj = pickle.loads(pickled_bytes)
+
+    return obj

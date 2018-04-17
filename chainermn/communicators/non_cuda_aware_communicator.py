@@ -2,12 +2,12 @@ import chainer.cuda
 import math
 import mpi4py.MPI
 
-from chainermn.communicators import _base
 from chainermn.communicators import _memory_utility
+from chainermn.communicators import mpi_communicator_base
 from chainermn import nccl
 
 
-class NonCudaAwareCommunicator(_base.CommunicatorBase):
+class NonCudaAwareCommunicator(mpi_communicator_base.MpiCommunicatorBase):
 
     def __init__(self, mpi_comm):
         super(NonCudaAwareCommunicator, self).__init__(mpi_comm, use_nccl=True)
@@ -16,7 +16,7 @@ class NonCudaAwareCommunicator(_base.CommunicatorBase):
         self.cpu_buffer_a = _memory_utility.HostPinnedMemory()
         self.cpu_buffer_b = _memory_utility.HostPinnedMemory()
 
-    def broadcast_data(self, model):
+    def bcast_data(self, model):
         for _, param in sorted(model.namedparams()):
             data = param.data
             tmp_cpu = chainer.cuda.to_cpu(data)

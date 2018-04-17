@@ -39,6 +39,11 @@ class AllreducePersistent(chainer.training.extension.Extension):
     def __init__(self, model, comm):
         if hasattr(comm, 'mpi_comm'):
             comm = comm.mpi_comm
+        else:
+            # TODO(kuenishi): wrap this speciall allreduce with
+            # CommunicatorBase interface
+            raise ValueError(
+                'allreduce_persistent is only in MPI-based communicator.')
 
         self.model = model
         self.comm = comm

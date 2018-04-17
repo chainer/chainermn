@@ -55,7 +55,7 @@ class _MultiNodeIterator_Master(object):
     def serialize(self, serializer):
         # Master's and Slave's serialize must be called at the same time.
         self.actual_iterator.serialize(serializer)
-        self.communicator.mpi_comm.bcast(
+        self.communicator.bcast_obj(
             serializer, root=self.rank_master)
 
 
@@ -99,7 +99,7 @@ class _MultiNodeIterator_Slave(chainer.dataset.iterator.Iterator):
 
     def serialize(self, serializer):
         # Master's and Slave's serialize must be called at the same time.
-        _serializer = self.communicator.mpi_comm.bcast(
+        _serializer = self.communicator.bcast_obj(
             None, root=self.rank_master)
 
         self.current_position = serializer(

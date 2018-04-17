@@ -154,11 +154,11 @@ def check_send_and_recv_tuple(communicator, data):
         communicator.send(data, dest=rank_next, tag=0)
 
 
-def check_broadcast_data(communicator, model):
+def check_bcast_data(communicator, model):
     model.a.W.data[:] = communicator.rank
     model.b.W.data[:] = communicator.rank + 1
     model.c.b.data[:] = communicator.rank + 2
-    communicator.broadcast_data(model)
+    communicator.bcast_data(model)
     chainer.testing.assert_allclose(model.a.W.data, 0 * np.ones((3, 2)))
     chainer.testing.assert_allclose(model.b.W.data, 1 * np.ones((4, 3)))
     chainer.testing.assert_allclose(model.c.b.data, 2 * np.ones((5, )))
@@ -228,7 +228,7 @@ def check_collective_communication(param, use_gpu):
     model = ExampleModel(param.model_dtype)
     if use_gpu:
         model.to_gpu()
-    check_broadcast_data(communicator, model)
+    check_bcast_data(communicator, model)
     check_allreduce_grad(communicator, model)
     check_allreduce_grad_empty(communicator, model)
 

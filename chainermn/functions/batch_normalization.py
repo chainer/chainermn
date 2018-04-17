@@ -114,6 +114,9 @@ class MultiNodeBatchNormalizationFunction(function.Function):
             axis = (0,) + tuple(range(head_ndim, x.ndim))
 
             # ChainerMN diff (1/2) begins
+            # This was intentionally left as MPI's allreduce because
+            # MPI was optimized for small messages, while earlier
+            # NCCL2 was optmized for larger messages.
             mpi_comm = self.comm.mpi_comm
             tmp = xp.empty(gamma.size * 2, dtype=x.dtype)
             x.mean(axis=axis, out=tmp[:gamma.size])
