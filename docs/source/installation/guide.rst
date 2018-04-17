@@ -110,8 +110,8 @@ We tested ChainerMN on all the following environments.
   * Ubuntu 14.04 LTS 64bit
 
 * Python 2.7.13 3.5.1 3.6.1
-* Chainer 3.5.0
-* CuPy 2.5.0
+* Chainer 3.5.0 4.0.0
+* CuPy 2.5.0 4.0.0
 * MPI
 
   * openmpi 1.6.5 1.10.3 2.1.1
