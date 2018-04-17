@@ -240,9 +240,14 @@ class CommunicatorBase(six.with_metaclass(ABCMeta)):
         '''Broadcast Chainer model parameter data'''
         raise NotImplementedError()
 
-    # Left for backward compatibility, but ill be deprecated in future
-    # version. Use ``bcast_data()`` method instad.
-    broadcast_data = bcast_data
+    def broadcast_data(self, model):
+        '''Broadcast Chainer model parameter data
+
+        Left for backward compatibility, but ill be deprecated in
+        future version. Use ``bcast_data()`` method instad.
+
+        '''
+        self.bcast_data(model)
 
     @abstractmethod
     def allreduce_grad(self, model):
