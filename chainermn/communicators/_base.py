@@ -71,7 +71,7 @@ class CommunicatorBase(object):
         raise NotImplementedError()
 
     # Special communication method on grads and data of models
-    def bcast_data(self, model, max_buf_len=None, root=0):
+    def bcast_data(self, model):
         '''Broadcast Chainer model data'''
         raise NotImplementedError()
 
