@@ -64,7 +64,6 @@ def scatter_dataset(dataset, comm, root=0, shuffle=False,
             if i == root:
                 mine = chainer.datasets.SubDataset(dataset, b, e, order)
             else:
-                print((b, e))
                 comm.send_obj((b, e), dest=i)
         assert mine is not None
         return mine

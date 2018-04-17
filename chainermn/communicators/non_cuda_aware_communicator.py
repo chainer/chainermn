@@ -24,8 +24,6 @@ class NonCudaAwareCommunicator(mpi_communicator_base.MpiCommunicatorBase):
             tmp_gpu = chainer.cuda.to_gpu(tmp_cpu)
             data[:] = tmp_gpu
 
-    broadcast_data = bcast_data
-
     def allreduce_grad(self, model):
         self._init_comms()
         stream = chainer.cuda.Stream.null

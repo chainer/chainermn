@@ -7,6 +7,7 @@ import chainer.cuda
 import chainer.utils
 from chainermn.communicators import _base
 from chainermn.communicators import _communication_utility
+from chainermn.communicators._communication_utility import chunked_bcast_obj
 from chainermn.communicators import _memory_utility
 from chainermn import nccl
 
@@ -334,18 +335,15 @@ class MpiCommunicatorBase(_base.CommunicatorBase):
     def recv_obj(self, source):
         return self.mpi_comm.recv(source=source)
 
-    def bcast_obj(self, obj, max_buf_len=None, root=0):
-        if max_buf_len is None:
-            max_buf_len = 256 * 1024 * 1024
-        return _communication_utility.chunked_bcast(obj,
-                                                    self.mpi_comm,
-                                                    max_buf_len=max_buf_len,
-                                                    root=root)
+    def bcast_obj(self, obj, max_buf_len=256 * 1024 * 1024, root=0):
+        return chunked_bcast_obj(obj, self.mpi_comm,
+                                 max_buf_len=max_buf_len,
+                                 root=root)
 
     def gather_obj(self, obj, root=0):
         return self.mpi_comm.gather(obj, root=root)
 
-    def allreduce_obj(self, obj, op=None):
+    def allreduce_obj(self, obj):
         # Summation by default
         return self.mpi_comm.allreduce(obj)
 
@@ -353,8 +351,6 @@ class MpiCommunicatorBase(_base.CommunicatorBase):
         for _, param in sorted(model.namedparams()):
             buf = _memory_utility.array_to_buffer_object(param.data)
             self.mpi_comm.Bcast(buf)
-
-    broadcast_data = bcast_data
 
     def _init_ranks(self):
         my_ranks = _communication_utility.init_ranks(self.mpi_comm)

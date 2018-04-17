@@ -50,8 +50,8 @@ class CommunicatorBase(object):
     def gather(self, data, root=0):
         raise NotImplementedError()
 
-    def allreduce(self, data):
-        raise NotImplementedError()
+    # TODO(kuenishi) implment ``allreduce``
+    # def allreduce(self, xs):
 
     # on objects
     def send_obj(self, obj, dest, tag):
@@ -66,7 +66,8 @@ class CommunicatorBase(object):
     def gather_obj(self, data, root=0):
         raise NotImplementedError()
 
-    def allreduce_obj(self, model, op=None):
+    # We may add ``op`` argument in future when needed.
+    def allreduce_obj(self, obj):
         raise NotImplementedError()
 
     # Special communication method on grads and data of models
@@ -74,14 +75,8 @@ class CommunicatorBase(object):
         '''Broadcast Chainer model data'''
         raise NotImplementedError()
 
-    def broadcast_data(self, model, max_buf_len=None, root=0):
-        '''Broadcast Chainer model data
-
-        Left for backward compatibility, but will be removed in future
-        versions. Use bcast_data() method instead.
-
-        '''
-        raise NotImplementedError()
+    # Will be deprecated in some future
+    broadcast_data = bcast_data
 
     def allreduce_grad(self, model):
         raise NotImplementedError()

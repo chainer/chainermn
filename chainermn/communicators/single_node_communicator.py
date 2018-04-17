@@ -37,8 +37,6 @@ class SingleNodeCommunicator(mpi_communicator_base.MpiCommunicatorBase):
         _memory_utility.unpack_params(
             params, itemsize, 'data', self.gpu_buffer_a)
 
-    broadcast_data = bcast_data
-
     def allreduce_grad(self, model):
         self._init_comms()
         stream = chainer.cuda.Stream.null

@@ -105,8 +105,8 @@ def inter_allreduce_gpu(
 INT_MAX = 2147483647
 
 
-def chunked_bcast(obj, mpi_comm, max_buf_len=256 * 1024 * 1024,
-                  root=0):
+def chunked_bcast_obj(obj, mpi_comm, max_buf_len=256 * 1024 * 1024,
+                      root=0):
     '''Split object to max_buf_len size chunks and send them out
 
     As mpi4py does not accept an object whose pickled size is larger
