@@ -307,3 +307,23 @@ class TestNonContiguousArray(unittest.TestCase):
     def test_alltoall_gpu(self):
         self.setup(True)
         self.check_alltoall()
+
+    def check_allreduce(self):
+        x = np.arange(18) + self.communicator.rank
+        xs = x.astype(np.float32)
+        xs = self.communicator.allreduce(xs)
+
+        s = sum(range(self.communicator.size))
+
+        y = np.arange(18) * self.communicator.size + s
+        ys = y.astype(np.float32)
+        chainer.testing.assert_allclose(ys, xs)
+
+    def test_allreduce_cpu(self):
+        self.setup(False)
+        self.check_allreduce()
+
+    @chainer.testing.attr.gpu
+    def test_allreduce_gpu(self):
+        self.setup(True)
+        self.check_allreduce()
