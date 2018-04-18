@@ -10,13 +10,13 @@ python:
 
 env:
   - MPI="mpich-3.0.4"    CHAINER_VER="3.5.0"
-  - MPI="mpich-3.0.4"    CHAINER_VER="4.0.0rc1"
+  - MPI="mpich-3.0.4"    CHAINER_VER="4.0.0"
   - MPI="mpich-3.2"      CHAINER_VER="3.5.0"
-  - MPI="mpich-3.2"      CHAINER_VER="4.0.0rc1"
+  - MPI="mpich-3.2"      CHAINER_VER="4.0.0"
   - MPI="openmpi-1.6.5"  CHAINER_VER="3.5.0"
-  - MPI="openmpi-1.6.5"  CHAINER_VER="4.0.0rc1"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="4.0.0"
   - MPI="openmpi-1.10.3" CHAINER_VER="3.5.0"
-  - MPI="openmpi-1.10.3" CHAINER_VER="4.0.0rc1"
+  - MPI="openmpi-1.10.3" CHAINER_VER="4.0.0"
 
 cache:
   - pip
