@@ -53,6 +53,29 @@ class CommunicatorBase(six.with_metaclass(ABCMeta)):
         raise NotImplementedError()
 
     @abstractmethod
+    def split(self, color, key):
+        """A function anologous MPI_Comm_Split.
+
+        This method splits the inter MPI commnicator and return a wrapped
+        ChainerMN communicator.
+
+        Args:
+            color (int):
+                Index of new group. The process with the same color will be
+                assigned to the same group.
+            key (int):
+                Control of rank assignment. The process will be assigned
+                a rank in the new group ordered by the value of key.
+                If you do not care of the rank, you can just simply specify
+                the original rank.
+
+        Returns:
+            CommunicatorBase
+
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def alltoall(self, xs):
         '''All-to-all implementation for ndarray
 

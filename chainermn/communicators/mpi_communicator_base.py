@@ -82,24 +82,6 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         return self.mpi_comm.size
 
     def split(self, color, key):
-        """A wrapper function of MPI_Comm_Split.
-
-        This method splits the inter MPI commnicator and return a wrapped
-        ChainerMN communicator.
-
-        Args:
-            color (int):
-                Index of new group. The process with the same color will be
-                assigned to the same group.
-            key (int):
-                Control of rank assignment. The process will be assigned
-                a rank in the new group ordered by the value of key.
-                If you do not care of the rank, you can just simply specify
-                the original rank.
-
-        Returns:
-            CommunicatorBase
-        """
         return self.__class__(mpi_comm=self.mpi_comm.Split(color, key))
 
     def alltoall(self, xs):
@@ -119,7 +101,7 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
                 the communicator size.
         """
         chainer.utils.experimental(
-            'chainermn.communicators.CommunicatorBase.alltoall')
+            'chainermn.communicators.MpiCommunicatorBase.alltoall')
 
         if len(xs) != self.size:
             raise ValueError(
@@ -180,7 +162,7 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
 
         """
         chainer.utils.experimental(
-            'chainermn.communicators.CommunicatorBase.send')
+            'chainermn.communicators.MpiCommunicatorBase.send')
 
         msgtype = _MessageType(data)
         """We use ssend() instead of send() to pass unittests.
@@ -222,7 +204,7 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         """
 
         chainer.utils.experimental(
-            'chainermn.communicators.CommunicatorBase.recv')
+            'chainermn.communicators.MpiCommunicatorBase.recv')
 
         msgtype = self.mpi_comm.recv(source=source, tag=tag)
 
@@ -302,7 +284,7 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
                 ``None`` for non-root processes.
         """
         chainer.utils.experimental(
-            'chainermn.communicators.CommunicatorBase.gather')
+            'chainermn.communicators.MpiCommunicatorBase.gather')
 
         is_master = self.mpi_comm.rank == root
 
