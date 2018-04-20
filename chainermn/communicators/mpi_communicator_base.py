@@ -5,10 +5,10 @@ import numpy
 
 import chainer.cuda
 import chainer.utils
-from chainermn.communicators import _base
 from chainermn.communicators import _communication_utility
 from chainermn.communicators._communication_utility import chunked_bcast_obj
 from chainermn.communicators import _memory_utility
+from chainermn.communicators import communicator_base
 from chainermn import nccl
 
 
@@ -36,7 +36,18 @@ class _MessageType(object):
                 'Message object must be numpy/cupy array or tuple.')
 
 
-class MpiCommunicatorBase(_base.CommunicatorBase):
+class MpiCommunicatorBase(communicator_base.CommunicatorBase):
+    '''MpiCommunicatorBase
+
+    Implementation of communicator interface defined by
+    :class:`CommunicatorBase`. This communicator assumes MPI4py and
+    all ChainerMN processes are invoked by ``mpirun`` (``mpiexec``)
+    command. Although this lacks several important methods such as
+    ``allreduce_grad`` to be impelmented with speficic algorithm. See
+    hierarcical communicator or pure_nccl communicator for example.
+
+    '''
+
     def __init__(self, mpi_comm, use_nccl=False):
         self.mpi_comm = mpi_comm
         self._init_ranks()
@@ -71,24 +82,6 @@ class MpiCommunicatorBase(_base.CommunicatorBase):
         return self.mpi_comm.size
 
     def split(self, color, key):
-        """A wrapper function of MPI_Comm_Split.
-
-        This method splits the inter MPI commnicator and return a wrapped
-        ChainerMN communicator.
-
-        Args:
-            color (int):
-                Index of new group. The process with the same color will be
-                assigned to the same group.
-            key (int):
-                Control of rank assignment. The process will be assigned
-                a rank in the new group ordered by the value of key.
-                If you do not care of the rank, you can just simply specify
-                the original rank.
-
-        Returns:
-            CommunicatorBase
-        """
         return self.__class__(mpi_comm=self.mpi_comm.Split(color, key))
 
     def alltoall(self, xs):
@@ -108,7 +101,7 @@ class MpiCommunicatorBase(_base.CommunicatorBase):
                 the communicator size.
         """
         chainer.utils.experimental(
-            'chainermn.communicators.CommunicatorBase.all_to_all')
+            'chainermn.communicators.MpiCommunicatorBase.alltoall')
 
         if len(xs) != self.size:
             raise ValueError(
@@ -169,7 +162,7 @@ class MpiCommunicatorBase(_base.CommunicatorBase):
 
         """
         chainer.utils.experimental(
-            'chainermn.communicators.CommunicatorBase.send')
+            'chainermn.communicators.MpiCommunicatorBase.send')
 
         msgtype = _MessageType(data)
         """We use ssend() instead of send() to pass unittests.
@@ -211,7 +204,7 @@ class MpiCommunicatorBase(_base.CommunicatorBase):
         """
 
         chainer.utils.experimental(
-            'chainermn.communicators.CommunicatorBase.recv')
+            'chainermn.communicators.MpiCommunicatorBase.recv')
 
         msgtype = self.mpi_comm.recv(source=source, tag=tag)
 
@@ -291,7 +284,7 @@ class MpiCommunicatorBase(_base.CommunicatorBase):
                 ``None`` for non-root processes.
         """
         chainer.utils.experimental(
-            'chainermn.communicators.CommunicatorBase.gather')
+            'chainermn.communicators.MpiCommunicatorBase.gather')
 
         is_master = self.mpi_comm.rank == root
 
@@ -352,6 +345,7 @@ class MpiCommunicatorBase(_base.CommunicatorBase):
             buf = _memory_utility.array_to_buffer_object(param.data)
             self.mpi_comm.Bcast(buf)
 
+    # Private methods
     def _init_ranks(self):
         my_ranks = _communication_utility.init_ranks(self.mpi_comm)
         assert my_ranks[0] == self.mpi_comm.rank
