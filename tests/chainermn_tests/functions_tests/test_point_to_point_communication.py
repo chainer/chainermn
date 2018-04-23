@@ -234,5 +234,5 @@ class TestNonVariableInput(unittest.TestCase):
             x = chainermn.functions.recv(
                 self.communicator, rank=self.rank_recv)
             phi = chainermn.functions.send(
-                x, self.communicator, rank=self.rank_next)
+                x, self.communicator, rank=self.rank_send)
             phi.backward()
