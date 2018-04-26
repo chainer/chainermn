@@ -41,10 +41,13 @@ class DummyDeserializer(chainer.serializer.Deserializer):
         return value
 
 
-@chainer.testing.parameterize(
-    {'iterator_class': chainer.iterators.SerialIterator},
-    {'iterator_class': chainer.iterators.MultiprocessIterator},
-)
+@chainer.testing.parameterize(*chainer.testing.product({
+    'paired_dataset': [True, False],
+    'iterator_class': [
+        chainer.iterators.SerialIterator,
+        chainer.iterators.MultiprocessIterator
+    ],
+}))
 class TestMultiNodeIterator(unittest.TestCase):
 
     def setUp(self):
@@ -54,7 +57,12 @@ class TestMultiNodeIterator(unittest.TestCase):
             pytest.skip("This test is for multinode only")
 
         self.N = 100
-        self.dataset = np.arange(self.N).astype(np.float32)
+        if self.paired_dataset:
+            self.dataset = list(zip(
+                np.arange(self.N).astype(np.float32),
+                np.arange(self.N).astype(np.float32)))
+        else:
+            self.dataset = np.arange(self.N).astype(np.float32)
 
     def test_mn_iterator(self):
         # Datasize is a multiple of batchsize.
