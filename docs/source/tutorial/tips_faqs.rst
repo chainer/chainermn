@@ -73,26 +73,42 @@ file to force all processes to abort if an uncaught exception occurs.::
 
   import sys
 
+  _old_hook = sys.excepthook
+
   # Global error handler
   def global_except_hook(exctype, value, traceback):
-      import sys
-      from traceback import print_exception
-      print_exception(exctype, value, traceback)
-      sys.stderr.flush()
+    import sys
+    try:
+        import mpi4py.MPI
 
-      import mpi4py.MPI
-      mpi4py.MPI.COMM_WORLD.Abort(1)
+        _old_hook(exctype, value, traceback)
+
+        rank = mpi4py.MPI.COMM_WORLD.Get_rank()
+        sys.stderr.write("\n")
+        sys.stderr.write("********************************************************\n")
+        sys.stderr.write("ChainerMN: Uncaught exception was detected on rank {}. \n".format(rank))
+        sys.stderr.write("           Calling MPI_Abort() to shut down MPI processes...\n")
+        sys.stderr.write("********************************************************\n\n\n")
+        sys.stderr.flush()
+
+    finally:
+        try:
+            import mpi4py.MPI
+            mpi4py.MPI.COMM_WORLD.Abort(1)
+        except Exception as e:
+            sys.stderr.write("Sorry, we failed to stop MPI, this MPI process may hang.\n")
+            sys.stderr.flush()
+            raise e
 
   sys.excepthook = global_except_hook
 
   def func():
-      import mpi4py.MPI
-      mpi_comm = mpi4py.MPI.COMM_WORLD
-      if mpi_comm.rank == 0:
-          raise ValueError('failure!')
+    import mpi4py.MPI
+    mpi_comm = mpi4py.MPI.COMM_WORLD
+    if mpi_comm.rank == 0:
+        raise ValueError('failure!')
 
-      mpi4py.MPI.COMM_WORLD.Barrier()
+    mpi4py.MPI.COMM_WORLD.Barrier()
 
   if __name__ == '__main__':
-      func()
-
+    func()
