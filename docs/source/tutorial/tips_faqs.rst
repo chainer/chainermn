@@ -39,3 +39,60 @@ Please refer to `MPI4py API reference <http://pythonhosted.org/mpi4py/apiref/mpi
 Using FP16
 ~~~~~~~~~~
 FP16 (16-bit half precision floating point values) is not supported in ChainerMN as of now.
+
+
+
+MPI processes don't exit when an error occurs in a process
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+An MPI runtime is expected to kill all of its child processes if one of them
+exits abnormally or without calling `MPI_Finalize()`.  However,
+when a Python program run on `mpi4py`, the MPI runtime often fails to detect
+a process failure, and the rest of the processes hang infinitely. It is especially problematic
+when you run your ChainerMN program on a cloud environment, in which you are charged on time basis.
+
+This tiny program demonstrates the issue.::
+
+  # test.py
+  def func():
+    import mpi4py.MPI
+    mpi_comm = mpi4py.MPI.COMM_WORLD
+    if mpi_comm.rank == 0:
+      raise ValueError('failure!')
+
+    mpi4py.MPI.COMM_WORLD.Barrier()
+
+  if __name__ == '__main__':
+    func()
+
+  # mpiexec -n 2 python test.py
+
+To avoid this problem, you can inject the following code snippet into your script
+file to force all processes to abort if an uncaught exception occurs.::
+
+  import sys
+
+  # Global error handler
+  def global_except_hook(exctype, value, traceback):
+      import sys
+      from traceback import print_exception
+      print_exception(exctype, value, traceback)
+      sys.stderr.flush()
+
+      import mpi4py.MPI
+      mpi4py.MPI.COMM_WORLD.Abort(1)
+
+  sys.excepthook = global_except_hook
+
+  def func():
+      import mpi4py.MPI
+      mpi_comm = mpi4py.MPI.COMM_WORLD
+      if mpi_comm.rank == 0:
+          raise ValueError('failure!')
+
+      mpi4py.MPI.COMM_WORLD.Barrier()
+
+  if __name__ == '__main__':
+      func()
+
