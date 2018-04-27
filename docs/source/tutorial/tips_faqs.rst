@@ -73,6 +73,7 @@ file to force all processes to abort if an uncaught exception occurs.::
 
   import sys
 
+  # === begin code snippet
   _old_hook = sys.excepthook
 
   # Global error handler
@@ -102,13 +103,17 @@ file to force all processes to abort if an uncaught exception occurs.::
 
   sys.excepthook = global_except_hook
 
+  # === end code snippet
+
   def func():
+    "A sample function to cause the problem"
     import mpi4py.MPI
     mpi_comm = mpi4py.MPI.COMM_WORLD
     if mpi_comm.rank == 0:
         raise ValueError('failure!')
 
     mpi4py.MPI.COMM_WORLD.Barrier()
+
 
   if __name__ == '__main__':
     func()
