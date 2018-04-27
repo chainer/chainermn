@@ -48,8 +48,8 @@ MPI processes don't exit when an error occurs in a process
 
 An MPI runtime is expected to kill all of its child processes if one of them
 exits abnormally or without calling `MPI_Finalize()`.  However,
-when a Python program run on `mpi4py`, the MPI runtime often fails to detect
-a process failure, and the rest of the processes hang infinitely. It is especially problematic
+when a Python program runs on `mpi4py`, the MPI runtime often fails to detect
+the process failure, and the rest of the processes hang infinitely. It is especially problematic
 when you run your ChainerMN program on a cloud environment, in which you are charged on time basis.
 
 This tiny program demonstrates the issue.::
