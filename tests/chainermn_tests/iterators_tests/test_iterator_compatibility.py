@@ -7,6 +7,7 @@
 #      iterators_tests/test_iterator_compatibility.py (7e8f6cc)
 
 import numpy
+import platform
 import pytest
 import unittest
 
@@ -55,6 +56,9 @@ class DummyDeserializer(chainer.serializer.Deserializer):
 class TestIteratorCompatibility(unittest.TestCase):
 
     def setUp(self):
+        if self.iterator_class == chainer.iterators.MultiprocessIterator and \
+                int(platform.python_version_tuple()[0]) < 3:
+            pytest.skip('This test requires Python version >= 3')
         self.communicator = chainermn.create_communicator('naive')
 
         if self.communicator.size < 2:

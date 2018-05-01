@@ -3,6 +3,7 @@ import chainer.testing
 import chainer.testing.attr
 import chainermn
 import numpy as np
+import platform
 import pytest
 from six.moves import range
 import unittest
@@ -51,6 +52,9 @@ class DummyDeserializer(chainer.serializer.Deserializer):
 class TestMultiNodeIterator(unittest.TestCase):
 
     def setUp(self):
+        if self.iterator_class == chainer.iterators.MultiprocessIterator and \
+                int(platform.python_version_tuple()[0]) < 3:
+            pytest.skip('This test requires Python version >= 3')
         self.communicator = chainermn.create_communicator('naive')
 
         if self.communicator.size < 2:
