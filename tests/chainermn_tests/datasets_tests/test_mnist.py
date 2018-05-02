@@ -34,12 +34,11 @@ def check_mnist(gpu, display_log=True):
     batchsize = 100
     n_units = 100
 
+    comm = chainermn.create_communicator('naive')
     if gpu:
-        comm = chainermn.create_communicator('hierarchical')
         device = comm.intra_rank
         chainer.cuda.get_device(device).use()
     else:
-        comm = chainermn.create_communicator('naive')
         device = -1
 
     model = L.Classifier(MLP(n_units, 10))
