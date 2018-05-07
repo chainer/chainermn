@@ -68,8 +68,17 @@ This tiny program demonstrates the issue.::
 
   # mpiexec -n 2 python test.py
 
-To avoid this problem, you can inject the following code snippet into your script
-file to force all processes to abort if an uncaught exception occurs.::
+
+
+`mpi4py` offers a solution to force all processes to abort if an uncaught exception occurs.. ::
+
+  $ mpiexec -n 2 python -m mpi4py yourscript.py ...
+
+This also works well with ChainerMN. See `here <http://mpi4py.readthedocs.io/en/stable/mpi4py.run.html>`_
+for more details.
+
+If you cannot apply the solution (i.e. you don't have a control of how Python interpreter is invoked),
+you can inject the following code snippet into your script file ::
 
   import sys
 
@@ -118,13 +127,7 @@ file to force all processes to abort if an uncaught exception occurs.::
   if __name__ == '__main__':
     func()
 
-`mpi4py` also offers a solution for this. ::
-
-  $ mpiexec -n 2 python -m mpi4py yourscript.py ...
-
-This also works well with ChainerMN. See `here <http://mpi4py.readthedocs.io/en/stable/mpi4py.run.html>`_
-for more details.
-You can choose any of these solutions for depending on your environment and restrictions.
+You can choose any of these solutions depending on your environment and restrictions.
 
 NOTE: These techniques are effective only for unhandled Python exceptions.
 If your program crashes due to lower-level issues such as `SIGSEGV`, the MPI process may still hang.
