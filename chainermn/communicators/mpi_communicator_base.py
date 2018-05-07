@@ -233,6 +233,7 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
 
         Args:
             x (numpy.array): Array to be broadcasted.
+            root (int): Rank of root process.
 
         Returns:
             ys (tuple of numpy.ndarray): Received arrays.
@@ -248,8 +249,7 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
                 raise TypeError('Tuple data cannot be broadcasted')
 
             elif x.dtype != numpy.float32:
-                raise ValueError(
-                    'MPI broadcast only supports dtype == numpy.float32')
+                raise TypeError('bcast only supports dtype == numpy.float32')
 
             msgtype = self.mpi_comm.bcast(msgtype, root)
             shape = msgtype.shapes[0]
@@ -272,16 +272,13 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         invoke ``gather()``. This method relies on mpi4py fast communication
         optimized for numpy arrays, as well as ``send()`` and ``recv()``.
 
-        Note that this method can only handle the same shapes of data
-        over all processes, and cannot handle tuple data.
-
         Args:
             x (numpy.array): Array to be gathered.
+            root (int): Rank of root process.
 
         Returns:
-            ys (numpy.ndarray):
-                Received arrays with shape (#proc, [data-shape]).
-                ``None`` for non-root processes.
+            ys (tuple of numpy.ndarray):
+                Received arrays. ``None`` for non-root processes.
         """
         chainer.utils.experimental(
             'chainermn.communicators.MpiCommunicatorBase.gather')
@@ -292,34 +289,70 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         msgtypes = self.mpi_comm.gather(msgtype, root)
 
         # Type check.
+        if x.dtype != numpy.float32:
+            raise TypeError('gather only support dtype == numpy.float32')
+
         if is_master:
-            shape = msgtype.shapes[0]
             for msgtype in msgtypes:
                 if msgtype.is_tuple:
                     raise TypeError('gather cannot handle tuple data')
 
                 assert len(msgtype.shapes) == 1
 
-                if msgtype.shapes[0] != shape:
-                    raise ValueError(
-                        'gather cannot handle different shapes of data')
+            sbuf = _memory_utility.array_to_buffer_object(x)
+            shapes = [mty.shapes[0] for mty in msgtypes]
+            rlens = [numpy.prod(s) for s in shapes]
+            rbuf = numpy.empty(sum(rlens), dtype=numpy.float32)
+
+            if chainer.cuda.get_array_module(x) is not numpy:
+                chainer.cuda.Stream.null.synchronize()
+
+            self.mpi_comm.Gatherv(
+                sbuf,
+                [rbuf, (rlens, _cnt_to_dsp(rlens)), mpi4py.MPI.FLOAT],
+                root)
+
+            ys = [rbuf[i:i + l].reshape(s)
+                  for i, l, s in zip(_cnt_to_dsp(rlens), rlens, shapes)]
+            return tuple(ys)
+
+        else:
+            sbuf = _memory_utility.array_to_buffer_object(x)
+            self.mpi_comm.Gatherv(sbuf, None, root)
+            return None
+
+    def allgather(self, x):
+        chainer.utils.experimental(
+            'chainermn.communicators.MPICommunicatorBase.allgather')
+
+        msgtype = _MessageType(x)
+        msgtypes = self.mpi_comm.allgather(msgtype)
+
+        # Type check.
+        for msgtype in msgtypes:
+            if msgtype.is_tuple:
+                raise TypeError('allgather cannot handle tuple data')
+
+            assert len(msgtype.shapes) == 1
 
         if x.dtype != numpy.float32:
-            raise ValueError('gather only support dtype == numpy.float32')
+            raise TypeError('allgather only support dtype == numpy.float32')
 
-        # Gather data.
+        # Collective communication.
+        xp = chainer.cuda.get_array_module(x)
+        shapes = [msgtype.shapes[0] for msgtype in msgtypes]
         sbuf = _memory_utility.array_to_buffer_object(x)
-        if is_master:
-            shape = tuple([self.mpi_comm.size]) + shape
-            rbuf = numpy.empty(numpy.prod(shape), dtype=numpy.float32)
-        else:
-            rbuf = None
-        self.mpi_comm.Gather(sbuf, rbuf, root)
+        rlens = [numpy.prod(s) for s in shapes]
+        rbuf = numpy.empty(sum(rlens), dtype=numpy.float32)
+        if xp is not numpy:
+            chainer.cuda.Stream.null.synchronize()
+        self.mpi_comm.Allgatherv(
+            sbuf,
+            [rbuf, (rlens, _cnt_to_dsp(rlens)), mpi4py.MPI.FLOAT])
+        ys = [rbuf[i:i + l].reshape(s)
+              for i, l, s in zip(_cnt_to_dsp(rlens), rlens, shapes)]
 
-        if is_master:
-            return rbuf.reshape(shape)
-        else:
-            return None
+        return tuple(ys)
 
     # Objects
     def send_obj(self, obj, dest):
@@ -335,6 +368,92 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
 
     def gather_obj(self, obj, root=0):
         return self.mpi_comm.gather(obj, root=root)
+
+    def scatter(self, xs, root=0):
+        """A primitive of inter-process scatter communication.
+
+        This method tries to invoke scatter communication within the
+        communicator. All processes in the communicator are expected to
+        invoke ``scatter()``. This method relies on mpi4py fast communication
+        optimized for numpy arrays, as well as ``send()`` and ``recv()``.
+
+        If ``xs`` is tuple, each element is send to different processes.
+        The length of the tuple must be the same as the communicator size.
+        If ``xs`` is ``numpy.ndarrray``, it is splitted with the first
+        axis and sent to different processes. For slave processes, ``xs``
+        is allowed to be any value (will be ignored).
+
+        Args:
+            xs (tuple of numpy.array or numpy.array): Arrays to be scattered.
+            root (int): Rank of root process.
+
+        Returns:
+            ys (numpy.ndarray): Received arrays.
+        """
+        chainer.utils.experimental(
+            'chainermn.communicators.CommunicatorBase.scatter')
+
+        is_master = self.mpi_comm.rank == root
+
+        if is_master:
+            # Type check.
+            msgtype = _MessageType(xs)
+
+            if msgtype.is_tuple:
+                if xs[0].dtype != numpy.float32:
+                    raise TypeError(
+                        'scatter only support dtype == numpy.float32')
+
+                if len(msgtype.shapes) != self.size:
+                    raise ValueError(
+                        'the length of xs must be consistent '
+                        'with communicator size')
+
+                xp = chainer.cuda.get_array_module(*xs)
+                msgtype = tuple([_MessageType(x) for x in xs])
+                shapes = [mty.shapes[0] for mty in msgtype]
+                # concatenate([x.reshape(-1) ... ], axis=0) will fail
+                xs = xp.concatenate([x.reshape(1, -1) for x in xs], axis=1)
+
+            else:
+                assert len(msgtype.shapes) == 1
+
+                if xs.dtype != numpy.float32:
+                    raise TypeError(
+                        'scatter only support dtype == numpy.float32')
+
+                if msgtype.shapes[0][0] != self.mpi_comm.size:
+                    raise ValueError(
+                        'scatter received inconsistent number of inputs '
+                        'with communicator size')
+
+                xp = chainer.cuda.get_array_module(xs)
+                msgtype = tuple([_MessageType(xs[0])
+                                 for _ in range(self.size)])
+                shapes = [xs.shape[1:] for _ in range(self.size)]
+
+            msgtype = self.mpi_comm.scatter(msgtype, root)
+            shape = msgtype.shapes[0]
+
+            # Collective communication.
+            slens = [numpy.prod(s) for s in shapes]
+            sbuf = _memory_utility.array_to_buffer_object(xs)[0]
+            rbuf = numpy.empty(numpy.prod(shape), dtype=numpy.float32)
+            if xp is not numpy:
+                chainer.cuda.Stream.null.synchronize()
+
+            self.mpi_comm.Scatterv(
+                [sbuf, (slens, _cnt_to_dsp(slens)), mpi4py.MPI.FLOAT],
+                rbuf, root)
+
+            return rbuf.reshape(shape)
+
+        else:  # slave processes
+            msgtypes = self.mpi_comm.scatter(None, root)
+            shape = msgtypes.shapes[0]
+            rbuf = numpy.empty(numpy.prod(shape), dtype=numpy.float32)
+            self.mpi_comm.Scatterv(None, rbuf, root)
+            return rbuf.reshape(shape)
 
     def allreduce_obj(self, obj):
         # Summation by default

@@ -153,6 +153,26 @@ class CommunicatorBase(six.with_metaclass(ABCMeta)):
         '''
         raise NotImplementedError()
 
+    @abstractmethod
+    def allgather(self, x):
+        """A primitive of inter-process all-gather communication.
+
+        This method tries to invoke all-gather communication within the
+        communicator. All processes in the communicator are expected to
+        invoke ``allgather()``. This method relies on mpi4py fast communication
+        optimized for numpy arrays, as well as ``send()`` and ``recv()``.
+
+        Note that this method can only handle the same shapes of data
+        over all processes, and cannot handle tuple data.
+
+        Args:
+            x (numpy.array): Array to be gathered.
+
+        Returns:
+            ys (tuple of numpy.ndarray): Received arrays.
+        """
+        raise NotImplementedError()
+
     # TODO(kuenishi): implement this function in MpiCommunicatorBase
     # @abstractmethod
     def allreduce(self, data):
