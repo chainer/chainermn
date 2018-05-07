@@ -37,7 +37,7 @@ def check_mnist(gpu, display_log=True):
     comm = chainermn.create_communicator('naive')
     if gpu:
         device = comm.intra_rank
-        chainer.cuda.get_device(device).use()
+        chainer.cuda.get_device_from_id(device).use()
     else:
         device = -1
 

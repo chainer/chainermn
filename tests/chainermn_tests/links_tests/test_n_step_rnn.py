@@ -43,7 +43,7 @@ class TestNStepRNN(unittest.TestCase):
     def setup(self, gpu):
         if gpu:
             self.communicator = chainermn.create_communicator('hierarchical')
-            chainer.cuda.get_device(self.communicator.intra_rank).use()
+            chainer.cuda.get_device_from_id(self.communicator.intra_rank).use()
         else:
             self.communicator = chainermn.create_communicator('naive')
 

@@ -34,7 +34,7 @@ class TestMultiNodeOptimizer(unittest.TestCase):
     def setup_gpu(self, device=None):
         self.comm = chainermn.create_communicator('hierarchical')
         device = self.comm.intra_rank
-        chainer.cuda.get_device(device).use()
+        chainer.cuda.get_device_from_id(device).use()
         self.target = ExampleModel()
         self.target.to_gpu()
         self.target.a.W.data[:] = self.comm.rank
@@ -128,7 +128,7 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
     def setup_gpu(self, device=None):
         self.comm = chainermn.create_communicator('hierarchical')
         device = self.comm.intra_rank
-        chainer.cuda.get_device(device).use()
+        chainer.cuda.get_device_from_id(device).use()
         self.target = DynamicExampleModel()
         self.target.to_gpu()
         self.target.a.W.data[:] = self.comm.rank

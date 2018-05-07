@@ -25,12 +25,12 @@ Therefore, it is often convenient to use the ``intra_rank``-th GPU.
 
 The following line of code is found in the original MNIST example::
 
-  chainer.cuda.get_device(args.gpu).use()
+  chainer.cuda.get_device_from_id(args.gpu).use()
 
 which we modify as follows::
 
   device = comm.intra_rank
-  chainer.cuda.get_device(device).use()
+  chainer.cuda.get_device_from_id(device).use()
 
 
 Creating a Multi-Node Optimizer

@@ -455,7 +455,7 @@ def main():
             comm, n_lstm_layers, len(source_ids), len(target_ids), args.unit)
 
     if dev >= 0:
-        chainer.cuda.get_device(dev).use()
+        chainer.cuda.get_device_from_id(dev).use()
         model.to_gpu(dev)
 
     # determine the stop trigger

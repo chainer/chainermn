@@ -19,7 +19,7 @@ class TestPointToPointCommunication(unittest.TestCase):
         if self.gpu:
             self.communicator = chainermn.create_communicator('hierarchical')
             device = self.communicator.intra_rank
-            chainer.cuda.get_device(device).use()
+            chainer.cuda.get_device_from_id(device).use()
         else:
             self.communicator = chainermn.create_communicator('naive')
             device = -1

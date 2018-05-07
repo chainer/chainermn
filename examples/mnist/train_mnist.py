@@ -74,7 +74,7 @@ def main():
 
     model = L.Classifier(MLP(args.unit, 10))
     if device >= 0:
-        chainer.cuda.get_device(device).use()
+        chainer.cuda.get_device_from_id(device).use()
         model.to_gpu()
 
     # Create a multi node optimizer from a standard Chainer optimizer.

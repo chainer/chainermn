@@ -149,7 +149,7 @@ def main():
         print('Load model from', args.initmodel)
         chainer.serializers.load_npz(args.initmodel, model)
 
-    chainer.cuda.get_device(device).use()  # Make the GPU current
+    chainer.cuda.get_device_from_id(device).use()  # Make the GPU current
     model.to_gpu()
 
     # Split and distribute the dataset. Only worker 0 loads the whole dataset.
