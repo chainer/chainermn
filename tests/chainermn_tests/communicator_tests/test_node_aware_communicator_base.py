@@ -10,7 +10,7 @@ from chainermn.communicators.mpi_communicator_base import MpiCommunicatorBase
 
 class NodeAwareNaiveCommunicator(MpiCommunicatorBase):
     def __init__(self, mpi_comm):
-        super(NodeAwareNaiveCommunicator, self).__init__(mpi_comm, False)
+        super(NodeAwareNaiveCommunicator, self).__init__(mpi_comm)
 
     def allreduce_grad(self, model):
         raise NotImplementedError()

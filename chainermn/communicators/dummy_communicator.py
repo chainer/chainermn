@@ -11,13 +11,11 @@ class DummyCommunicator(mpi_communicator_base.MpiCommunicatorBase):
     """
 
     def __init__(self, mpi_comm):
-        super(DummyCommunicator, self).__init__(mpi_comm, use_nccl=True)
+        super(DummyCommunicator, self).__init__(mpi_comm)
 
         self.gpu_buffer_a = _memory_utility.DeviceMemory()
 
     def allreduce_grad(self, model):
-        self._init_comms()
-
         params = _memory_utility.extract_params(model)
         itemsize = 4
         n_elems_total = sum(param.grad.size for param in params)

@@ -11,15 +11,15 @@ import numpy as np
 class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
 
     def __init__(self, mpi_comm, allreduce_grad_dtype=None):
-        super(PureNcclCommunicator, self).__init__(mpi_comm, True)
-        if nccl.get_version() < 2000:
+        super(PureNcclCommunicator, self).__init__(mpi_comm)
+        if not nccl._available or nccl.get_version() < 2000:
             raise RuntimeError(
                 'PureNcclCommunicator is only supported on NCCL 2.0+')
-        self._init_ranks()
 
-        self.inter_mpi_comm = None
-        self.intra_mpi_comm = None
-        self.intra_nccl_comm = None
+        # We have to delay the initialization of communicators. This is because
+        # NCCL's communicators use the current CUDA devices at the time of
+        # initialization. Therefore, we have to initialize NCCL communicators
+        # after users set the devices to use.
         self.nccl_comm = None
 
         self.gpu_tmp_buffer = _memory_utility.DeviceMemory()
@@ -39,28 +39,10 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
         self.allreduce_dtype_to_grad_dtype_kernel = None
         self.div_by_size = None
 
-    def _init_ranks(self):
-        my_ranks = _communication_utility.init_ranks(self.mpi_comm)
-        assert my_ranks[0] == self.mpi_comm.rank
-        self._intra_rank = my_ranks[1]
-        self.intra_size = my_ranks[2]
-        self.inter_rank = my_ranks[3]
-        self.inter_size = my_ranks[4]
-
     def _init_comms(self):
-        if self.inter_mpi_comm is not None:
-            assert self.intra_mpi_comm is not None
-            assert self.intra_nccl_comm is not None
-            assert self.nccl_comm is not None
+        if self.nccl_comm is not None:
             return
-
-        comms = _communication_utility.init_comms(
-            self.mpi_comm, self.intra_rank, self.intra_size, self.inter_rank,
-            use_nccl=True)
-        self.intra_mpi_comm = comms[0]
-        self.inter_mpi_comm = comms[1]
-        self.intra_nccl_comm = comms[2]
-        self.nccl_comm = comms[3]
+        self.nccl_comm = _communication_utility.init_nccl_comm(self.mpi_comm)
 
     def allreduce_grad(self, model):
         stream = chainer.cuda.Stream.null

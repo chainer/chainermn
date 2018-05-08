@@ -2,6 +2,7 @@ import chainer.cuda
 import math
 import mpi4py.MPI
 
+from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
 from chainermn.communicators import mpi_communicator_base
 from chainermn import nccl
@@ -10,11 +11,36 @@ from chainermn import nccl
 class NonCudaAwareCommunicator(mpi_communicator_base.MpiCommunicatorBase):
 
     def __init__(self, mpi_comm):
-        super(NonCudaAwareCommunicator, self).__init__(mpi_comm, use_nccl=True)
+        super(NonCudaAwareCommunicator, self).__init__(mpi_comm)
+        if not nccl._available:
+            raise RuntimeError(
+                'NCCL is not available. '
+                'Please confirm that NCCL is enabled in CuPy.'
+            )
+
+        # We have to delay the initialization of communicators. This is because
+        # NCCL's communicators use the current CUDA devices at the time of
+        # initialization. Therefore, we have to initialize NCCL communicators
+        # after users set the devices to use.
+        self.inter_mpi_comm = None
+        self.intra_nccl_comm = None
+
         self.gpu_buffer_a = _memory_utility.DeviceMemory()
         self.gpu_buffer_b = _memory_utility.DeviceMemory()
         self.cpu_buffer_a = _memory_utility.HostPinnedMemory()
         self.cpu_buffer_b = _memory_utility.HostPinnedMemory()
+
+    def _init_comms(self):
+        if self.inter_mpi_comm is not None:
+            assert self.intra_nccl_comm is not None
+            return
+
+        intra_mpi_comm = _communication_utility.init_intra_mpi_comm(
+            self.mpi_comm, self.intra_rank, self.inter_rank)
+        self.inter_mpi_comm = _communication_utility.init_inter_mpi_comm(
+            self.mpi_comm, self.intra_rank, self.inter_rank)
+        self.intra_nccl_comm = _communication_utility.init_nccl_comm(
+            intra_mpi_comm)
 
     def bcast_data(self, model):
         for _, param in sorted(model.namedparams()):
