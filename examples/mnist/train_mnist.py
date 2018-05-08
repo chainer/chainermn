@@ -2,7 +2,6 @@
 from __future__ import print_function
 
 import argparse
-import multiprocessing
 
 import chainer
 import chainer.functions as F
@@ -73,9 +72,6 @@ def main():
         print('Num epoch: {}'.format(args.epoch))
         print('==========================================')
 
-    # multiprocessing.set_start_method('forkserver')
-
-
     model = L.Classifier(MLP(args.unit, 10))
     if device >= 0:
         chainer.cuda.get_device(device).use()
@@ -95,8 +91,8 @@ def main():
     train = chainermn.scatter_dataset(train, comm, shuffle=True)
     test = chainermn.scatter_dataset(test, comm, shuffle=True)
 
-    train_iter = chainer.iterators.MultiprocessIterator(train, args.batchsize)
-    test_iter = chainer.iterators.MultiprocessIterator(test, args.batchsize,
+    train_iter = chainer.iterators.SerialIterator(train, args.batchsize)
+    test_iter = chainer.iterators.SerialIterator(test, args.batchsize,
                                                  repeat=False, shuffle=False)
 
     updater = training.StandardUpdater(train_iter, optimizer, device=device)
