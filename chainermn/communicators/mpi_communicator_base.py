@@ -354,6 +354,45 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
 
         return tuple(ys)
 
+    def allreduce(self, x):
+        """A primitive of inter-process allreduce communication.
+
+        This method tries to invoke allreduce communication within the
+        communicator. All processes in the communicator are expected to
+        invoke ``allreduce()``. This method relies on mpi4py fast communication
+        optimized for numpy arrays, as well as ``send()`` and ``recv()``.
+
+        Note that this method can only handle the same shapes of data
+        over all processes, and cannot handle tuple data.
+
+        Args:
+            x (numpy.array): An array to apply allreduce operation.
+
+        Returns:
+            ys (numpy.ndarray): An array that allreduce (currently SUM only)
+                has been applied.
+
+        """
+
+        chainer.utils.experimental(
+            'chainermn.communicators.CommunicatorBase.allreduce')
+
+        msgtype = _MessageType(x)
+        if msgtype.is_tuple:
+            raise TypeError('allreduce cannot handle tuple data')
+        if x.dtype != numpy.float32:
+            raise ValueError('gather only support dtype == numpy.float32')
+
+        # TODO(kuenishi): do we check all messages have same shape and dims?
+
+        # Source buffer
+        sbuf = _memory_utility.array_to_buffer_object(x)
+        # Destination buffer
+        dbuf = numpy.empty(msgtype.shapes[0], dtype=numpy.float32)
+        self.mpi_comm.Allreduce(sbuf, dbuf)
+
+        return dbuf.reshape(msgtype.shapes[0])
+
     # Objects
     def send_obj(self, obj, dest):
         self.mpi_comm.send(obj, dest=dest)

@@ -173,14 +173,16 @@ class CommunicatorBase(six.with_metaclass(ABCMeta)):
         """
         raise NotImplementedError()
 
-    # TODO(kuenishi): implement this function in MpiCommunicatorBase
-    # @abstractmethod
+    @abstractmethod
     def allreduce(self, data):
         '''Allreduce operation among processes
 
         Processes one of several aggregation operations using all data from
         all processes and returns the result of the aggregation to all
         processes.
+
+        TODO(kuenishi): add ``op`` argument once we find a use case
+        for operations other than 'SUM'.
 
         Args:
             data (ndarray): the data to aggregate among all nodes.
