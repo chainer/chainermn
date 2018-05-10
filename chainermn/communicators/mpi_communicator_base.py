@@ -11,6 +11,28 @@ from chainermn.communicators import _memory_utility
 from chainermn.communicators import communicator_base
 
 
+_dtype_mpi_type = {
+    # see the definition of mpi4py.MPI._typedict (in mpi4py/MPI/typemap.pxi)
+    numpy.dtype(numpy.int32): mpi4py.MPI._typedict['i'],
+    numpy.dtype(numpy.int64): mpi4py.MPI._typedict['l'],
+    numpy.dtype(numpy.float32): mpi4py.MPI._typedict['f'],
+    numpy.dtype(numpy.float64): mpi4py.MPI._typedict['d'],
+}
+
+
+def _check_dtype(caller, msgtype):
+    dtype = msgtype.dtype
+    if dtype not in _dtype_mpi_type.keys():
+        raise TypeError(
+            '{} does not support dtype {}'.format(caller, dtype))
+
+
+def _check_dtypes_are_same(msgtypes):
+    dtypes = [msgtype.dtype for msgtype in msgtypes]
+    if any(dtypes[0] != dtype for dtype in dtypes):
+        raise TypeError('all dtypes must be the same')
+
+
 def _is_numpy_array(array):
     return isinstance(array, numpy.ndarray)
 
@@ -19,16 +41,18 @@ def _is_cupy_array(array):
     return chainer.cuda.get_array_module(array) is not numpy
 
 
-def _check_dtype(caller, array):
-    """Type checker for MPI communicator."""
-    if array.dtype != numpy.float32:
-        raise ValueError(
-            '{} only support dtype == numpy.float32'.format(caller))
-
-
 def _cnt_to_dsp(cnt):
     """Utility to convert length array to cumulative array."""
     return [0] + numpy.cumsum(cnt)[:-1].tolist()
+
+
+def _get_mpi_type(msgtype):
+    dtype = msgtype.dtype
+    if dtype not in _dtype_mpi_type.keys():
+        raise TypeError(
+            'dtype {} is not supported by MpiCommunicator'.format(dtype))
+
+    return _dtype_mpi_type[dtype]
 
 
 class _MessageType(object):
@@ -40,7 +64,7 @@ class _MessageType(object):
             self.narr = 1
             self.ndims = [obj.ndim]
             self.shapes = [obj.shape]
-
+            self.dtype = obj.dtype
         elif isinstance(obj, collections.Iterable):
             if all(map(_is_numpy_array, obj)):
                 self.is_host = True
@@ -53,10 +77,14 @@ class _MessageType(object):
             self.narr = len(obj)
             self.ndims = [x.ndim for x in obj]
             self.shapes = [x.shape for x in obj]
-
+            dtypes = [x.dtype for x in obj]
+            if not all(dtype == dtypes[0] for dtype in dtypes):
+                raise TypeError(
+                    'Message objects must be the same dtype')
+            self.dtype = dtypes[0]
         else:
-            raise ValueError(
-                'Message object must be numpy/cupy array or tuple.')
+            raise TypeError(
+                'Message object must be numpy/cupy array or its tuple.')
 
     def get_array_module(self):
         if self.is_host:
@@ -139,45 +167,30 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
                 'The length of data must be same as communicator size.')
 
         # Type check.
-        for x in xs:
-            _check_dtype('alltoall', x)
-        _MessageType(xs)
+        msgtypes = [_MessageType(x) for x in xs]
+        for msgtype in msgtypes:
+            _check_dtype('alltoall', msgtype)
+        _check_dtypes_are_same(msgtypes)
+        send_msgtype = msgtypes[0]
 
-        # Mediate #axes of arrays.
-        sndims = numpy.array([x.ndim for x in xs], dtype=numpy.int32)
-        rndims = numpy.empty(self.size, dtype=numpy.int32)
-        self.mpi_comm.Alltoall(
-            [sndims, mpi4py.MPI.INT],
-            [rndims, mpi4py.MPI.INT])
-
-        # Arbitrate shapes of arrays.
-        sshapes = numpy.hstack([x.shape for x in xs]).astype(numpy.int32)
-        rshapes = numpy.empty(sum(rndims), dtype=numpy.int32)
-        self.mpi_comm.Alltoallv(
-            [sshapes, (sndims, _cnt_to_dsp(sndims)), mpi4py.MPI.INT],
-            [rshapes, (rndims, _cnt_to_dsp(rndims)), mpi4py.MPI.INT])
-        shapes = [rshapes[i:i + l]
-                  for i, l in zip(_cnt_to_dsp(rndims), rndims)]
+        msgtypes = self.mpi_comm.alltoall(msgtypes)
+        _check_dtypes_are_same(msgtypes)
+        recv_msgtype = msgtypes[0]
 
         # Collective communication.
         slens = [numpy.prod(x.shape) for x in xs]
-        xp = chainer.cuda.get_array_module(xs[0])
+        xp = chainer.cuda.get_array_module(*xs)
         sbuf = xp.hstack([x.reshape(-1) for x in xs])
+        shapes = [msgtype.shapes[0] for msgtype in msgtypes]
         rlens = [numpy.prod(s) for s in shapes]
-        rbuf = xp.empty([sum(rlens)], dtype=numpy.float32)
+        rbuf = xp.empty([sum(rlens)], dtype=msgtype.dtype)
         if xp is not numpy:
-            sbuf = _memory_utility.array_to_buffer_object(sbuf)[0]
+            sbuf = _memory_utility.get_device_memory_pointer(sbuf)
             chainer.cuda.Stream.null.synchronize()
-            self.mpi_comm.Alltoallv(
-                [sbuf, (slens, _cnt_to_dsp(slens)), mpi4py.MPI.FLOAT],
-                [_memory_utility.get_device_memory_pointer(rbuf),
-                 (rlens, _cnt_to_dsp(rlens)), mpi4py.MPI.FLOAT])
-        else:
-            self.mpi_comm.Alltoallv(
-                [sbuf, (slens, _cnt_to_dsp(slens)), mpi4py.MPI.FLOAT],
-                [_memory_utility.get_device_memory_pointer(rbuf),
-                 (rlens, _cnt_to_dsp(rlens)), mpi4py.MPI.FLOAT])
-
+        self.mpi_comm.Alltoallv(
+            [sbuf, (slens, _cnt_to_dsp(slens)), _get_mpi_type(send_msgtype)],
+            [_memory_utility.get_device_memory_pointer(rbuf),
+             (rlens, _cnt_to_dsp(rlens)), _get_mpi_type(recv_msgtype)])
         ys = [rbuf[i:i + l].reshape(s)
               for i, l, s in zip(_cnt_to_dsp(rlens), rlens, shapes)]
 
@@ -202,6 +215,8 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             'chainermn.communicators.MpiCommunicatorBase.send')
 
         msgtype = _MessageType(data)
+        _check_dtype('send', msgtype)
+
         """We use ssend() instead of send() to pass unittests.
         If we don't use it, an error occurs in
         test_point_to_point_communication.py
@@ -213,16 +228,17 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         if not msgtype.is_tuple:
             data = [data]
 
-        for x in data:
-            _check_dtype('send', x)
-
         for array in data:
             if chainer.cuda.get_array_module(array) is not numpy:
                 chainer.cuda.Stream.null.synchronize()
+                array = (_memory_utility.get_device_memory_pointer(array),
+                         _get_mpi_type(msgtype))
 
-            buf = _memory_utility.array_to_buffer_object(array)
+            else:
+                array = numpy.ascontiguousarray(array)
+
             """We use Ssend() for the same reason as using ssend()."""
-            self.mpi_comm.Ssend(buf, dest=dest, tag=tag)
+            self.mpi_comm.Ssend(array, dest=dest, tag=tag)
 
     def recv(self, source, tag):
         """A primitive of inter-process receiver.
@@ -257,7 +273,7 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         if msgtype.is_tuple:
             msg = []
             for shape in msgtype.shapes:
-                buf = xp.empty([numpy.prod(shape)], dtype=numpy.float32)
+                buf = xp.empty([numpy.prod(shape)], dtype=msgtype.dtype)
                 self.mpi_comm.Recv(
                     _memory_utility.get_device_memory_pointer(buf),
                     source=source, tag=tag)
@@ -267,7 +283,7 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         else:
             assert len(msgtype.shapes) == 1
             shape = msgtype.shapes[0]
-            buf = xp.empty([numpy.prod(shape)], dtype=numpy.float32)
+            buf = xp.empty([numpy.prod(shape)], dtype=msgtype.dtype)
             self.mpi_comm.Recv(
                 _memory_utility.get_device_memory_pointer(buf),
                 source=source, tag=tag)
@@ -300,22 +316,22 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
 
         if is_master:
             msgtype = _MessageType(x)
+            _check_dtype('bcast', msgtype)
+
             if msgtype.is_tuple:
                 raise TypeError('Tuple data cannot be broadcasted')
 
-            _check_dtype('bcast', x)
-
             msgtype = self.mpi_comm.bcast(msgtype, root)
             shape = msgtype.shapes[0]
-            buf = _memory_utility.array_to_buffer_object(x)
+            buf = _memory_utility.array_to_buffer_object(
+                x, _get_mpi_type(msgtype))
             self.mpi_comm.Bcast(buf, root)
             return x
         else:
-            msgtype = None
-            msgtype = self.mpi_comm.bcast(msgtype, root)
+            msgtype = self.mpi_comm.bcast(None, root)
             xp = msgtype.get_array_module()
             shape = msgtype.shapes[0]
-            buf = xp.empty([numpy.prod(shape)], dtype=numpy.float32)
+            buf = xp.empty([numpy.prod(shape)], dtype=msgtype.dtype)
             self.mpi_comm.Bcast(
                 _memory_utility.get_device_memory_pointer(buf),
                 root)
@@ -349,11 +365,13 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         is_master = self.mpi_comm.rank == root
 
         msgtype = _MessageType(x)
+        _check_dtype('gather', msgtype)
+
         msgtypes = self.mpi_comm.gather(msgtype, root)
 
-        _check_dtype('gather', x)
-
         if is_master:
+            _check_dtypes_are_same(msgtypes)
+
             for msgtype in msgtypes:
                 if msgtype.is_tuple:
                     raise TypeError('gather cannot handle tuple data')
@@ -361,10 +379,11 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
                 assert len(msgtype.shapes) == 1
 
             xp = chainer.cuda.get_array_module(x)
-            sbuf = _memory_utility.array_to_buffer_object(x)
+            sbuf = _memory_utility.array_to_buffer_object(
+                x, _get_mpi_type(msgtype))
             shapes = [mty.shapes[0] for mty in msgtypes]
             rlens = [numpy.prod(s) for s in shapes]
-            rbuf = xp.empty([sum(rlens)], dtype=numpy.float32)
+            rbuf = xp.empty([sum(rlens)], dtype=msgtype.dtype)
 
             if xp is not numpy:
                 chainer.cuda.Stream.null.synchronize()
@@ -372,7 +391,7 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             self.mpi_comm.Gatherv(
                 sbuf,
                 [_memory_utility.get_device_memory_pointer(rbuf),
-                 (rlens, _cnt_to_dsp(rlens)), mpi4py.MPI.FLOAT],
+                 (rlens, _cnt_to_dsp(rlens)), _get_mpi_type(msgtype)],
                 root)
 
             ys = [rbuf[i:i + l].reshape(s)
@@ -380,7 +399,8 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             return tuple(ys)
 
         else:
-            sbuf = _memory_utility.array_to_buffer_object(x)
+            sbuf = _memory_utility.array_to_buffer_object(
+                x, _get_mpi_type(msgtype))
             self.mpi_comm.Gatherv(sbuf, None, root)
             return None
 
@@ -389,7 +409,10 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             'chainermn.communicators.MpiCommunicatorBase.allgather')
 
         msgtype = _MessageType(x)
+        _check_dtype('allgather', msgtype)
+
         msgtypes = self.mpi_comm.allgather(msgtype)
+        _check_dtypes_are_same(msgtypes)
 
         # Type check.
         for msgtype in msgtypes:
@@ -398,25 +421,19 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
 
             assert len(msgtype.shapes) == 1
 
-        _check_dtype('allgather', x)
-
         # Collective communication.
         xp = chainer.cuda.get_array_module(x)
         shapes = [msgtype.shapes[0] for msgtype in msgtypes]
-        sbuf = _memory_utility.array_to_buffer_object(x)
+        sbuf = _memory_utility.array_to_buffer_object(
+            x, _get_mpi_type(msgtype))
         rlens = [numpy.prod(s) for s in shapes]
-        rbuf = xp.empty([sum(rlens)], dtype=numpy.float32)
+        rbuf = xp.empty([sum(rlens)], dtype=msgtype.dtype)
         if xp is not numpy:
             chainer.cuda.Stream.null.synchronize()
-            self.mpi_comm.Allgatherv(
-                sbuf,
-                [_memory_utility.get_device_memory_pointer(rbuf),
-                 (rlens, _cnt_to_dsp(rlens)), mpi4py.MPI.FLOAT])
-        else:
-            self.mpi_comm.Allgatherv(
-                sbuf,
-                [_memory_utility.get_device_memory_pointer(rbuf),
-                 (rlens, _cnt_to_dsp(rlens)), mpi4py.MPI.FLOAT])
+        self.mpi_comm.Allgatherv(
+            sbuf,
+            [_memory_utility.get_device_memory_pointer(rbuf),
+             (rlens, _cnt_to_dsp(rlens)), _get_mpi_type(msgtype)])
         ys = [rbuf[i:i + l].reshape(s)
               for i, l, s in zip(_cnt_to_dsp(rlens), rlens, shapes)]
 
@@ -452,19 +469,23 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             'chainermn.communicators.CommunicatorBase.allreduce')
 
         msgtype = _MessageType(x)
+        _check_dtype('allreduce', msgtype)
+
         if msgtype.is_tuple:
             raise TypeError('allreduce cannot handle tuple data')
 
-        _check_dtype('allreduce', x)
+        if msgtype.is_tuple:
+            raise TypeError('allreduce cannot handle tuple data')
 
         xp = chainer.cuda.get_array_module(x)
 
         # TODO(kuenishi): do we check all messages have same shape and dims?
 
         # Source buffer
-        sbuf = _memory_utility.array_to_buffer_object(x)
+        sbuf = _memory_utility.array_to_buffer_object(
+            x, _get_mpi_type(msgtype))
         # Destination buffer
-        dbuf = xp.empty([numpy.prod(msgtype.shapes[0])], dtype=numpy.float32)
+        dbuf = xp.empty([numpy.prod(msgtype.shapes[0])], dtype=msgtype.dtype)
         self.mpi_comm.Allreduce(
             sbuf,
             _memory_utility.get_device_memory_pointer(dbuf))
@@ -520,10 +541,9 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         if is_master:
             # Type check.
             msgtype = _MessageType(xs)
+            _check_dtype('scatter', msgtype)
 
             if msgtype.is_tuple:
-                _check_dtype('scatter', xs[0])
-
                 if len(msgtype.shapes) != self.size:
                     raise ValueError(
                         'the length of xs must be consistent '
@@ -537,8 +557,6 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
 
             else:
                 assert len(msgtype.shapes) == 1
-
-                _check_dtype('scatter', xs)
 
                 if msgtype.shapes[0][0] != self.mpi_comm.size:
                     raise ValueError(
@@ -555,13 +573,13 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
 
             # Collective communication.
             slens = [numpy.prod(s) for s in shapes]
-            sbuf = _memory_utility.array_to_buffer_object(xs)[0]
-            rbuf = xp.empty([numpy.prod(shape)], dtype=numpy.float32)
+            sbuf = _memory_utility.get_device_memory_pointer(xs)
+            rbuf = xp.empty([numpy.prod(shape)], dtype=msgtype.dtype)
             if xp is not numpy:
                 chainer.cuda.Stream.null.synchronize()
 
             self.mpi_comm.Scatterv(
-                [sbuf, (slens, _cnt_to_dsp(slens)), mpi4py.MPI.FLOAT],
+                [sbuf, (slens, _cnt_to_dsp(slens)), _get_mpi_type(msgtype)],
                 _memory_utility.get_device_memory_pointer(rbuf), root)
 
             return rbuf.reshape(shape)
@@ -570,7 +588,7 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             msgtypes = self.mpi_comm.scatter(None, root)
             xp = msgtypes.get_array_module()
             shape = msgtypes.shapes[0]
-            rbuf = xp.empty([numpy.prod(shape)], dtype=numpy.float32)
+            rbuf = xp.empty([numpy.prod(shape)], dtype=msgtypes.dtype)
             self.mpi_comm.Scatterv(
                 None,
                 _memory_utility.get_device_memory_pointer(rbuf),

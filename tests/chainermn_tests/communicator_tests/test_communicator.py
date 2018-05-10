@@ -263,12 +263,162 @@ class TestPureNcclCommunicator(unittest.TestCase):
             PureNcclCommunicator(self.mpi_comm, allreduce_grad_dtype=np.int32)
 
 
+class TestDifferentDtype(unittest.TestCase):
+
+    def setup(self, gpu):
+        if gpu:
+            self.communicator = chainermn.create_communicator('hierarchical')
+            self.device = self.communicator.rank
+            chainer.cuda.get_device_from_id(self.device).use()
+        else:
+            self.communicator = chainermn.create_communicator('naive')
+            self.device = -1
+
+        if self.communicator.size != 2:
+            pytest.skip('This test is for two processes')
+
+        # dtypes to be tested
+        # DO NOT USE chainer.testing.parameterize
+        # (because running order of generated test cases is not unique)
+        self.dtypes = [np.int32, np.int64, np.float32, np.float64]
+
+    def check_alltoall(self, xs):
+        x = xs[self.communicator.rank]
+        ys = self.communicator.alltoall(
+            tuple([x for _ in range(self.communicator.size)]))
+        for x, y in zip(xs, ys):
+            chainer.testing.assert_allclose(x, y)
+
+    def test_alltoall_cpu(self):
+        self.setup(False)
+        for dtype in self.dtypes:
+            xs = np.arange(4 * self.communicator.size) \
+                .reshape(self.communicator.size, 4) \
+                .astype(dtype)
+            xs = np.split(xs, self.communicator.size)
+            self.check_alltoall(xs)
+
+    @chainer.testing.attr.gpu
+    def test_alltoall_gpu(self):
+        self.setup(True)
+        for dtype in self.dtypes:
+            xs = np.arange(4 * self.communicator.size) \
+                .reshape(self.communicator.size, 4) \
+                .astype(dtype)
+            xs = np.split(xs, self.communicator.size)
+            xs = [chainer.cuda.to_gpu(x, device=self.device) for x in xs]
+            self.check_alltoall(xs)
+
+    def check_allgather(self, xs):
+        x = xs[self.communicator.rank]
+        ys = self.communicator.allgather(x)
+        for x, y in zip(xs, ys):
+            chainer.testing.assert_allclose(x, y)
+
+    def test_allgather_cpu(self):
+        self.setup(False)
+        for dtype in self.dtypes:
+            xs = np.arange(4 * self.communicator.size) \
+                .reshape(self.communicator.size, 4) \
+                .astype(dtype)
+            xs = np.split(xs, self.communicator.size)
+            self.check_allgather(xs)
+
+    @chainer.testing.attr.gpu
+    def test_allgather_gpu(self):
+        self.setup(True)
+        for dtype in self.dtypes:
+            xs = np.arange(4 * self.communicator.size) \
+                .reshape(self.communicator.size, 4) \
+                .astype(dtype)
+            xs = np.split(xs, self.communicator.size)
+            xs = [chainer.cuda.to_gpu(x, device=self.device) for x in xs]
+            self.check_allgather(xs)
+
+    def check_bcast(self, x):
+        if self.communicator.rank == 0:
+            y = self.communicator.bcast(x, root=0)
+        else:
+            y = self.communicator.bcast(None, root=0)
+        chainer.testing.assert_allclose(x, y)
+
+    def test_bcast_cpu(self):
+        self.setup(False)
+        for dtype in self.dtypes:
+            x = np.arange(4).astype(dtype)
+            self.check_bcast(x)
+
+    @chainer.testing.attr.gpu
+    def test_bcast_gpu(self):
+        self.setup(True)
+        for dtype in self.dtypes:
+            x = np.arange(4).astype(dtype)
+            x = chainer.cuda.to_gpu(x, device=self.device)
+            self.check_bcast(x)
+
+    def check_gather(self, xs):
+        x = xs[self.communicator.rank]
+        ys = self.communicator.gather(x, root=0)
+        if self.communicator.rank == 0:
+            for x, y in zip(xs, ys):
+                chainer.testing.assert_allclose(x, y)
+
+    def test_gather_cpu(self):
+        self.setup(False)
+        for dtype in self.dtypes:
+            xs = np.arange(4 * self.communicator.size) \
+                .reshape(self.communicator.size, 4) \
+                .astype(dtype)
+            xs = np.split(xs, self.communicator.size)
+            self.check_gather(xs)
+
+    @chainer.testing.attr.gpu
+    def test_gather_gpu(self):
+        self.setup(True)
+        for dtype in self.dtypes:
+            xs = np.arange(4 * self.communicator.size) \
+                .reshape(self.communicator.size, 4) \
+                .astype(dtype)
+            xs = np.split(xs, self.communicator.size)
+            xs = [chainer.cuda.to_gpu(x, device=self.device) for x in xs]
+            self.check_gather(xs)
+
+    def check_scatter(self, xs):
+        x = xs[self.communicator.rank]
+        if self.communicator.rank == 0:
+            y = self.communicator.scatter(xs, root=0)
+        else:
+            y = self.communicator.scatter(None, root=0)
+        chainer.testing.assert_allclose(x, y)
+
+    def test_scatter_cpu(self):
+        self.setup(False)
+        for dtype in self.dtypes:
+            xs = np.arange(4 * self.communicator.size) \
+                .reshape(self.communicator.size, 4) \
+                .astype(dtype)
+            xs = np.split(xs, self.communicator.size)
+            self.check_scatter(xs)
+
+    @chainer.testing.attr.gpu
+    def test_scatter_gpu(self):
+        self.setup(True)
+        for dtype in self.dtypes:
+            xs = np.arange(4 * self.communicator.size) \
+                .reshape(self.communicator.size, 4) \
+                .astype(dtype)
+            xs = np.split(xs, self.communicator.size)
+            xs = [chainer.cuda.to_gpu(x, device=self.device) for x in xs]
+            self.check_scatter(xs)
+
+
 class TestNonContiguousArray(unittest.TestCase):
 
     def setup(self, gpu):
         if gpu:
             self.communicator = chainermn.create_communicator('hierarchical')
             self.device = self.communicator.rank
+            chainer.cuda.get_device_from_id(self.device).use()
         else:
             self.communicator = chainermn.create_communicator('naive')
             self.device = -1

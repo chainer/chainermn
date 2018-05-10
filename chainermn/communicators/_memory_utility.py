@@ -107,13 +107,13 @@ def unpack_params(params, itemsize, attr_name, buffer, stream=None):
         offset += size
 
 
-def array_to_buffer_object(array):
+def array_to_buffer_object(array, mpi_dtype=mpi4py.MPI.FLOAT):
     xp = chainer.cuda.get_array_module(array)
 
     if xp is np:
         return get_device_memory_pointer(array)
     else:
-        return (get_device_memory_pointer(array), mpi4py.MPI.FLOAT)
+        return (get_device_memory_pointer(array), mpi_dtype)
 
 
 def get_device_memory_pointer(array):
