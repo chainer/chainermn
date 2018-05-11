@@ -41,7 +41,8 @@ before_install:
 
 install:
   - pip install -U pip wheel
-  - pip install pytest hacking mock
+  - pip install hacking==1.0.0
+  - pip install pytest mock
   - pip install autopep8
   - pip install mpi4py cffi
   - pip install chainer==${CHAINER_VER}

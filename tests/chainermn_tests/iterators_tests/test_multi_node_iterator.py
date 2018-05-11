@@ -2,6 +2,8 @@ import chainer
 import chainer.testing
 import chainer.testing.attr
 import chainermn
+from chainermn.iterators.multi_node_iterator import _build_ctrl_msg
+from chainermn.iterators.multi_node_iterator import _parse_ctrl_msg
 import numpy as np
 import platform
 import pytest
@@ -177,3 +179,39 @@ class TestMultiNodeIterator(unittest.TestCase):
             self.assertEqual(iterator._order.tolist(), new_order.tolist())
         else:
             self.assertEqual(iterator._order.tolist(), order.tolist())
+
+
+class TestMultiNodeIteratorDataType(unittest.TestCase):
+
+    def setUp(self):
+        self.communicator = chainermn.create_communicator('naive')
+
+        if self.communicator.size < 2:
+            pytest.skip("This test is for multinode only")
+
+    def test_invalid_type(self):
+        self.N = 10
+        self.dataset = ["test"]*self.N
+
+        bs = 1
+        iterator = chainermn.iterators.create_multi_node_iterator(
+            chainer.iterators.SerialIterator(
+                self.dataset, batch_size=bs, shuffle=True),
+            self.communicator)
+
+        with self.assertRaises(TypeError):
+            iterator.next()
+
+
+class TestCntrlMessageConversion(unittest.TestCase):
+
+    def test_conversion(self):
+        stop = True
+        is_valid_data_type = True
+        is_paired_dataset = True
+        is_new_epoch = True
+        current_position = 0
+        msg = _build_ctrl_msg(stop, is_valid_data_type, is_paired_dataset,
+                              is_new_epoch, current_position)
+        np.testing.assert_array_equal(msg,
+                                      _build_ctrl_msg(*_parse_ctrl_msg(msg)))
