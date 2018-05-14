@@ -43,6 +43,10 @@ def create_multi_node_checkpointer(name, comm, cp_interval=5,
     this will let multi node optimizer avoid initial broadcast when
     all snapshot data among nodes are all in sync.
 
+    .. note:: Make sure that ``checkpointer.maybe_load`` is called
+              *after* all extensions with states, such as ``ExponentialShift``,
+              set to the trainer.
+
     After training finished without errors all those temporary
     checkpoints will be cleaned up at all nodes.
 
