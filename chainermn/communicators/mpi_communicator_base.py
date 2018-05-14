@@ -56,12 +56,24 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         return self.mpi_comm.rank
 
     @property
+    def size(self):
+        return self.mpi_comm.size
+
+    @property
     def intra_rank(self):
         return self._intra_rank
 
     @property
-    def size(self):
-        return self.mpi_comm.size
+    def intra_size(self):
+        return self._intra_size
+
+    @property
+    def inter_rank(self):
+        return self._inter_rank
+
+    @property
+    def inter_size(self):
+        return self._inter_size
 
     def split(self, color, key):
         return self.__class__(mpi_comm=self.mpi_comm.Split(color, key))
@@ -490,6 +502,6 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
         my_ranks = _communication_utility.init_ranks(self.mpi_comm)
         assert my_ranks[0] == self.mpi_comm.rank
         self._intra_rank = my_ranks[1]
-        self.intra_size = my_ranks[2]
-        self.inter_rank = my_ranks[3]
-        self.inter_size = my_ranks[4]
+        self._intra_size = my_ranks[2]
+        self._inter_rank = my_ranks[3]
+        self._inter_size = my_ranks[4]
