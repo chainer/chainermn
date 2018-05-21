@@ -46,8 +46,8 @@ Functions
 .. autofunction:: chainermn.functions.bcast
 .. autofunction:: chainermn.functions.gather
 .. autofunction:: chainermn.functions.scatter
-.. autofunction:: chainermn.functions.all_to_all
-.. autofunction:: chainermn.functions.all_gather
+.. autofunction:: chainermn.functions.alltoall
+.. autofunction:: chainermn.functions.allgather
 
 
 Iterators
