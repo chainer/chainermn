@@ -43,13 +43,28 @@ class CommunicatorBase(six.with_metaclass(ABCMeta)):
         raise NotImplementedError()
 
     @property
-    def intra_rank(self):
-        '''Intra rank (process id in the machine) of this process integer'''
+    def size(self):
+        '''Number of processes of the cluster.'''
         raise NotImplementedError()
 
     @property
-    def size(self):
-        '''Number of nodes of the cluster'''
+    def intra_rank(self):
+        '''Intra rank (process id in the machine) of this process.'''
+        raise NotImplementedError()
+
+    @property
+    def intra_size(self):
+        '''Number of processes in the machine of this process.'''
+        raise NotImplementedError()
+
+    @property
+    def inter_rank(self):
+        '''The rank of this node in the cluster.'''
+        raise NotImplementedError()
+
+    @property
+    def inter_size(self):
+        '''Number of nodes that participates the cluster.'''
         raise NotImplementedError()
 
     @abstractmethod
