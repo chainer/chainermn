@@ -63,7 +63,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'ChainerMN'
-copyright = '2017, Preferred Networks, inc.'
+copyright = '2017-2018, Preferred Networks, inc.'
 author = 'Preferred Networks, inc.'
 
 # The version info for the project you're documenting, acts as replacement for
