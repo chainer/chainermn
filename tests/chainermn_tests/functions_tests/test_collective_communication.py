@@ -20,14 +20,13 @@ class TestCollectiveCommunication(unittest.TestCase):
             chainer.cuda.get_device_from_id(self.device).use()
         else:
             self.communicator = chainermn.create_communicator('naive')
-            self.device = -1
 
         if self.communicator.size < 2:
             pytest.skip("This test is for multinode")
 
     def check_all_gather(self, xs):
         x = xs[self.communicator.rank]
-        ys = chainermn.functions.allgather(self.communicator, x, self.device)
+        ys = chainermn.functions.allgather(self.communicator, x)
         e = 0
         for i, y in enumerate(ys):
             e += chainer.functions.mean_squared_error(y, xs[i])
@@ -55,7 +54,7 @@ class TestCollectiveCommunication(unittest.TestCase):
         self.check_all_gather(xs)
 
     def check_all_to_all(self, xs):
-        ys = chainermn.functions.alltoall(self.communicator, xs, self.device)
+        ys = chainermn.functions.alltoall(self.communicator, xs)
 
         y = chainer.functions.sum(ys[0])
         for _y in ys[1:]:
@@ -91,10 +90,10 @@ class TestCollectiveCommunication(unittest.TestCase):
         root = 0
         if self.communicator.rank == root:
             y = chainermn.functions.bcast(
-                self.communicator, x, root, self.device)
+                self.communicator, x, root)
         else:
             y = chainermn.functions.bcast(
-                self.communicator, None, root, self.device)
+                self.communicator, None, root)
         e = chainer.functions.mean_squared_error(y, x)
         e.backward()
 
@@ -124,7 +123,7 @@ class TestCollectiveCommunication(unittest.TestCase):
 
         if self.communicator.rank == root:
             ys = chainermn.functions.gather(
-                self.communicator, x, root, self.device)
+                self.communicator, x, root)
             e = 0
             for i, y in enumerate(ys):
                 e += chainer.functions.mean_squared_error(y, xs[i])
@@ -136,7 +135,7 @@ class TestCollectiveCommunication(unittest.TestCase):
 
         else:
             phi = chainermn.functions.gather(
-                self.communicator, x, root, self.device)
+                self.communicator, x, root)
             phi.backward()
 
             # Check backward does not fall in deadlock.
@@ -183,7 +182,7 @@ class TestCollectiveCommunication(unittest.TestCase):
         y = chainermn.functions.scatter(
             self.communicator,
             xs if self.communicator.rank == root else None,
-            root, self.device)
+            root)
         x = xs[self.communicator.rank]
         e = chainer.functions.mean_squared_error(y, x)
         e.backward()

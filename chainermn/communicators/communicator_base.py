@@ -95,10 +95,10 @@ class CommunicatorBase(six.with_metaclass(ABCMeta)):
         '''All-to-all implementation for ndarray
 
         Args:
-            xs (tuple of numpy.ndarray)
+            xs (tuple of numpy/cupy array)
 
         Returns:
-            ys (tuple of numpy.ndarray):
+            ys (tuple of numpy/cupy array):
                 Received arrays. The length of tuple equals to
                 the communicator size.
 
@@ -141,13 +141,13 @@ class CommunicatorBase(six.with_metaclass(ABCMeta)):
         '''Broadcasts an ndarray from root process to all processes
 
         Args:
-            data (numpy.array): for root process, the data to broadcast.
+            data (numpy/cupy array): for root process, the data to broadcast.
                 For non-root processes, this argument is ignored.
             max_buf_len (int): Length of send buffer.
             root (int): the process who has the data to broadcast.
 
         Returns:
-            ys (numpy.ndarray) : The data sent from root process
+            ys (numpy/cupy array) : The data sent from root process
 
         '''
         raise NotImplementedError()
@@ -181,10 +181,10 @@ class CommunicatorBase(six.with_metaclass(ABCMeta)):
         over all processes, and cannot handle tuple data.
 
         Args:
-            x (numpy.array): Array to be gathered.
+            x (numpy/cupy array): Array to be gathered.
 
         Returns:
-            ys (tuple of numpy.ndarray): Received arrays.
+            ys (tuple of numpy/cupy array): Received arrays.
         """
         raise NotImplementedError()
 

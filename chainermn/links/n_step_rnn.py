@@ -53,8 +53,7 @@ class _MultiNodeNStepRNN(chainer.Chain):
         if self.rank_in is not None:
             cells = [chainermn.functions.recv(
                 self.communicator,
-                rank=self.rank_in,
-                device=self.actual_rnn._device_id)
+                rank=self.rank_in)
                 for _ in range(self.n_cells)]
 
         outputs = self.actual_rnn(*(tuple(cells) + inputs))

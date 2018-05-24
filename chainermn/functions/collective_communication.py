@@ -1,32 +1,21 @@
 import chainer
 from chainer import cuda
-import numpy
 
 
 class AllGather(chainer.Function):
     """Collective all-gather communication."""
 
-    def __init__(self, comm, device):
+    def __init__(self, comm):
         chainer.utils.experimental('chainermn.functions.AllGather')
         self.comm = comm
-        self.device = device
 
     def forward(self, inputs):
         x, = inputs
-        ys = self.comm.allgather(x)
-
-        if isinstance(self.device, int) and self.device >= 0:
-            ys = tuple([cuda.to_gpu(y, device=self.device) for y in ys])
-
-        return ys
+        return self.comm.allgather(x)
 
     def backward(self, inputs, grad_outputs):
         xp = cuda.get_array_module(*inputs)
         gxs = self.comm.alltoall(grad_outputs)
-
-        if isinstance(self.device, int) and self.device >= 0:
-            gxs = tuple([cuda.to_gpu(gx, device=self.device) for gx in gxs])
-
         gx = xp.stack(gxs).sum(axis=0)
         return gx,
 
@@ -34,10 +23,9 @@ class AllGather(chainer.Function):
 class AllToAll(chainer.Function):
     """Collective all-to-all communication."""
 
-    def __init__(self, comm, device):
+    def __init__(self, comm):
         chainer.utils.experimental('chainermn.functions.AllToAll')
         self.comm = comm
-        self.device = device
 
     def forward(self, inputs):
         if len(inputs) != self.comm.size:
@@ -45,32 +33,22 @@ class AllToAll(chainer.Function):
                 'The length of inputs must be same as communicator size.')
 
         xs = tuple([x for x in inputs])
-        ys = self.comm.alltoall(xs)
-
-        if isinstance(self.device, int) and self.device >= 0:
-            ys = tuple([cuda.to_gpu(y, device=self.device) for y in ys])
-
-        return ys
+        return self.comm.alltoall(xs)
 
     def backward(self, inputs, grad_outputs):
         assert self.comm.size == len(grad_outputs)
 
-        xp = cuda.get_array_module(*inputs)
-        with cuda.get_device_from_array(*inputs):
-            gys = tuple([gy for gy in grad_outputs])
-            gx = self.comm.alltoall(gys)
-            gx = [xp.array(_gx) for _gx in gx]
-            return tuple(gx)
+        gys = tuple([gy for gy in grad_outputs])
+        return self.comm.alltoall(gys)
 
 
 class Bcast(chainer.Function):
     """Collective broadcast communication."""
 
-    def __init__(self, comm, root, device):
+    def __init__(self, comm, root):
         chainer.utils.experimental('chainermn.functions.Bcast')
         self.comm = comm
         self.root = root
-        self.device = device
 
     def __call__(self, *inputs):
         xp = cuda.get_array_module(*inputs)
@@ -90,37 +68,27 @@ class Bcast(chainer.Function):
             x, = inputs
         else:
             x = None
-        x = self.comm.bcast(x, self.root)
-
-        if isinstance(self.device, int) and self.device >= 0:
-            x = cuda.to_gpu(x, device=self.device)
-
-        return x,
+        return self.comm.bcast(x, self.root),
 
     def backward(self, inputs, grad_outputs):
-        with cuda.get_device_from_array(*inputs):
-            gx, = grad_outputs
-            gxs = self.comm.gather(gx, self.root)
+        gx, = grad_outputs
+        gxs = self.comm.gather(gx, self.root)
 
-            if self.comm.rank == self.root:
-                gxs = numpy.stack(gxs)
-
-                if isinstance(self.device, int) and self.device >= 0:
-                    gxs = cuda.to_gpu(gxs, device=self.device)
-
-                return gxs.sum(axis=0),
-            else:
-                return None,
+        if self.comm.rank == self.root:
+            xp = cuda.get_array_module(*gxs)
+            gxs = xp.stack(gxs)
+            return gxs.sum(axis=0),
+        else:
+            return None,
 
 
 class Gather(chainer.Function):
     """Collective gather communication."""
 
-    def __init__(self, comm, root, device):
+    def __init__(self, comm, root):
         chainer.utils.experimental('chainermn.functions.Gather')
         self.comm = comm
         self.root = root
-        self.device = device
 
     def forward(self, inputs):
         xp = cuda.get_array_module(*inputs)
@@ -128,9 +96,6 @@ class Gather(chainer.Function):
         ys = self.comm.gather(x, self.root)
 
         if self.comm.rank == self.root:
-            if isinstance(self.device, int) and self.device >= 0:
-                ys = tuple([cuda.to_gpu(y, device=self.device) for y in ys])
-
             return ys
 
         else:
@@ -138,23 +103,16 @@ class Gather(chainer.Function):
             return xp.array([], dtype=xp.float32),
 
     def backward(self, inputs, grad_outputs):
-        with cuda.get_device_from_array(*inputs):
-            gx = self.comm.scatter(grad_outputs, self.root)
-
-            if isinstance(self.device, int) and self.device >= 0:
-                gx = cuda.to_gpu(gx, device=self.device)
-
-            return gx,
+        return self.comm.scatter(grad_outputs, self.root),
 
 
 class Scatter(chainer.Function):
     """Collective scatter communication."""
 
-    def __init__(self, comm, root, device):
+    def __init__(self, comm, root):
         chainer.utils.experimental('chainermn.functions.Scatter')
         self.comm = comm
         self.root = root
-        self.device = device
 
     def __call__(self, *inputs):
         xp = cuda.get_array_module(*inputs)
@@ -175,55 +133,51 @@ class Scatter(chainer.Function):
         else:
             y = self.comm.scatter(None, self.root)
 
-        if isinstance(self.device, int) and self.device >= 0:
-            y = cuda.to_gpu(y, device=self.device)
-
         return y,
 
     def backward(self, inputs, grad_outputs):
         xp = cuda.get_array_module(*inputs)
-        with cuda.get_device_from_array(*inputs):
-            gy, = grad_outputs
-            gxs = self.comm.gather(gy, self.root)
+        gy, = grad_outputs
+        gxs = self.comm.gather(gy, self.root)
 
-            if self.comm.rank == self.root:
-                if isinstance(self.device, int) and self.device >= 0:
-                    gxs = tuple([cuda.to_gpu(gx, device=self.device)
-                                 for gx in gxs])
+        if self.comm.rank == self.root:
+            return gxs
 
-                return gxs
-
+        else:
+            # Slave processes need to maintain input/output shapes.
+            if inputs == ():
+                dummy_var = tuple([xp.array([], dtype=xp.float32)])
             else:
-                # Slave processes need to maintain input/output shapes.
-                if inputs == ():
-                    dummy_var = tuple([xp.array([], dtype=xp.float32)])
-                else:
-                    dummy_var = tuple([xp.zeros(x.shape, dtype=xp.float32)
-                                       for x in inputs])
-                return dummy_var
+                dummy_var = tuple([xp.zeros(x.shape, dtype=xp.float32)
+                                   for x in inputs])
+            return dummy_var
 
 
-def allgather(comm, x, device=-1):
+def allgather(comm, x):
     """Differentiable all-gather communication between workers.
 
     This function invokes gather communications among processes specified
     by the communicator. Backward will be invoked as well as the ordinary
     chainer functions, where gradients are reduced to each process.
 
+    The received array will be on the current CUDA device on the invoking
+    process if ``x`` is on GPU. Please be aware that the current CUDA device
+    is intended one.
+    (``https://docs-cupy.chainer.org/en/stable/tutorial/basic.html#current-device``)
+
     Args:
         comm: ChainerMN communicator.
         x (chainer.Variables): Variables to send.
-        device (int): Target device specifier.
 
     Returns:
         ys (list of chainer.Variables): Received variables.
     """
     chainer.utils.experimental('chainermn.functions.all_gather')
 
-    return AllGather(comm, device)(x)
+    return AllGather(comm)(x)
 
 
-def alltoall(comm, xs, device=-1):
+def alltoall(comm, xs):
     """Differentiable all-to-all communication between workers.
 
     This function invokes all-to-all communications among processes specified
@@ -236,10 +190,14 @@ def alltoall(comm, xs, device=-1):
     Please refer to ``chainermn.functions.pseudo_connect`` about the detail
     of delegate variables.
 
+    The received array will be on the current CUDA device on the invoking
+    process if ``xs`` is on GPU. Please be aware that the current CUDA device
+    is intended one.
+    (``https://docs-cupy.chainer.org/en/stable/tutorial/basic.html#current-device``)
+
     Args:
         comm: ChainerMN communicator.
         xs (list of chainer.Variables): Variables to send.
-        device (int): Target device specifier.
 
     Returns:
         ys (list of chainer.Variables): Received variables.
@@ -249,10 +207,10 @@ def alltoall(comm, xs, device=-1):
     if len(xs) != comm.size:
         raise ValueError('The length of xs must be same as communicator size.')
 
-    return AllToAll(comm, device)(*xs)
+    return AllToAll(comm)(*xs)
 
 
-def bcast(comm, x, root=0, device=-1):
+def bcast(comm, x, root=0):
     """Differentiable broadcast communication between workers.
 
     This function invokes broadcast communications among processes specified
@@ -260,10 +218,14 @@ def bcast(comm, x, root=0, device=-1):
     chainer functions, where gradients are gathered to the root process
     and summed up.
 
+    The received array will be on the current CUDA device if ``x`` on the
+    invoking process is on GPU. Please be aware that the current CUDA device
+    is intended one.
+    (``https://docs-cupy.chainer.org/en/stable/tutorial/basic.html#current-device``)
+
     Args:
         comm: ChainerMN communicator.
         x (chainer.Variable): Variable to be sent.
-        device (int): Target device specifier.
 
     Returns:
         y (chainer.Variable): Broadcasted variable.
@@ -271,12 +233,12 @@ def bcast(comm, x, root=0, device=-1):
     chainer.utils.experimental('chainermn.functions.bcast')
 
     if comm.rank == root:
-        return Bcast(comm, root, device)(x)
+        return Bcast(comm, root)(x)
     else:
-        return Bcast(comm, root, device)()
+        return Bcast(comm, root)()
 
 
-def gather(comm, x, root=0, device=-1):
+def gather(comm, x, root=0):
     """Differentiable gather communication between workers.
 
     This function invokes gather communications among processes specified
@@ -284,10 +246,14 @@ def gather(comm, x, root=0, device=-1):
     chainer functions, where gradients are scattered from the root process
     to each slave.
 
+    The received array will be on the current CUDA device if ``x`` on the
+    root process is on GPU. Please be aware that the current CUDA device
+    is intended one.
+    (``https://docs-cupy.chainer.org/en/stable/tutorial/basic.html#current-device``)
+
     Args:
         comm: ChainerMN communicator.
         x (chainer.Variable): Variable to be sent.
-        device (int): Target device specifier.
 
     Returns:
         ys (chainer.Variable):
@@ -295,22 +261,26 @@ def gather(comm, x, root=0, device=-1):
     """
     chainer.utils.experimental('chainermn.functions.gather')
 
-    return Gather(comm, root, device)(x)
+    return Gather(comm, root)(x)
 
 
-def scatter(comm, xs, root=0, device=-1):
+def scatter(comm, xs, root=0):
     """Differentiable scatter communication between workers.
 
     This function invokes scatter communications among processes specified
     by the communicator. Backward will be invoked as well as the ordinary
     chainer functions, where gradients are gathered to the root process.
 
+    The received array will be on the current CUDA device if ``xs`` on the
+    root process is on GPU. Please be aware that the current CUDA device
+    is intended one.
+    (``https://docs-cupy.chainer.org/en/stable/tutorial/basic.html#current-device``)
+
     Args:
         comm: ChainerMN communicator.
         xs (list of chainer.Variable):
             Variables to be scattered for master process.
             ``None`` for slave process.
-        device (int): Target device specifier.
 
     Returns:
         y (chainer.Variable): Scattered variable.
@@ -318,6 +288,6 @@ def scatter(comm, xs, root=0, device=-1):
     chainer.utils.experimental('chainermn.functions.scatter')
 
     if comm.rank == root:
-        return Scatter(comm, root, device)(*xs)
+        return Scatter(comm, root)(*xs)
     else:
-        return Scatter(comm, root, device)()
+        return Scatter(comm, root)()

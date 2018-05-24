@@ -109,11 +109,19 @@ def unpack_params(params, itemsize, attr_name, buffer, stream=None):
 
 def array_to_buffer_object(array):
     xp = chainer.cuda.get_array_module(array)
+
+    if xp is np:
+        return get_device_memory_pointer(array)
+    else:
+        return (get_device_memory_pointer(array), mpi4py.MPI.FLOAT)
+
+
+def get_device_memory_pointer(array):
+    xp = chainer.cuda.get_array_module(array)
     array = xp.ascontiguousarray(array)
 
     if xp is np:
         return array
     else:
         ffi = cffi.FFI()
-        return (ffi.buffer(ffi.cast('void *', array.data.ptr), array.nbytes),
-                mpi4py.MPI.FLOAT)
+        return ffi.buffer(ffi.cast('void *', array.data.ptr), array.nbytes)

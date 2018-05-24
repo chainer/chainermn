@@ -78,8 +78,7 @@ class TestPointToPointCommunication(unittest.TestCase):
 
         elif self.communicator.rank == self.communicator.size - 1:
             # Output process.
-            x = chainermn.functions.recv(
-                self.communicator, self.rank_recv, device=self.device)
+            x = chainermn.functions.recv(self.communicator, self.rank_recv)
             y = self.f(self.model(x))
             err = self.evaluation(y, self.x)
             err.backward()
@@ -94,8 +93,7 @@ class TestPointToPointCommunication(unittest.TestCase):
 
         else:
             # Intermediate processes.
-            x = chainermn.functions.recv(
-                self.communicator, self.rank_recv, device=self.device)
+            x = chainermn.functions.recv(self.communicator, self.rank_recv)
             y = self.f(self.model(x))
             err = chainermn.functions.send(
                 y, self.communicator, self.rank_send)
@@ -121,8 +119,7 @@ class TestPointToPointCommunication(unittest.TestCase):
             # Unless delegate_variable is used, backprop would stop here.
             x = chainermn.functions.recv(
                 self.communicator, self.rank_recv,
-                delegate_variable=dlg,
-                device=self.device)
+                delegate_variable=dlg)
             err = self.evaluation(x, t)
             err.backward()
 
@@ -131,8 +128,7 @@ class TestPointToPointCommunication(unittest.TestCase):
 
         else:
             # Intermediate processes.
-            x = chainermn.functions.recv(
-                self.communicator, self.rank_recv, device=self.device)
+            x = chainermn.functions.recv(self.communicator, self.rank_recv)
             y = self.f(self.model(x))
             err = chainermn.functions.send(
                 y, self.communicator, self.rank_send)
@@ -159,16 +155,14 @@ class TestPointToPointCommunication(unittest.TestCase):
 
         elif self.communicator.rank == self.communicator.size - 1:
             y = chainermn.functions.recv(
-                self.communicator, self.rank_recv, device=self.device,
-                force_tuple=True)
+                self.communicator, self.rank_recv, force_tuple=True)
             assert isinstance(y, tuple)
             z = functools.reduce(lambda x, y: x + y, y)
             err = self.evaluation(z, self.x)
             err.backward()
 
         else:
-            y = chainermn.functions.recv(
-                self.communicator, self.rank_recv, device=self.device)
+            y = chainermn.functions.recv(self.communicator, self.rank_recv)
             err = chainermn.functions.send(
                 y, self.communicator, self.rank_send)
             err.backward()
