@@ -5,11 +5,9 @@ import numpy
 def _is_valid_type(element):
     if isinstance(element, tuple) and len(element) == 2 \
             and hasattr(element[0], 'dtype') \
-            and element[0].dtype == numpy.float32 \
-            and hasattr(element[1], 'dtype') \
-            and element[1].dtype == numpy.float32:
+            and hasattr(element[1], 'dtype'):
         return True
-    elif hasattr(element, 'dtype') and element.dtype == numpy.float32:
+    elif hasattr(element, 'dtype'):
         return True
     return False
 
@@ -78,8 +76,8 @@ class _MultiNodeIteratorMaster(chainer.dataset.iterator.Iterator):
         if stop:
             raise StopIteration
         elif not is_valid_data_type:
-            raise TypeError('Multi node iterator supports numpy.float32 '
-                            'or tuple of numpy.float32 as the data type '
+            raise TypeError('Multi node iterator supports ndarray '
+                            'or tuple of scalars as the data type '
                             'of the batch element only.')
 
         if is_paired_dataset:
@@ -154,8 +152,8 @@ class _MultiNodeIteratorSlave(chainer.dataset.iterator.Iterator):
         if stop:
             raise StopIteration
         elif not is_valid_data_type:
-            raise TypeError('Multi node iterator supports numpy.float32 '
-                            'or tuple of numpy.float32 as the data type '
+            raise TypeError('Multi node iterator supports ndarray '
+                            'or tuple of scalars as the data type '
                             'of the batch element only.')
         if is_paired_dataset:
             xs = self.communicator.bcast(None, root=self.rank_master)
