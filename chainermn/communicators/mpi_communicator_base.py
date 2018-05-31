@@ -274,8 +274,9 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             msg = []
             for shape in msgtype.shapes:
                 buf = xp.empty([numpy.prod(shape)], dtype=msgtype.dtype)
+                rtype = _get_mpi_type(msgtype)
                 self.mpi_comm.Recv(
-                    _memory_utility.get_device_memory_pointer(buf),
+                    _memory_utility.array_to_buffer_object(buf, rtype),
                     source=source, tag=tag)
                 msg.append(buf.reshape(shape))
             return tuple(msg)
@@ -284,8 +285,9 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             assert len(msgtype.shapes) == 1
             shape = msgtype.shapes[0]
             buf = xp.empty([numpy.prod(shape)], dtype=msgtype.dtype)
+            rtype = _get_mpi_type(msgtype)
             self.mpi_comm.Recv(
-                _memory_utility.get_device_memory_pointer(buf),
+                _memory_utility.array_to_buffer_object(buf, rtype),
                 source=source, tag=tag)
             return buf.reshape(shape)
 
@@ -332,8 +334,9 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             xp = msgtype.get_array_module()
             shape = msgtype.shapes[0]
             buf = xp.empty([numpy.prod(shape)], dtype=msgtype.dtype)
+            buftype = _get_mpi_type(msgtype)
             self.mpi_comm.Bcast(
-                _memory_utility.get_device_memory_pointer(buf),
+                _memory_utility.array_to_buffer_object(buf, buftype),
                 root)
             return buf.reshape(shape)
 
@@ -486,9 +489,9 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             x, _get_mpi_type(msgtype))
         # Destination buffer
         dbuf = xp.empty([numpy.prod(msgtype.shapes[0])], dtype=msgtype.dtype)
-        self.mpi_comm.Allreduce(
-            sbuf,
-            _memory_utility.get_device_memory_pointer(dbuf))
+        dbuf = _memory_utility.array_to_buffer_object(
+            dbuf, _get_mpi_type(msgtype))
+        self.mpi_comm.Allreduce(sbuf, dbuf)
 
         return dbuf.reshape(msgtype.shapes[0])
 
@@ -575,12 +578,13 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             slens = [numpy.prod(s) for s in shapes]
             sbuf = _memory_utility.get_device_memory_pointer(xs)
             rbuf = xp.empty([numpy.prod(shape)], dtype=msgtype.dtype)
+            rtype = _get_mpi_type(msgtype)
             if xp is not numpy:
                 chainer.cuda.Stream.null.synchronize()
 
             self.mpi_comm.Scatterv(
                 [sbuf, (slens, _cnt_to_dsp(slens)), _get_mpi_type(msgtype)],
-                _memory_utility.get_device_memory_pointer(rbuf), root)
+                _memory_utility.array_to_buffer_object(rbuf, rtype), root)
 
             return rbuf.reshape(shape)
 
@@ -589,9 +593,10 @@ class MpiCommunicatorBase(communicator_base.CommunicatorBase):
             xp = msgtypes.get_array_module()
             shape = msgtypes.shapes[0]
             rbuf = xp.empty([numpy.prod(shape)], dtype=msgtypes.dtype)
+            rtype = _get_mpi_type(msgtypes)
             self.mpi_comm.Scatterv(
                 None,
-                _memory_utility.get_device_memory_pointer(rbuf),
+                _memory_utility.array_to_buffer_object(rbuf, rtype),
                 root)
             return rbuf.reshape(shape)
 
