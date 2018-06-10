@@ -44,7 +44,7 @@ install:
   - pip install hacking==1.0.0
   - pip install pytest mock
   - pip install autopep8
-  - pip install mpi4py cffi
+  - pip install mpi4py
   - pip install chainer==${CHAINER_VER}
   - python setup.py develop
 
