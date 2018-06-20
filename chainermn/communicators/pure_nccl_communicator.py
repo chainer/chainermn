@@ -60,8 +60,12 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
         _memory_utility.pack_params(
             params, data_dtype.itemsize, 'data',
             self.gpu_allreduce_buffer_a, stream)
+        print(self.gpu_allreduce_buffer_a.array(n_elems,
+                                              dtype=data_dtype))
         self.nccl_comm.bcast(self.gpu_allreduce_buffer_a.ptr(), n_elems,
                                  _get_nccl_type_id(data_dtype), 0, stream.ptr)
+        print(self.gpu_allreduce_buffer_a.array(n_elems,
+                                                dtype=data_dtype))
         _memory_utility.unpack_params(
             params, data_dtype.itemsize, 'data',
             self.gpu_allreduce_buffer_a, stream)
