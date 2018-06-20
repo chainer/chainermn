@@ -45,6 +45,7 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
         self.nccl_comm = _communication_utility.init_nccl_comm(self.mpi_comm)
 
     def bcast_data(self, model):
+        self._init_comms()
         params = _memory_utility.extract_params(model)
         print(params[0].data)
         print(params[0].grad)
