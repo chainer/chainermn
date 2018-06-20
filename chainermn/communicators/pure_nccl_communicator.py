@@ -64,9 +64,13 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
                              _get_nccl_type_id(data_dtype), 0, stream.ptr)
         print(self.rank, self.gpu_tmp_buffer.array(n_elems,
                                                  dtype=data_dtype), flush=True)
+        for i, v in enumerate(params):
+            print(self.rank, i, v)
         _memory_utility.unpack_params(
             params, data_dtype.itemsize, 'data',
             self.gpu_tmp_buffer, stream)
+        for i, v in enumerate(params):
+            print(self.rank, i, v)
 
     def allreduce_grad(self, model):
         stream = chainer.cuda.Stream.null
