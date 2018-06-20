@@ -44,6 +44,24 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
             return
         self.nccl_comm = _communication_utility.init_nccl_comm(self.mpi_comm)
 
+    def bcast_data(self, model):
+        params = _memory_utility.extract_params(model)
+        data_dtype = _get_param_data_dtype(params[0])
+        n_elems = sum(param.data.size for param in params)
+        data_grad_n_bytes = data_dtype.itemsize * n_elems
+        if self.gpu_allreduce_buffer_a.size != data_grad_n_bytes:
+            self.gpu_allreduce_buffer_a.assign(data_grad_n_bytes)
+        stream = chainer.cuda.Stream.null
+
+        _memory_utility.pack_params(
+            params, data_dtype.itemsize, 'data',
+            self.gpu_allreduce_buffer_a, stream)
+        self.nccl_comm.bcast(self.gpu_allreduce_buffer_a.ptr(), n_elems,
+                                 _get_nccl_type_id(data_dtype), 0, stream.ptr)
+        _memory_utility.unpack_params(
+            params, data_dtype.itemsize, 'data',
+            self.gpu_allreduce_buffer_a, stream)
+
     def allreduce_grad(self, model):
         stream = chainer.cuda.Stream.null
         self._allreduce_grad_async(model, stream)
@@ -58,7 +76,7 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
             allreduce_grad_dtype = self.allreduce_grad_dtype
         print(grad_dtype, allreduce_grad_dtype)
         n_elems = sum(param.grad.size for param in params)
-        needs_sync = self._assign(grad_dtype, allreduce_grad_dtype, n_elems)
+        needs_sync = self._assign_for_allreduce_grad(grad_dtype, allreduce_grad_dtype, n_elems)
         if stream != chainer.cuda.Stream.null and needs_sync:
             chainer.cuda.Stream.null.synchronize()
 
@@ -83,7 +101,8 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
         self._unpack_params_from_buffer(params, grad_dtype,
                                         allreduce_grad_dtype, n_elems, stream)
 
-    def _assign(self, grad_dtype, allreduce_grad_dtype, n_elems):
+    def _assign_for_allreduce_grad(self, grad_dtype, allreduce_grad_dtype,
+                                   n_elems):
         allreduce_grad_n_bytes = allreduce_grad_dtype.itemsize * n_elems
         needs_sync = False
         if self.gpu_allreduce_buffer_a.size != allreduce_grad_n_bytes:
@@ -152,6 +171,10 @@ def _get_converting_kernel(src_dtype, dst_dtype, kernel_name):
         '{} x'.format(src_dtype.name),
         '{} y'.format(dst_dtype.name),
         'y = x', kernel_name)
+
+
+def _get_param_data_dtype(param):
+    return param.data.dtype
 
 
 def _get_param_grad_dtype(param):
