@@ -46,7 +46,7 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
 
     def bcast_data(self, model):
         self._init_comms()
-        params = _memory_utility.extract_params(model)
+        params = _memory_utility.extract_params_set_data(model)
         data_dtype = _get_param_data_dtype(params[0])
         print(data_dtype, params[0].data.dtype)
         n_elems = sum(param.data.size for param in params)
@@ -74,7 +74,7 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
 
     def _allreduce_grad_async(self, model, stream):
         self._init_comms()
-        params = _memory_utility.extract_params(model)
+        params = _memory_utility.extract_params_set_grad(model)
         grad_dtype = _get_param_grad_dtype(params[0])
         if self.allreduce_grad_dtype is None:
             allreduce_grad_dtype = grad_dtype

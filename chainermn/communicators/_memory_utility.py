@@ -84,7 +84,12 @@ class DeviceMemory(object):
         return cp.ndarray(shape, memptr=self.memory + offset, dtype=dtype)
 
 
-def extract_params(model):
+def extract_params_set_data(model):
+    return [param for _, param in sorted(model.namedparams())
+            if param.data is not None]
+
+
+def extract_params_set_grad(model):
     return [param for _, param in sorted(model.namedparams())
             if param.grad is not None]
 
