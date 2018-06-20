@@ -56,6 +56,7 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
             allreduce_grad_dtype = grad_dtype
         else:
             allreduce_grad_dtype = self.allreduce_grad_dtype
+        print(grad_dtype, allreduce_grad_dtype)
         n_elems = sum(param.grad.size for param in params)
         needs_sync = self._assign(grad_dtype, allreduce_grad_dtype, n_elems)
         if stream != chainer.cuda.Stream.null and needs_sync:
