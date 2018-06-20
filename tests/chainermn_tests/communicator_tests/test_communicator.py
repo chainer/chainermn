@@ -90,13 +90,11 @@ gpu_params = [Param(p) for p in [
         'multi_node': True,
         'nccl1': False,
         'model_dtype': np.float16,
-        'allreduce_grad_dtype': np.float16,
     }, {
         'communicator_class': PureNcclCommunicator,
         'multi_node': True,
         'nccl1': False,
         'model_dtype': np.float64,
-        'allreduce_grad_dtype': np.float64,
     }]]
 
 mpi_comm = mpi4py.MPI.COMM_WORLD

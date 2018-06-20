@@ -48,7 +48,6 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
         self._init_comms()
         params = _memory_utility.extract_params_set_data(model)
         data_dtype = _get_param_data_dtype(params[0])
-        print(data_dtype, params[0].data.dtype)
         n_elems = sum(param.data.size for param in params)
         data_grad_n_bytes = data_dtype.itemsize * n_elems
         if self.gpu_tmp_buffer.size != data_grad_n_bytes:
@@ -58,19 +57,11 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
         _memory_utility.pack_params(
             params, data_dtype.itemsize, 'data',
             self.gpu_tmp_buffer, stream)
-        print(self.rank, self.gpu_tmp_buffer.array(n_elems,
-                                                 dtype=data_dtype), flush=True)
         self.nccl_comm.bcast(self.gpu_tmp_buffer.ptr(), n_elems,
                              _get_nccl_type_id(data_dtype), 0, stream.ptr)
-        print(self.rank, self.gpu_tmp_buffer.array(n_elems,
-                                                 dtype=data_dtype), flush=True)
-        for i, v in enumerate(params):
-            print(self.rank, i, v)
         _memory_utility.unpack_params(
             params, data_dtype.itemsize, 'data',
             self.gpu_tmp_buffer, stream)
-        for i, v in enumerate(params):
-            print(self.rank, i, v)
 
     def allreduce_grad(self, model):
         stream = chainer.cuda.Stream.null
@@ -84,9 +75,10 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
             allreduce_grad_dtype = grad_dtype
         else:
             allreduce_grad_dtype = self.allreduce_grad_dtype
-        print(grad_dtype, allreduce_grad_dtype)
         n_elems = sum(param.grad.size for param in params)
-        needs_sync = self._assign_for_allreduce_grad(grad_dtype, allreduce_grad_dtype, n_elems)
+        needs_sync = self._assign_for_allreduce_grad(grad_dtype,
+                                                     allreduce_grad_dtype,
+                                                     n_elems)
         if stream != chainer.cuda.Stream.null and needs_sync:
             chainer.cuda.Stream.null.synchronize()
 
