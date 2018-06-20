@@ -46,6 +46,8 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
 
     def bcast_data(self, model):
         params = _memory_utility.extract_params(model)
+        print(params[0].data)
+        print(params[0].grad)
         data_dtype = _get_param_data_dtype(params[0])
         n_elems = sum(param.data.size for param in params)
         data_grad_n_bytes = data_dtype.itemsize * n_elems
