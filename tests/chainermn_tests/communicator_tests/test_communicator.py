@@ -36,8 +36,10 @@ class ExampleModel(chainer.Chain):
         super(ExampleModel, self).__init__(
             a=chainer.links.Linear(2, 3, initialW=initialW,
                                    initial_bias=initial_bias),
-            b=chainer.links.Linear(3, 4),
-            c=chainer.links.Linear(4, 5),
+            b=chainer.links.Linear(3, 4, initialW=initialW,
+                                   initial_bias=initial_bias),
+            c=chainer.links.Linear(4, 5, initialW=initialW,
+                                   initial_bias=initial_bias),
         )
 
 
