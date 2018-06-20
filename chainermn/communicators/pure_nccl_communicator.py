@@ -49,6 +49,7 @@ class PureNcclCommunicator(mpi_communicator_base.MpiCommunicatorBase):
         print(params[0].data)
         print(params[0].grad)
         data_dtype = _get_param_data_dtype(params[0])
+        print(data_dtype, params[0].data.dtype)
         n_elems = sum(param.data.size for param in params)
         data_grad_n_bytes = data_dtype.itemsize * n_elems
         if self.gpu_allreduce_buffer_a.size != data_grad_n_bytes:
