@@ -85,6 +85,9 @@ class DeviceMemory(object):
 
 
 def extract_params_set_data(model):
+    for n, param in sorted(model.namedparams()):
+        if param.data is not None:
+            print(n)
     return [param for _, param in sorted(model.namedparams())
             if param.data is not None]
 

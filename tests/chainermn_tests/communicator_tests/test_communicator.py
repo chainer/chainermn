@@ -160,7 +160,6 @@ def check_bcast_data(communicator, model):
     model.a.W.data[:] = communicator.rank
     model.b.W.data[:] = communicator.rank + 1
     model.c.b.data[:] = communicator.rank + 2
-    print(model.a.W.data.dtype)
     communicator.bcast_data(model)
     chainer.testing.assert_allclose(model.a.W.data, 0 * np.ones((3, 2)))
     chainer.testing.assert_allclose(model.b.W.data, 1 * np.ones((4, 3)))
@@ -174,7 +173,6 @@ def check_allreduce_grad(communicator, model):
         model.a.W.grad[:] = communicator.rank
         model.b.W.grad[:] = communicator.rank + 1
         model.c.b.grad[:] = communicator.rank + 2
-        print(model.a.W.grad.dtype)
         communicator.allreduce_grad(model)
         base = (communicator.size - 1.0) / 2
 
