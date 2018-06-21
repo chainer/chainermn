@@ -5,6 +5,8 @@ This is an example for (channel-wise) model-parallel convolution layer.
 Each process is responsible for a subset of channels of each layer,
 which is aggregated by allgather operation.
 
+![Parallel Convolution](./parallel-conv.png)
+
 ## Run
 
 ```
