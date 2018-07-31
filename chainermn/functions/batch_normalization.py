@@ -178,7 +178,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
                     '''
                     r_mean = r_mean * decay + mean * (1 - decay);
                     r_var = r_var * decay + var * (1 - decay) * adjust;
-                    '''
+                    ''',
                     'update_mean_var')(mean, var, self.decay, adjust,
                                        self.running_mean, self.running_var)
 
