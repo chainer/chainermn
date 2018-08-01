@@ -174,7 +174,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
             else:
                 cuda.elementwise(
                     'T mean, T var, T decay, T adjust',
-                    'T r_mean, T r_var,',
+                    'T r_mean, T r_var',
                     '''
                     r_mean = r_mean * decay + mean * (1 - decay);
                     r_var = r_var * decay + var * (1 - decay) * adjust;
