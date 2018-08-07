@@ -1,0 +1,17 @@
+e175452f4d61646a52c73031683fc375  mpich-3.2.1.tar.gz
+f414cfa77099cd1fa1a5ae4e22db508a  mpich-3.2.tar.gz
+9c5d5d4fe1e17dd12153f40bc5b6dbc0  mpich-3.0.4.tar.gz
+493f1db2f75afaab1c8ecba78d2f5aab  openmpi-3.1.1.tar.bz2
+0895e268ca27735d7654bf64cee6c256  openmpi-3.1.0.tar.bz2
+46079b6f898a412240a0bf523e6cd24b  openmpi-2.1.3.tar.bz2
+a1c4a50bbc49cd3bbb593f293bd8b8e4  openmpi-2.1.2.tar.bz2
+ae542f5cf013943ffbbeb93df883731b  openmpi-2.1.1.tar.bz2
+4838a5973115c44e14442c01d3f21d52  openmpi-2.1.0.tar.bz2
+c87c613f9acb1a4eee21fa1ac8042579  openmpi-1.10.7.tar.bz2
+2e65008c1867b1f47c32f9f814d41706  openmpi-1.10.6.tar.bz2
+d32ba9530a869d9c1eae930882ea1834  openmpi-1.10.5.tar.bz2
+9d2375835c5bc5c184ecdeb76c7c78ac  openmpi-1.10.4.tar.bz2
+e2fe4513200e2aaa1500b762342c674b  openmpi-1.10.3.tar.bz2
+b2f43d9635d2d52826e5ef9feb97fd4c  openmpi-1.10.2.tar.bz2
+f0fcd77ed345b7eafb431968124ba16e  openmpi-1.10.1.tar.bz2
+280cf952de68369cebaca886c5ce0304  openmpi-1.10.0.tar.bz2
