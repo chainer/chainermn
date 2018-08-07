@@ -8,7 +8,6 @@ import chainer.functions as F
 import chainer.links as L
 from chainer import training
 from chainer.training import extensions
-from mpi4py import MPI
 
 import chainermn
 
@@ -62,9 +61,9 @@ def main():
         comm = chainermn.create_communicator('naive')
         device = -1
 
-    if comm.mpi_comm.rank == 0:
+    if comm.rank == 0:
         print('==========================================')
-        print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
+        print('Num process (COMM_WORLD): {}'.format(comm.size))
         if args.gpu:
             print('Using GPUs')
         print('Using {} communicator'.format(args.communicator))
@@ -75,7 +74,7 @@ def main():
 
     model = L.Classifier(MLP(args.unit, 10))
     if device >= 0:
-        chainer.cuda.get_device(device).use()
+        chainer.cuda.get_device_from_id(device).use()
         model.to_gpu()
 
     # Create a multi node optimizer from a standard Chainer optimizer.

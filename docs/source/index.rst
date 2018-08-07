@@ -3,10 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to ChainerMN's documentation!
-=====================================
-
-Contents:
+ChainerMN Official Documentation
+================================
 
 .. toctree::
    :maxdepth: 2

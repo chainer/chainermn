@@ -8,7 +8,6 @@ import re
 import sys
 import time
 
-from mpi4py import MPI
 from nltk.translate import bleu_score
 import numpy
 import six
@@ -226,7 +225,7 @@ class BleuEvaluator(extensions.Evaluator):
 
         if self.comm is not None:
             # This evaluator is called via chainermn.MultiNodeEvaluator
-            for i in range(0, self.comm.mpi_comm.size):
+            for i in range(0, self.comm.size):
                 print("BleuEvaluator::evaluate(): "
                       "took {:.3f} [s]".format(et - bt))
                 sys.stdout.flush()
@@ -342,9 +341,9 @@ def main():
         comm = chainermn.create_communicator('naive')
         dev = -1
 
-    if comm.mpi_comm.rank == 0:
+    if comm.rank == 0:
         print('==========================================')
-        print('Num process (COMM_WORLD): {}'.format(MPI.COMM_WORLD.Get_size()))
+        print('Num process (COMM_WORLD): {}'.format(comm.size))
         if args.gpu:
             print('Using GPUs')
         print('Using {} communicator'.format(args.communicator))
@@ -415,8 +414,8 @@ def main():
         comm.mpi_comm.Barrier()
 
     # broadcast id- > word dictionary
-    source_ids = comm.mpi_comm.bcast(source_ids, root=0)
-    target_ids = comm.mpi_comm.bcast(target_ids, root=0)
+    source_ids = comm.bcast_obj(source_ids, root=0)
+    target_ids = comm.bcast_obj(target_ids, root=0)
 
     target_words = {i: w for w, i in target_ids.items()}
     source_words = {i: w for w, i in source_ids.items()}
@@ -428,7 +427,7 @@ def main():
     model = Seq2seq(3, len(source_ids), len(target_ids), args.unit)
 
     if dev >= 0:
-        chainer.cuda.get_device(dev).use()
+        chainer.cuda.get_device_from_id(dev).use()
         model.to_gpu(dev)
 
     # determine the stop trigger

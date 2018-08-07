@@ -10,9 +10,6 @@ import chainermn
 from chainermn.communicators.flat_communicator import FlatCommunicator
 from chainermn.communicators.naive_communicator import NaiveCommunicator
 
-from chainermn.datasets.scatter_dataset import chunked_bcast  # NOQA
-from chainermn.datasets.scatter_dataset import INT_MAX  # NOQA
-
 
 class TestDataset(unittest.TestCase):
 
@@ -24,9 +21,9 @@ class TestDataset(unittest.TestCase):
         my_dataset = chainermn.scatter_dataset(
             original_dataset, self.communicator,
             shuffle=shuffle, root=root)
-        sub_datasets = self.mpi_comm.gather(my_dataset, root=root)
+        sub_datasets = self.communicator.gather_obj(my_dataset, root=root)
 
-        if self.mpi_comm.rank == root:
+        if self.communicator.rank == root:
             # Test the sizes
             sub_sizes = [len(sub_dataset) for sub_dataset in sub_datasets]
             self.assertEqual(len(set(sub_sizes)), 1)
@@ -56,28 +53,6 @@ class TestDataset(unittest.TestCase):
                 self.check_scatter_dataset(np.array([0]), shuffle, root)
                 self.check_scatter_dataset(np.arange(n), shuffle, root)
                 self.check_scatter_dataset(np.arange(n * 5 - 1), shuffle, root)
-
-    def test_chunked_bcasts(self):
-        # success
-        for (s, l) in [(10, 1), (1024, 7), (355678, 2378), (234, INT_MAX - 1)]:
-            self.check_chunked_bcast(s, l)
-        # fail
-        for (s, l) in [(200, -1), (23, INT_MAX)]:
-            with pytest.raises(AssertionError):
-                self.check_chunked_bcast(s, l)
-
-    def check_chunked_bcast(self, data_size, max_buf_len):
-        root = 0
-        obj = np.arange(data_size)
-        src = None
-        if self.communicator.mpi_comm.rank == root:
-            src = obj
-
-        dst = chunked_bcast(src, self.communicator.mpi_comm,
-                            max_buf_len, root)
-        assert len(dst) == len(obj)
-        for i in range(len(obj)):
-            assert dst[i] == obj[i]
 
 
 def scatter_large_data(communicator):

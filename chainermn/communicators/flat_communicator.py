@@ -1,25 +1,19 @@
 import mpi4py.MPI
 
-from chainermn.communicators import _base
-from chainermn.communicators import _communication_utility
 from chainermn.communicators import _memory_utility
+from chainermn.communicators import mpi_communicator_base
 
 
-class FlatCommunicator(_base.CommunicatorBase):
+class FlatCommunicator(mpi_communicator_base.MpiCommunicatorBase):
 
     def __init__(self, mpi_comm):
-        super(FlatCommunicator, self).__init__(mpi_comm, False)
+        super(FlatCommunicator, self).__init__(mpi_comm)
 
         self.gpu_buffer_a = _memory_utility.DeviceMemory()
         self.gpu_buffer_b = _memory_utility.DeviceMemory()
 
-    def broadcast_data(self, model):
-        _communication_utility.broadcast_naive(self.mpi_comm, model)
-
     def allreduce_grad(self, model):
-        self._init_comms()
-
-        params = _memory_utility.extract_params(model)
+        params = _memory_utility.extract_params_set_grad(model)
         itemsize = 4
         n_elems_total = sum(param.grad.size for param in params)
         n_bytes_total = n_elems_total * itemsize

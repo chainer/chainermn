@@ -9,14 +9,14 @@ python:
   - "3.6"
 
 env:
-  - MPI="mpich-3.0.4"    CHAINER_VER="3.1.0"
-  - MPI="mpich-3.0.4"    CHAINER_VER="3.2.0"
-  - MPI="mpich-3.2"      CHAINER_VER="3.1.0"
-  - MPI="mpich-3.2"      CHAINER_VER="3.2.0"
-  - MPI="openmpi-1.6.5"  CHAINER_VER="3.1.0"
-  - MPI="openmpi-1.6.5"  CHAINER_VER="3.2.0"
-  - MPI="openmpi-1.10.3" CHAINER_VER="3.1.0"
-  - MPI="openmpi-1.10.3" CHAINER_VER="3.2.0"
+  - MPI="mpich-3.0.4"    CHAINER_VER="3.5.0"
+  - MPI="mpich-3.0.4"    CHAINER_VER="4.0.0"
+  - MPI="mpich-3.2"      CHAINER_VER="3.5.0"
+  - MPI="mpich-3.2"      CHAINER_VER="4.0.0"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="3.5.0"
+  - MPI="openmpi-1.6.5"  CHAINER_VER="4.0.0"
+  - MPI="openmpi-1.10.3" CHAINER_VER="3.5.0"
+  - MPI="openmpi-1.10.3" CHAINER_VER="4.0.0"
 
 cache:
   - pip
@@ -41,9 +41,10 @@ before_install:
 
 install:
   - pip install -U pip wheel
-  - pip install pytest hacking mock
+  - pip install hacking==1.0.0
+  - pip install pytest mock
   - pip install autopep8
-  - pip install mpi4py cffi
+  - pip install mpi4py
   - pip install chainer==${CHAINER_VER}
   - python setup.py develop
 

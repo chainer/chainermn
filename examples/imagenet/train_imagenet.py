@@ -16,18 +16,11 @@ from chainer.training import extensions
 import chainermn
 
 
-if chainer.__version__.startswith('1.'):
-    import models_v1.alex as alex
-    import models_v1.googlenet as googlenet
-    import models_v1.googlenetbn as googlenetbn
-    import models_v1.nin as nin
-    import models_v1.resnet50 as resnet50
-else:
-    import models_v2.alex as alex
-    import models_v2.googlenet as googlenet
-    import models_v2.googlenetbn as googlenetbn
-    import models_v2.nin as nin
-    import models_v2.resnet50 as resnet50
+import models.alex as alex
+import models.googlenet as googlenet
+import models.googlenetbn as googlenetbn
+import models.nin as nin
+import models.resnet50 as resnet50
 
 # Check Python version if it supports multiprocessing.set_start_method,
 # which was introduced in Python 3.4
@@ -142,7 +135,7 @@ def main():
     comm = chainermn.create_communicator(args.communicator)
     device = comm.intra_rank
 
-    if comm.mpi_comm.rank == 0:
+    if comm.rank == 0:
         print('==========================================')
         print('Num process (COMM_WORLD): {}'.format(comm.size))
         print('Using {} communicator'.format(args.communicator))
@@ -156,7 +149,7 @@ def main():
         print('Load model from', args.initmodel)
         chainer.serializers.load_npz(args.initmodel, model)
 
-    chainer.cuda.get_device(device).use()  # Make the GPU current
+    chainer.cuda.get_device_from_id(device).use()  # Make the GPU current
     model.to_gpu()
 
     # Split and distribute the dataset. Only worker 0 loads the whole dataset.

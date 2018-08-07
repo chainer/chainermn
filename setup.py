@@ -5,8 +5,7 @@ import os
 
 
 install_requires = [
-    'cffi',
-    'chainer >=3.0.0',
+    'chainer >=3.5.0, !=4.0.0b2, != 4.0.0b1, != 4.0.0a1',
     'mpi4py',
 ]
 
@@ -16,11 +15,12 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='chainermn',
-    version='1.1.0',
+    version='1.3.0',
     description='ChainerMN: Multi-node distributed training with Chainer',
     author='Takuya Akiba',
     author_email='akiba@preferred.jp',
     packages=find_packages(),
     install_requires=install_requires,
-    test_requires=['pytest']
+    tests_require=['mock',
+                   'pytest'],
 )

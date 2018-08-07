@@ -5,15 +5,22 @@ import unittest
 import mpi4py.MPI
 import pytest
 
-from chainermn.communicators import _base
+from chainermn.communicators.mpi_communicator_base import MpiCommunicatorBase
 
 
-class TestCommunicatorBase(unittest.TestCase):
+class NodeAwareNaiveCommunicator(MpiCommunicatorBase):
+    def __init__(self, mpi_comm):
+        super(NodeAwareNaiveCommunicator, self).__init__(mpi_comm)
+
+    def allreduce_grad(self, model):
+        raise NotImplementedError()
+
+
+class TestMpiCommunicatorBase(unittest.TestCase):
 
     def setUp(self):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
-        self.communicator = _base.CommunicatorBase(
-            self.mpi_comm, use_nccl=False)
+        self.communicator = NodeAwareNaiveCommunicator(self.mpi_comm)
 
     def test_intra_rank_with_env(self):
         if 'MV2_COMM_WORLD_LOCAL_RANK' in os.environ:  # MVAPICH

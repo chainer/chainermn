@@ -207,8 +207,7 @@ class MultiNodeChainList(chainer.ChainList):
                         _x = chainermn.functions.recv(
                             self._comm,
                             rank=_rank_in,
-                            delegate_variable=delegate_variable,
-                            device=self._device_id)
+                            delegate_variable=delegate_variable)
 
                     xs.append(_x)
 

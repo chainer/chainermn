@@ -1,31 +1,51 @@
 import chainer
-import chainer.functions.connection as conn
+import chainer.functions.connection as fconn
+import chainer.links.connection as lconn
 import chainermn.functions
 
 
-_rnn_n_cells = {
-    conn.n_step_gru.n_step_bigru: 1,
-    conn.n_step_gru.n_step_gru: 1,
-    conn.n_step_lstm.n_step_bilstm: 2,
-    conn.n_step_lstm.n_step_lstm: 2,
-    conn.n_step_rnn.n_step_birnn: 1,
-    conn.n_step_rnn.n_step_rnn: 1,
-}
+# Chainer <=v3
+CHAINER_VERSION_OLD_RNN = (int(chainer.__version__.split('.')[0]) <= 3)
+
+if CHAINER_VERSION_OLD_RNN:
+    _rnn_n_cells = {
+        fconn.n_step_gru.n_step_bigru: 1,
+        fconn.n_step_gru.n_step_gru: 1,
+        fconn.n_step_lstm.n_step_bilstm: 2,
+        fconn.n_step_lstm.n_step_lstm: 2,
+        fconn.n_step_rnn.n_step_birnn: 1,
+        fconn.n_step_rnn.n_step_rnn: 1,
+    }
 
 
 class _MultiNodeNStepRNN(chainer.Chain):
 
     def __init__(self, link, communicator, rank_in, rank_out):
+        if chainer.__version__.startswith('4.0.0b'):
+            raise ValueError(
+                'Multi node stacked RNN link does not support '
+                'Chainer 4.0.0b1-4.0.0b4 versions.')
+
         super(_MultiNodeNStepRNN, self).__init__(actual_rnn=link)
 
         self.communicator = communicator
         self.rank_in = rank_in
         self.rank_out = rank_out
 
-        if not hasattr(link, 'rnn') or link.rnn not in _rnn_n_cells:
-            raise ValueError('link must be NStepRNN and its inherited link')
-        else:
-            self.n_cells = _rnn_n_cells[link.rnn]
+        if CHAINER_VERSION_OLD_RNN:
+            if not hasattr(link, 'rnn') or link.rnn not in _rnn_n_cells:
+                raise ValueError(
+                    'link must be NStepRNN and its inherited link')
+            else:
+                self.n_cells = _rnn_n_cells[link.rnn]
+
+        else:  # expect Chainer >=4.0.0rc1
+            check_lstm = isinstance(link, lconn.n_step_rnn.NStepRNNBase)
+            if not check_lstm:
+                raise ValueError(
+                    'link must be NStepRNN and its inherited link')
+            else:
+                self.n_cells = link.n_cells
 
     def __call__(self, *inputs):
         cells = [None for _ in range(self.n_cells)]
@@ -33,8 +53,7 @@ class _MultiNodeNStepRNN(chainer.Chain):
         if self.rank_in is not None:
             cells = [chainermn.functions.recv(
                 self.communicator,
-                rank=self.rank_in,
-                device=self.actual_rnn._device_id)
+                rank=self.rank_in)
                 for _ in range(self.n_cells)]
 
         outputs = self.actual_rnn(*(tuple(cells) + inputs))

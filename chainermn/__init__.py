@@ -3,9 +3,12 @@ import pkg_resources
 from chainermn import communicators  # NOQA
 from chainermn import datasets  # NOQA
 from chainermn import extensions  # NOQA
+from chainermn import functions  # NOQA
+from chainermn import iterators  # NOQA
 from chainermn import links  # NOQA
 from chainermn import optimizers  # NOQA
 
+from chainermn.communicators import CommunicatorBase  # NOQA
 from chainermn.communicators import create_communicator  # NOQA
 from chainermn.datasets import DataSizeError  # NOQA
 from chainermn.datasets import scatter_dataset  # NOQA

@@ -28,7 +28,7 @@ def create_multi_node_evaluator(actual_evaluator, communicator):
         local_mean_dict = self._mn_original_evaluate()
         global_mean_dict = {
             name:
-            self._mn_communicator.mpi_comm.allreduce(
+            self._mn_communicator.allreduce_obj(
                 value) / self._mn_communicator.size
             for name, value in sorted(local_mean_dict.items())
         }

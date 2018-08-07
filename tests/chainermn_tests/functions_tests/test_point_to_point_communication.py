@@ -1,7 +1,10 @@
 import copy
 import functools
+import unittest
 
 import chainer
+import chainer.testing
+import chainer.testing.attr
 import numpy
 import pytest
 
@@ -9,14 +12,14 @@ import chainermn
 import chainermn.functions
 
 
-class PointToPointCommunication(object):
+class TestPointToPointCommunication(unittest.TestCase):
 
-    def __init__(self, gpu):
+    def setup(self, gpu):
         self.gpu = gpu
         if self.gpu:
             self.communicator = chainermn.create_communicator('hierarchical')
             device = self.communicator.intra_rank
-            chainer.cuda.get_device(device).use()
+            chainer.cuda.get_device_from_id(device).use()
         else:
             self.communicator = chainermn.create_communicator('naive')
             device = -1
@@ -54,7 +57,7 @@ class PointToPointCommunication(object):
         return 1.0 * numpy.arange(100).reshape(10, 10).astype(numpy.float32) \
             / ((l + 1) * 100)
 
-    def test_communication(self):
+    def check_communication(self):
         if self.communicator.rank == 0:
             # Input process.
             y = self.f(self.model(self.x))
@@ -75,8 +78,7 @@ class PointToPointCommunication(object):
 
         elif self.communicator.rank == self.communicator.size - 1:
             # Output process.
-            x = chainermn.functions.recv(
-                self.communicator, self.rank_recv, device=self.device)
+            x = chainermn.functions.recv(self.communicator, self.rank_recv)
             y = self.f(self.model(x))
             err = self.evaluation(y, self.x)
             err.backward()
@@ -91,14 +93,22 @@ class PointToPointCommunication(object):
 
         else:
             # Intermediate processes.
-            x = chainermn.functions.recv(
-                self.communicator, self.rank_recv, device=self.device)
+            x = chainermn.functions.recv(self.communicator, self.rank_recv)
             y = self.f(self.model(x))
             err = chainermn.functions.send(
                 y, self.communicator, self.rank_send)
             err.backward()
 
-    def test_retain(self):
+    def test_communication_cpu(self):
+        self.setup(False)
+        self.check_communication()
+
+    @chainer.testing.attr.gpu
+    def test_communication_gpu(self):
+        self.setup(True)
+        self.check_communication()
+
+    def check_retain(self):
         if self.communicator.rank == 0:
             # Starting process.
             t = copy.copy(self.x)
@@ -109,8 +119,7 @@ class PointToPointCommunication(object):
             # Unless delegate_variable is used, backprop would stop here.
             x = chainermn.functions.recv(
                 self.communicator, self.rank_recv,
-                delegate_variable=dlg,
-                device=self.device)
+                delegate_variable=dlg)
             err = self.evaluation(x, t)
             err.backward()
 
@@ -119,12 +128,20 @@ class PointToPointCommunication(object):
 
         else:
             # Intermediate processes.
-            x = chainermn.functions.recv(
-                self.communicator, self.rank_recv, device=self.device)
+            x = chainermn.functions.recv(self.communicator, self.rank_recv)
             y = self.f(self.model(x))
             err = chainermn.functions.send(
                 y, self.communicator, self.rank_send)
             err.backward()
+
+    def test_retain_cpu(self):
+        self.setup(False)
+        self.check_retain()
+
+    @chainer.testing.attr.gpu
+    def test_retain_gpu(self):
+        self.setup(True)
+        self.check_retain()
 
     def check_tuple_communication(self, length):
         if self.communicator.rank == 0:
@@ -138,39 +155,78 @@ class PointToPointCommunication(object):
 
         elif self.communicator.rank == self.communicator.size - 1:
             y = chainermn.functions.recv(
-                self.communicator, self.rank_recv, device=self.device,
-                force_tuple=True)
+                self.communicator, self.rank_recv, force_tuple=True)
             assert isinstance(y, tuple)
             z = functools.reduce(lambda x, y: x + y, y)
             err = self.evaluation(z, self.x)
             err.backward()
 
         else:
-            y = chainermn.functions.recv(
-                self.communicator, self.rank_recv, device=self.device)
+            y = chainermn.functions.recv(self.communicator, self.rank_recv)
             err = chainermn.functions.send(
                 y, self.communicator, self.rank_send)
             err.backward()
 
-    def test_tuple_communication1(self):
+    def test_tuple_communication1_cpu(self):
+        self.setup(False)
         self.check_tuple_communication(1)
 
-    def test_tuple_communication2(self):
+    def test_tuple_communication2_cpu(self):
+        self.setup(False)
+        self.check_tuple_communication(2)
+
+    @chainer.testing.attr.gpu
+    def test_tuple_communication1_gpu(self):
+        self.setup(True)
+        self.check_tuple_communication(1)
+
+    @chainer.testing.attr.gpu
+    def test_tuple_communication2_gpu(self):
+        self.setup(True)
         self.check_tuple_communication(2)
 
 
-def test_cpu():
-    p2pcom = PointToPointCommunication(False)
-    p2pcom.test_communication()
-    p2pcom.test_retain()
-    p2pcom.test_tuple_communication1()
-    p2pcom.test_tuple_communication2()
+class TestNonVariableInput(unittest.TestCase):
 
+    def setUp(self):
+        self.communicator = chainermn.create_communicator('naive')
 
-@chainer.testing.attr.gpu
-def test_gpu():
-    p2pcom = PointToPointCommunication(True)
-    p2pcom.test_communication()
-    p2pcom.test_retain()
-    p2pcom.test_tuple_communication1()
-    p2pcom.test_tuple_communication2()
+        if self.communicator.size < 2:
+            pytest.skip("This test is for multinode")
+
+        self.rank_send = (self.communicator.rank + 1) % self.communicator.size
+        self.rank_recv = (self.communicator.rank - 1) % self.communicator.size
+
+    def test_non_variable_send(self):
+        """Checks if backward will be called even if inputs are not Variable.
+
+        This test confirms whether deadlock occurs when numpy/cupy array is
+        given as an input of send.
+        In this case, the input will be converted to chainer Variable without
+        ``requires_grad``, thus ``backward`` will not be called without any
+        modification.
+        """
+        if self.communicator.rank == 0:
+            x = numpy.ones((1, 10)).astype(numpy.float32)
+            phi = chainermn.functions.send(
+                x, self.communicator, rank=self.rank_send)
+            x = chainermn.functions.pseudo_connect(phi, x)
+            y = chainer.functions.sum(x)
+            t = numpy.array(0).astype(numpy.float32)
+            z = chainer.functions.mean_squared_error(y, t)
+            z.backward()
+
+        elif self.communicator.rank == self.communicator.size - 1:
+            x = chainermn.functions.recv(
+                self.communicator, rank=self.rank_recv)
+            y = chainer.functions.sum(x)
+            t = numpy.array(0).astype(numpy.float32)
+            z = chainer.functions.mean_squared_error(y, t)
+            z.backward()
+
+        else:
+            x = chainermn.functions.recv(
+                self.communicator, rank=self.rank_recv)
+            phi = chainermn.functions.send(
+                x, self.communicator, rank=self.rank_send)
+            phi.backward()

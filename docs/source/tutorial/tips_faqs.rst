@@ -38,4 +38,96 @@ Please refer to `MPI4py API reference <http://pythonhosted.org/mpi4py/apiref/mpi
 
 Using FP16
 ~~~~~~~~~~
-FP16 (16-bit half precision floating point values) is not supported in ChainerMN as of now.
+FP16 (16-bit half precision floating point values) is supported in ``pure_nccl`` of a ChainerMN communicator.
+
+
+
+MPI processes don't exit when an error occurs in a process
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+An MPI runtime is expected to kill all of its child processes if one of them
+exits abnormally or without calling `MPI_Finalize()`.  However,
+when a Python program runs on `mpi4py`, the MPI runtime often fails to detect
+the process failure, and the rest of the processes hang infinitely. It is especially problematic
+when you run your ChainerMN program on a cloud environment, in which you are charged on time basis.
+
+This tiny program demonstrates the issue.::
+
+  # test.py
+  def func():
+    import mpi4py.MPI
+    mpi_comm = mpi4py.MPI.COMM_WORLD
+    if mpi_comm.rank == 0:
+      raise ValueError('failure!')
+
+    mpi4py.MPI.COMM_WORLD.Barrier()
+
+  if __name__ == '__main__':
+    func()
+
+  # mpiexec -n 2 python test.py
+
+
+
+`mpi4py` offers a solution to force all processes to abort if an uncaught exception occurs.. ::
+
+  $ mpiexec -n 2 python -m mpi4py yourscript.py ...
+
+This also works well with ChainerMN. See `here <http://mpi4py.readthedocs.io/en/stable/mpi4py.run.html>`_
+for more details.
+
+If you cannot apply the solution (i.e. you don't have a control of how Python interpreter is invoked),
+you can inject the following code snippet into your script file ::
+
+  import sys
+
+  # === begin code snippet
+  _old_hook = sys.excepthook
+
+  # Global error handler
+  def global_except_hook(exctype, value, traceback):
+    import sys
+    try:
+        import mpi4py.MPI
+
+        _old_hook(exctype, value, traceback)
+
+        rank = mpi4py.MPI.COMM_WORLD.Get_rank()
+        sys.stderr.write("\n")
+        sys.stderr.write("********************************************************\n")
+        sys.stderr.write("ChainerMN: Uncaught exception was detected on rank {}. \n".format(rank))
+        sys.stderr.write("           Calling MPI_Abort() to shut down MPI processes...\n")
+        sys.stderr.write("********************************************************\n\n\n")
+        sys.stderr.flush()
+
+    finally:
+        try:
+            import mpi4py.MPI
+            mpi4py.MPI.COMM_WORLD.Abort(1)
+        except Exception as e:
+            sys.stderr.write("Sorry, we failed to stop MPI, this MPI process may hang.\n")
+            sys.stderr.flush()
+            raise e
+
+  sys.excepthook = global_except_hook
+
+  # === end code snippet
+
+  def func():
+    "A sample function to cause the problem"
+    import mpi4py.MPI
+    mpi_comm = mpi4py.MPI.COMM_WORLD
+    if mpi_comm.rank == 0:
+        raise ValueError('failure!')
+
+    mpi4py.MPI.COMM_WORLD.Barrier()
+
+
+  if __name__ == '__main__':
+    func()
+
+You can choose any of these solutions depending on your environment and restrictions.
+
+NOTE: These techniques are effective only for unhandled Python exceptions.
+If your program crashes due to lower-level issues such as `SIGSEGV`, the MPI process may still hang.
