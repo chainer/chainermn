@@ -157,7 +157,7 @@ Non-GPU environments
 
 Users who want to try ChainerMN in CPU-only environment may skip installation of CuPy.
 Non-GPU set up may not be performant as GPU-enabled set up,
-but would would be useful for testing or debugging training program
+but would be useful for testing or debugging training program
 in non-GPU environment such as laptops or CI jobs.
 
 In this case, the MPI does not have to be CUDA-aware.
