@@ -5,6 +5,7 @@ import unittest
 
 import chainer
 import chainer.cuda
+from chainer import initializers
 import chainer.links
 import chainer.testing
 import chainer.testing.attr
@@ -30,12 +31,15 @@ from chainermn import nccl
 class ExampleModel(chainer.Chain):
 
     def __init__(self, dtype=None):
-        if dtype is not None:
-            self.dtype = dtype
+        initialW = initializers.Normal(dtype=dtype)
+        initial_bias = initializers.Zero(dtype)
         super(ExampleModel, self).__init__(
-            a=chainer.links.Linear(2, 3),
-            b=chainer.links.Linear(3, 4),
-            c=chainer.links.Linear(4, 5),
+            a=chainer.links.Linear(2, 3, initialW=initialW,
+                                   initial_bias=initial_bias),
+            b=chainer.links.Linear(3, 4, initialW=initialW,
+                                   initial_bias=initial_bias),
+            c=chainer.links.Linear(4, 5, initialW=initialW,
+                                   initial_bias=initial_bias),
         )
 
 
@@ -86,13 +90,11 @@ gpu_params = [Param(p) for p in [
         'multi_node': True,
         'nccl1': False,
         'model_dtype': np.float16,
-        'allreduce_grad_dtype': np.float16,
     }, {
         'communicator_class': PureNcclCommunicator,
         'multi_node': True,
         'nccl1': False,
         'model_dtype': np.float64,
-        'allreduce_grad_dtype': np.float64,
     }]]
 
 mpi_comm = mpi4py.MPI.COMM_WORLD
@@ -171,7 +173,6 @@ def check_allreduce_grad(communicator, model):
         model.a.W.grad[:] = communicator.rank
         model.b.W.grad[:] = communicator.rank + 1
         model.c.b.grad[:] = communicator.rank + 2
-
         communicator.allreduce_grad(model)
         base = (communicator.size - 1.0) / 2
 

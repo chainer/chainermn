@@ -16,7 +16,7 @@ class DummyCommunicator(mpi_communicator_base.MpiCommunicatorBase):
         self.gpu_buffer_a = _memory_utility.DeviceMemory()
 
     def allreduce_grad(self, model):
-        params = _memory_utility.extract_params(model)
+        params = _memory_utility.extract_params_set_grad(model)
         itemsize = 4
         n_elems_total = sum(param.grad.size for param in params)
         n_bytes_total = n_elems_total * itemsize

@@ -45,7 +45,7 @@ class TwoDimensionalCommunicator(mpi_communicator_base.MpiCommunicatorBase):
         self._init_comms()
         stream = chainer.cuda.Stream.null
 
-        params = _memory_utility.extract_params(model)
+        params = _memory_utility.extract_params_set_grad(model)
         itemsize = 4
         n_elems_total = sum(param.grad.size for param in params)
         n_elems_per_node_2d = int(math.ceil(n_elems_total / self.size))

@@ -84,7 +84,12 @@ class DeviceMemory(object):
         return cp.ndarray(shape, memptr=self.memory + offset, dtype=dtype)
 
 
-def extract_params(model):
+def extract_params_set_data(model):
+    return [param for _, param in sorted(model.namedparams())
+            if param.data is not None]
+
+
+def extract_params_set_grad(model):
     return [param for _, param in sorted(model.namedparams())
             if param.grad is not None]
 
@@ -92,18 +97,18 @@ def extract_params(model):
 def pack_params(params, itemsize, attr_name, buffer, stream=None):
     offset = 0
     for param in params:
-        grad = getattr(param, attr_name)
-        size = grad.size * itemsize
-        buffer.from_device(grad, size, offset, stream)
+        v = getattr(param, attr_name)
+        size = v.size * itemsize
+        buffer.from_device(v, size, offset, stream)
         offset += size
 
 
 def unpack_params(params, itemsize, attr_name, buffer, stream=None):
     offset = 0
     for param in params:
-        grad = getattr(param, attr_name)
-        size = grad.size * itemsize
-        buffer.to_device(grad, size, offset, stream)
+        v = getattr(param, attr_name)
+        size = v.size * itemsize
+        buffer.to_device(v, size, offset, stream)
         offset += size
 
 

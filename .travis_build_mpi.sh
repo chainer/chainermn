@@ -2,6 +2,12 @@
 
 # Prepare various MPI installations
 
+PROJ_DIR=$(dirname $(readlink -e $0))
+CHECKSUM=${PROJ_DIR}/.md5sum.txt
+
+echo CHECKSUM=$CHECKSUM
+cat ${CHECKSUM}
+
 BUILD_DIR=$HOME/mpi-build
 mkdir -p ~/mpi
 mkdir -p $BUILD_DIR
@@ -24,7 +30,33 @@ function install_mpich {
         rm -rf $BUILD_DIR/*
         cd $BUILD_DIR
         mkdir -p $PREFIX
-        curl $DIST >$FILE
+
+        # Download the archive
+        RETRY_COUNT=0
+        while [ "$RETRY_COUNT" -lt 5 ]; do
+            if md5sum -c ${CHECKSUM} 2>/dev/null | grep -q "${FILE}: OK"; then
+                break
+            else
+                if [ -f "${FILE}" ]; then
+                    echo "MD5 mismatch:"
+                    file ${FILE}
+                    md5sum ${FILE}
+                    echo "Answer is:"
+                    cat ${CHECKSUM}
+                fi
+                rm -f ${FILE}
+                sleep 2
+                curl -L ${DIST} >${FILE}
+                RETRY_COUNT=$(expr ${RETRY_COUNT} + 1)
+            fi
+        done
+
+        if [ "$RETRY_COUNT" -eq 5 ]; then
+            echo "Error : failed to download $FILE" >&2
+            exit 1
+        fi
+          
+
         tar -xf $FILE
         cd $(find . -maxdepth 1 -mindepth 1 -type d)
         ./configure --prefix=$PREFIX \
@@ -57,7 +89,31 @@ function install_ompi {
         rm -rf $BUILD_DIR/*
         cd $BUILD_DIR
         mkdir -p $PREFIX
-        curl $DIST >$FILE
+        # Download the archive
+        RETRY_COUNT=0
+        while [ "$RETRY_COUNT" -lt 5 ]; do
+            if md5sum -c ${CHECKSUM} 2>/dev/null | grep -q "${FILE}: OK"; then
+                break
+            else
+                if [ -f "${FILE}" ]; then
+                    echo "MD5 mismatch:"
+                    file ${FILE}
+                    md5sum ${FILE}
+                    echo "Answer is:"
+                    cat ${CHECKSUM}
+                fi
+                rm -f ${FILE}
+                sleep 2
+                curl -L ${DIST} >${FILE}
+                RETRY_COUNT=$(expr ${RETRY_COUNT} + 1)
+            fi
+        done
+
+        if [ "$RETRY_COUNT" -eq 5 ]; then
+            echo "Error : failed to download $FILE" >&2
+            exit 1
+        fi
+        
         tar -xf $FILE
         cd $(find . -maxdepth 1 -mindepth 1 -type d)
         ./configure --prefix=$PREFIX \
