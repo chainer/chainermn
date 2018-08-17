@@ -13,6 +13,7 @@ class _MultiNodeOptimizer(object):
             'target_params', [])
 
     def update(self, lossfun=None, *args, **kwds):
+        print("#### MultiNodeOptimizer::update()")
         target = self.target
         if lossfun is not None:
             use_cleargrads = getattr(self, '_use_cleargrads', False)
