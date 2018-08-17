@@ -95,7 +95,12 @@ def check_mnist(gpu, display_log=True):
                                                'elapsed_time'],
                                               out=sys.stderr),
                        trigger=(1, 'epoch'))
+    import time
+    now = time.ctime()
+    print(time.strftime("%H:%M:%S", time.strptime(now)))
     trainer.run()
+    now = time.ctime()
+    print(time.strftime("%H:%M:%S", time.strptime(now)))
 
     err = evaluator()['validation/main/accuracy']
     assert err > 0.95
