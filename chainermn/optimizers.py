@@ -15,7 +15,6 @@ class _MultiNodeOptimizer(object):
         self._debug_counter = 0
 
     def update(self, lossfun=None, *args, **kwds):
-        now = time.ctime()
         timestamp_str = datetime.datetime.now().strftime("%H:%M:%S.%f")
         print("{} {}".format(timestamp_str, self._debug_counter), flush=True)
         self._debug_counter += 1
