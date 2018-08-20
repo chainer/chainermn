@@ -100,7 +100,7 @@ def check_mnist(gpu, display_log=True):
     print(time.strftime("%H:%M:%S", time.strptime(now)))
     trainer.run()
     now = time.ctime()
-    print(time.strftime("%H:%M:%S", time.strptime(now)))
+    print(time.strftime("%H:%M:%S.%f", time.strptime(now)))
 
     err = evaluator()['validation/main/accuracy']
     assert err > 0.95
