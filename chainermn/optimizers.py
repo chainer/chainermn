@@ -1,5 +1,6 @@
 import chainer
 import copy
+import time
 
 
 class _MultiNodeOptimizer(object):
@@ -13,7 +14,8 @@ class _MultiNodeOptimizer(object):
             'target_params', [])
 
     def update(self, lossfun=None, *args, **kwds):
-        print("#### MultiNodeOptimizer::update()")
+        now = time.ctime()
+        print(time.strftime("%H:%M:%S", time.strptime(now)), flush=True)
         target = self.target
         if lossfun is not None:
             use_cleargrads = getattr(self, '_use_cleargrads', False)
