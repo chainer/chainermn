@@ -1,7 +1,9 @@
 import chainer
 import copy
 import datetime
-
+import cProfile
+import pstats
+import io
 
 class _MultiNodeOptimizer(object):
 
@@ -13,11 +15,19 @@ class _MultiNodeOptimizer(object):
         super(_MultiNodeOptimizer, self).__setattr__(
             'target_params', [])
         self._debug_counter = 0
+        self._prof = cProfile.Profile()
 
     def update(self, lossfun=None, *args, **kwds):
-        timestamp_str = datetime.datetime.now().strftime("%H:%M:%S.%f")
-        print("{} {}".format(timestamp_str, self._debug_counter), flush=True)
+        if self._debug_counter == 0:
+            self._prof.enable()
         self._debug_counter += 1
+        if self._debug_counter == 100:
+            self._prof.disable()
+            s = io.StringIO()
+            sort_by = 'cumulative'
+            ps = pstats.Stats(self._prof, stream=s).sort_stats(sort_by)
+            ps.print_stats()
+            print(s.getvalue())
 
         target = self.target
         if lossfun is not None:
