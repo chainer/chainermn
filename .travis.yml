@@ -52,6 +52,8 @@ script:
   - autopep8 -r . --global-config .pep8 | tee check_autopep8
   - test ! -s check_autopep8
   - export PYTHONWARNINGS='ignore::FutureWarning'
+  - python -c "import numpy; print(numpy.__version__)"
+  - python -c "import numpy; numpy.show_config()"
   - (for NP in 1 2; do mpiexec ${NOBIND} -n ${NP} pytest --capture=no -s -v -m 'not gpu and not slow' || exit $?; done)
   - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
       READTHEDOCS=True python setup.py develop;

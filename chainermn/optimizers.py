@@ -5,6 +5,7 @@ import cProfile
 import pstats
 import io
 
+
 class _MultiNodeOptimizer(object):
 
     def __init__(self, actual_optimizer, communicator):
