@@ -12,10 +12,14 @@ class _MultiNodeOptimizer(object):
             'actual_optimizer', actual_optimizer)
         super(_MultiNodeOptimizer, self).__setattr__(
             'target_params', [])
+        self._debug_counter = 0
 
     def update(self, lossfun=None, *args, **kwds):
         now = time.ctime()
-        print(time.strftime("%H:%M:%S", time.strptime(now)), flush=True)
+        timestamp_str = time.strftime("%H:%M:%S.%f", time.strptime(now))
+        print("{} {}".format(timestamp_str, self._debug_counter), flush=True)
+        self._debug_counter += 1
+
         target = self.target
         if lossfun is not None:
             use_cleargrads = getattr(self, '_use_cleargrads', False)
