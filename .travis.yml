@@ -33,7 +33,8 @@ before_install:
       pyenv global $PYTHON_VERSION;
       python --version;
     fi
-  - /bin/bash .travis_build_mpi.sh
+  - echo "Building MPI..."
+  - /bin/bash .travis_build_mpi.sh >/dev/null 2>&1
   - export PATH=$HOME/mpi/$MPI/bin:$PATH
   - export LD_LIBRARY_PATH=$HOME/mpi/$MPI/lib:$HOME/mpi/$MPI/lib64:$LD_LIBRARY_PATH
 
