@@ -1,9 +1,8 @@
 import chainer
 import copy
-import datetime
-import cProfile
-import pstats
-import io
+import cProfile  # NOQA
+import pstats  # NOQA
+import io  # NOQA
 
 
 class _MultiNodeOptimizer(object):
@@ -19,17 +18,6 @@ class _MultiNodeOptimizer(object):
         self._prof = cProfile.Profile()
 
     def update(self, lossfun=None, *args, **kwds):
-        if self._debug_counter == 0:
-            self._prof.enable()
-        self._debug_counter += 1
-        if self._debug_counter == 100:
-            self._prof.disable()
-            s = io.StringIO()
-            sort_by = 'cumulative'
-            ps = pstats.Stats(self._prof, stream=s).sort_stats(sort_by)
-            ps.print_stats()
-            print(s.getvalue())
-
         target = self.target
         if lossfun is not None:
             use_cleargrads = getattr(self, '_use_cleargrads', False)
