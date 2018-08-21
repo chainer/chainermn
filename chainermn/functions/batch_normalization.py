@@ -160,16 +160,28 @@ class MultiNodeBatchNormalizationFunction(function.Function):
             # Update running statistics:
             m = x.size // gamma.size
             adjust = m / max(m - 1., 1.)  # unbiased estimation
-            self.running_mean *= self.decay
-            temp_ar = xp.array(mean)
-            temp_ar *= (1 - self.decay)
-            self.running_mean += temp_ar
-            del temp_ar
-            self.running_var *= self.decay
-            temp_ar = xp.array(var)
-            temp_ar *= (1 - self.decay) * adjust
-            self.running_var += temp_ar
-            del temp_ar
+            if xp is numpy:
+                self.running_mean *= self.decay
+                temp_ar = xp.array(mean)
+                temp_ar *= (1 - self.decay)
+                self.running_mean += temp_ar
+                del temp_ar
+                self.running_var *= self.decay
+                temp_ar = xp.array(var)
+                temp_ar *= (1 - self.decay) * adjust
+                self.running_var += temp_ar
+                del temp_ar
+            else:
+                cuda.elementwise(
+                    'T mean, T var, T decay, T adjust',
+                    'T r_mean, T r_var',
+                    '''
+                    r_mean = r_mean * decay + mean * (1 - decay);
+                    r_var = r_var * decay + var * (1 - decay) * adjust;
+                    ''',
+                    'update_mean_var')(mean, var, self.decay, adjust,
+                                       self.running_mean, self.running_var)
+
         return y,
 
     def backward(self, inputs, grad_outputs):
