@@ -54,6 +54,7 @@ script:
   - export PYTHONWARNINGS='ignore::FutureWarning'
   - python -c "import numpy; print(numpy.__version__)"
   - python -c "import numpy; numpy.show_config()"
+  - python -m timeit -s "import numpy as np" "np.dot(np.random.rand(10000), np.random.rand(10000))"
   - (for NP in 1 2; do mpiexec ${NOBIND} -n ${NP} pytest --capture=no -s -v -m 'not gpu and not slow' || exit $?; done)
   - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
       READTHEDOCS=True python setup.py develop;
