@@ -1,8 +1,8 @@
 import chainer
 import copy
 import cProfile  # NOQA
-import pstats  # NOQA
 import io  # NOQA
+import pstats  # NOQA
 
 
 class _MultiNodeOptimizer(object):
