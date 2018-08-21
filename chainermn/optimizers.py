@@ -14,8 +14,6 @@ class _MultiNodeOptimizer(object):
             'actual_optimizer', actual_optimizer)
         super(_MultiNodeOptimizer, self).__setattr__(
             'target_params', [])
-        self._debug_counter = 0
-        self._prof = cProfile.Profile()
 
     def update(self, lossfun=None, *args, **kwds):
         target = self.target
