@@ -52,7 +52,7 @@ script:
   - test ! -s check_autopep8
   - export PYTHONWARNINGS='ignore::FutureWarning'
   - export OMP_NUM_THREADS=1
-  - (for NP in 1 2; do mpiexec ${NOBIND} -n ${NP} pytest -s -v -m 'not gpu and not slow' || exit $?; done)
+  - (for NP in 1 2; do mpiexec ${NOBIND} -n ${NP} pytest --color=yes -s -v -m 'not gpu and not slow' || exit $?; done)
   - if [[ $TRAVIS_OS_NAME == "linux" ]]; then
       READTHEDOCS=True python setup.py develop;
     fi
