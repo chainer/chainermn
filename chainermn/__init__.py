@@ -4,6 +4,7 @@ from chainermn import communicators  # NOQA
 from chainermn import datasets  # NOQA
 from chainermn import extensions  # NOQA
 from chainermn import functions  # NOQA
+from chainermn import global_except_hook  # NOQA
 from chainermn import iterators  # NOQA
 from chainermn import links  # NOQA
 from chainermn import optimizers  # NOQA
@@ -17,5 +18,6 @@ from chainermn.extensions import create_multi_node_evaluator  # NOQA
 from chainermn.links import MultiNodeChainList  # NOQA
 from chainermn.optimizers import create_multi_node_optimizer  # NOQA
 
+global_except_hook._add_hook_if_enabled()
 
 __version__ = pkg_resources.get_distribution('chainermn').version
