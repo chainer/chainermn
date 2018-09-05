@@ -131,15 +131,17 @@ def main():
     parser.set_defaults(test=False)
     args = parser.parse_args()
 
-    # Start method of multiprocessing module need to be changed if we are
-    # using InfiniBand and MultiprocessIterator. This is because processes
-    # often crash when calling fork if they are using Infiniband.
-    # (c.f., https://www.open-mpi.org/faq/?category=tuning#fork-warning )
-    # Also, just setting the start method does not seem to be sufficient
-    # to actually launch the forkserver processes, so also start a dummy process.
+    # Start method of multiprocessing module need to be changed if we
+    # are using InfiniBand and MultiprocessIterator. This is because
+    # processes often crash when calling fork if they are using
+    # Infiniband.  (c.f.,
+    # https://www.open-mpi.org/faq/?category=tuning#fork-warning )
+    # Also, just setting the start method does not seem to be
+    # sufficient to actually launch the forkserver processes, so also
+    # start a dummy process.
     # See also our document:
     # https://chainermn.readthedocs.io/en/stable/tutorial/tips_faqs.html#using-multiprocessiterator
-    # This must be done *before* calling `chainermn.create_communicator`!!!
+    # This must be done *before* ``chainermn.create_communicator``!!!
     multiprocessing.set_start_method('forkserver')
     p = multiprocessing.Process(target=lambda *x: x, args=())
     p.start()
