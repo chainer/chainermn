@@ -50,8 +50,9 @@ class ModelDistributedBN(chainer.Chain):
 
 class Param(object):
     def __init__(self, param):
-        self.communicator_class = None
-        self.batch_normalization_class = None
+        self.communicator_class = NaiveCommunicator
+        self.batch_normalization_class = \
+            chainermn.links.MultiNodeBatchNormalization
         self.gpu = False
         self.nccl = False
         self.__dict__.update(param)
@@ -82,16 +83,6 @@ class TestMultiNodeBatchNormalization(unittest.TestCase):
 
     def setUp(self):
         self.mpi_comm = mpi4py.MPI.COMM_WORLD
-
-    def test_version_check(self):
-        if chainer.__version__.startswith('1.'):
-            with self.assertRaises(RuntimeError):
-                chainermn.links.MultiNodeBatchNormalization(
-                    3, self.communicator)
-        else:
-            # Expecting no exceptions
-            chainermn.links.MultiNodeBatchNormalization(
-                3, self.communicator)
 
     def check_multi_node_bn(self, comm, batch_normalization_cls):
         """Tests correctness of MultiNodeBatchNormalization.
@@ -194,22 +185,38 @@ class TestMultiNodeBatchNormalization(unittest.TestCase):
             numpy.testing.assert_allclose(
                 x, y, atol=atol, rtol=rtol, verbose=verbose)
 
-    def create_communicator(self, param, mpi_comm, use_gpu):
-        if use_gpu and not param.nccl1 and nccl.get_version() < 2000:
+    def create_communicator(self, communicator_class, mpi_comm, use_gpu, use_nccl):
+        if use_gpu and not use_nccl and nccl.get_version() < 2000:
             pytest.skip('This test requires NCCL version >= 2.0')
-        communicator = param.communicator_class(mpi_comm)
+        communicator = communicator_class(mpi_comm)
         if use_gpu:
             chainer.cuda.get_device_from_id(communicator.intra_rank).use()
 
         return communicator
 
+    def test_version_check(self):
+        comm = self.create_communicator(NaiveCommunicator, self.mpi_comm,
+                                        use_gpu=False, use_nccl=False)
+        if chainer.__version__.startswith('1.'):
+            with self.assertRaises(RuntimeError):
+                chainermn.links.MultiNodeBatchNormalization(
+                    3, comm)
+        else:
+            # Expecting no exceptions
+            chainermn.links.MultiNodeBatchNormalization(
+                3, comm)
+
     @pytest.mark.parametrize('param', cpu_params)
     def test_multi_node_bn_cpu(self, param):
-        comm = self.create_communicator(param, self.mpi_comm, use_gpu=False)
+        comm = self.create_communicator(param.communicator_class,
+                                        self.mpi_comm, use_gpu=False,
+                                        use_nccl=param.nccl)
         self.check_multi_node_bn(comm, param.batch_normalization_class)
 
     @pytest.mark.parametrize('param', gpu_params)
     @chainer.testing.attr.gpu
     def test_multi_node_bn_gpu(self, param):
-        comm = self.create_communicator(param, self.mpi_comm, use_gpu=True)
+        comm = self.create_communicator(param.communicator_class,
+                                        self.mpi_comm, use_gpu=True,
+                                        use_nccl=param.nccl)
         self.check_multi_node_bn(comm, param.batch_normalization_class)
