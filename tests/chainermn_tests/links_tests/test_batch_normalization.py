@@ -79,144 +79,156 @@ gpu_params = [Param(p) for p in [
         'nccl': True
     }]]
 
-class TestMultiNodeBatchNormalization(unittest.TestCase):
 
-    def setUp(self):
-        self.mpi_comm = mpi4py.MPI.COMM_WORLD
+mpi_comm = mpi4py.MPI.COMM_WORLD
 
-    def check_multi_node_bn(self, comm, batch_normalization_cls):
-        """Tests correctness of MultiNodeBatchNormalization.
 
-        This test verifies MultiNodeBatchNormalization by comparing
-        the following four configurations.
-        (1) Single worker, normal BatchNormalization
-        (2) Multiple workers, normal BatchNormalization
-        (3) Single worker, MultiNodeBatchNormalization
-        (4) Multiple workers, MultiNodeBatchNormalization
+def check_multi_node_bn(comm, batch_normalization_cls, use_gpu=False):
+    """Tests correctness of MultiNodeBatchNormalization.
 
-        Single worker: only using the result of worker 0, which uses the whole
-            batch.
-        Multiple workers: Each worker uses the 1/n part of the whole batch,
-            where n is the number of nodes, and gradient is aggregated.
+    This test verifies MultiNodeBatchNormalization by comparing
+    the following four configurations.
+    (1) Single worker, normal BatchNormalization
+    (2) Multiple workers, normal BatchNormalization
+    (3) Single worker, MultiNodeBatchNormalization
+    (4) Multiple workers, MultiNodeBatchNormalization
 
-        This test conducts the forward and backward computation once for the
-        deterministic model parameters and an input batch, and checks the
-        gradients of parameters.
+    Single worker: only using the result of worker 0, which uses the whole
+        batch.
+    Multiple workers: Each worker uses the 1/n part of the whole batch,
+        where n is the number of nodes, and gradient is aggregated.
 
-        The purpose of MultiNodeBatchNormalization is to make the results of
-        (4) to be exactly same as (1). Therefore, the essential part is to
-        check that the results of (1) and (4) are the same. The results of (3)
-        should also be also same as them. In contrast, the results of (2) is
-        not necessarily always same as them, and we can expect that it is
-        almost always different. Therefore, we also check that the results of
-        (2) is different from them, to see that this test working correctly.
-        """
+    This test conducts the forward and backward computation once for the
+    deterministic model parameters and an input batch, and checks the
+    gradients of parameters.
 
-        local_batchsize = 10
-        global_batchsize = 10 * comm.size
-        ndim = 3
-        numpy.random.seed(71)
-        x = numpy.random.random(
-            (global_batchsize, ndim)).astype(numpy.float32)
-        y = numpy.random.randint(
-            0, 1, size=global_batchsize, dtype=numpy.int32)
-        x_local = comm.mpi_comm.scatter(
-            x.reshape(comm.size, local_batchsize, ndim))
-        y_local = comm.mpi_comm.scatter(
-            y.reshape(comm.size, local_batchsize))
+    The purpose of MultiNodeBatchNormalization is to make the results of
+    (4) to be exactly same as (1). Therefore, the essential part is to
+    check that the results of (1) and (4) are the same. The results of (3)
+    should also be also same as them. In contrast, the results of (2) is
+    not necessarily always same as them, and we can expect that it is
+    almost always different. Therefore, we also check that the results of
+    (2) is different from them, to see that this test working correctly.
+    """
 
-        cls = chainer.links.Classifier
-        # Single worker
-        m1 = cls(ModelNormalBN())
-        # Multi worker, Ghost BN
-        m2 = cls(ModelNormalBN())
-        # Single worker, MNBN
-        m3 = cls(ModelDistributedBN(comm, batch_normalization_cls))
-        # Multi worker, MNBN
-        m4 = cls(ModelDistributedBN(comm, batch_normalization_cls))
-        # NOTE: m1, m3 and m4 should behave in the same way.
-        # m2 may be different.
+    local_batchsize = 10
+    global_batchsize = 10 * comm.size
+    ndim = 3
+    numpy.random.seed(71)
+    x = numpy.random.random(
+        (global_batchsize, ndim)).astype(numpy.float32)
+    y = numpy.random.randint(
+        0, 1, size=global_batchsize, dtype=numpy.int32)
+    x_local = comm.mpi_comm.scatter(
+        x.reshape(comm.size, local_batchsize, ndim))
+    y_local = comm.mpi_comm.scatter(
+        y.reshape(comm.size, local_batchsize))
 
-        m2.copyparams(m1)
-        m3.copyparams(m1)
-        m4.copyparams(m1)
+    cls = chainer.links.Classifier
+    # Single worker
+    m1 = cls(ModelNormalBN())
+    # Multi worker, Ghost BN
+    m2 = cls(ModelNormalBN())
+    # Single worker, MNBN
+    m3 = cls(ModelDistributedBN(comm, batch_normalization_cls))
+    # Multi worker, MNBN
+    m4 = cls(ModelDistributedBN(comm, batch_normalization_cls))
+    # NOTE: m1, m3 and m4 should behave in the same way.
+    # m2 may be different.
 
-        l1 = m1(x, y)
-        m1.cleargrads()
-        l1.backward()
+    if use_gpu:
+        m1.to_gpu()
+        m2.to_gpu()
+        m3.to_gpu()
+        m4.to_gpu()
 
-        l2 = m2(x_local, y_local)
-        m2.cleargrads()
-        l2.backward()
-        comm.allreduce_grad(m2)
+    m2.copyparams(m1)
+    m3.copyparams(m1)
+    m4.copyparams(m1)
 
-        l3 = m3(x, y)
-        m3.cleargrads()
-        l3.backward()
+    l1 = m1(x, y)
+    m1.cleargrads()
+    l1.backward()
 
-        l4 = m4(x_local, y_local)
-        m4.cleargrads()
-        l4.backward()
-        comm.allreduce_grad(m4)
+    l2 = m2(x_local, y_local)
+    m2.cleargrads()
+    l2.backward()
+    comm.allreduce_grad(m2)
 
-        if comm.rank == 0:
-            for p1, p2, p3, p4 in zip(
-                    sorted(m1.namedparams()),
-                    sorted(m2.namedparams()),
-                    sorted(m3.namedparams()),
-                    sorted(m4.namedparams())):
-                name = p1[0]
-                assert(p2[0] == name)
-                assert(p3[0] == name)
-                assert(p4[0] == name)
+    l3 = m3(x, y)
+    m3.cleargrads()
+    l3.backward()
 
-                chainer.testing.assert_allclose(p1[1].grad, p3[1].grad)
-                chainer.testing.assert_allclose(p1[1].grad, p4[1].grad)
+    l4 = m4(x_local, y_local)
+    m4.cleargrads()
+    l4.backward()
+    comm.allreduce_grad(m4)
 
-                # This is to see that this test is valid.
-                if comm.size >= 2:
-                    self.assert_not_allclose(p1[1].grad, p2[1].grad)
+    if comm.rank == 0:
+        for p1, p2, p3, p4 in zip(
+                sorted(m1.namedparams()),
+                sorted(m2.namedparams()),
+                sorted(m3.namedparams()),
+                sorted(m4.namedparams())):
+            name = p1[0]
+            assert (p2[0] == name)
+            assert (p3[0] == name)
+            assert (p4[0] == name)
 
-    def assert_not_allclose(self, x, y, atol=1e-5, rtol=1e-4, verbose=True):
-        x = chainer.cuda.to_cpu(chainer.utils.force_array(x))
-        y = chainer.cuda.to_cpu(chainer.utils.force_array(y))
+            chainer.testing.assert_allclose(p1[1].grad, p3[1].grad)
+            chainer.testing.assert_allclose(p1[1].grad, p4[1].grad)
 
-        with self.assertRaises(AssertionError):
-            numpy.testing.assert_allclose(
-                x, y, atol=atol, rtol=rtol, verbose=verbose)
+            # This is to see that this test is valid.
+            if comm.size >= 2:
+                assert_not_allclose(p1[1].grad, p2[1].grad)
 
-    def create_communicator(self, communicator_class, mpi_comm, use_gpu, use_nccl):
-        if use_gpu and not use_nccl and nccl.get_version() < 2000:
-            pytest.skip('This test requires NCCL version >= 2.0')
-        communicator = communicator_class(mpi_comm)
-        if use_gpu:
-            chainer.cuda.get_device_from_id(communicator.intra_rank).use()
 
-        return communicator
+def assert_not_allclose(x, y, atol=1e-5, rtol=1e-4, verbose=True):
+    x = chainer.cuda.to_cpu(chainer.utils.force_array(x))
+    y = chainer.cuda.to_cpu(chainer.utils.force_array(y))
 
-    def test_version_check(self):
-        comm = self.create_communicator(NaiveCommunicator, self.mpi_comm,
-                                        use_gpu=False, use_nccl=False)
-        if chainer.__version__.startswith('1.'):
-            with self.assertRaises(RuntimeError):
-                chainermn.links.MultiNodeBatchNormalization(
-                    3, comm)
-        else:
-            # Expecting no exceptions
+    with pytest.raises(AssertionError):
+        chainer.testing.assert_allclose(
+            x, y, atol=atol, rtol=rtol, verbose=verbose)
+
+
+def create_communicator(communicator_class, mpi_comm, use_gpu, use_nccl):
+    if use_gpu and not use_nccl and nccl.get_version() < 2000:
+        pytest.skip('This test requires NCCL version >= 2.0')
+    communicator = communicator_class(mpi_comm)
+    if use_gpu:
+        chainer.cuda.get_device_from_id(communicator.intra_rank).use()
+
+    return communicator
+
+
+def test_version_check():
+    comm = create_communicator(NaiveCommunicator, mpi_comm,
+                                    use_gpu=False, use_nccl=False)
+    if chainer.__version__.startswith('1.'):
+        with pytest.raises(RuntimeError):
             chainermn.links.MultiNodeBatchNormalization(
                 3, comm)
+    else:
+        # Expecting no exceptions
+        chainermn.links.MultiNodeBatchNormalization(
+            3, comm)
 
-    @pytest.mark.parametrize('param', cpu_params)
-    def test_multi_node_bn_cpu(self, param):
-        comm = self.create_communicator(param.communicator_class,
-                                        self.mpi_comm, use_gpu=False,
-                                        use_nccl=param.nccl)
-        self.check_multi_node_bn(comm, param.batch_normalization_class)
 
-    @pytest.mark.parametrize('param', gpu_params)
-    @chainer.testing.attr.gpu
-    def test_multi_node_bn_gpu(self, param):
-        comm = self.create_communicator(param.communicator_class,
-                                        self.mpi_comm, use_gpu=True,
-                                        use_nccl=param.nccl)
-        self.check_multi_node_bn(comm, param.batch_normalization_class)
+@pytest.mark.parametrize('param', cpu_params)
+def test_multi_node_bn_cpu(param):
+    comm = create_communicator(param.communicator_class,
+                                    mpi_comm, use_gpu=False,
+                                    use_nccl=param.nccl)
+    check_multi_node_bn(comm, param.batch_normalization_class)
+
+
+@pytest.mark.parametrize('param', gpu_params)
+@chainer.testing.attr.gpu
+def test_multi_node_bn_gpu(self, param):
+    comm = self.create_communicator(param.communicator_class,
+                                    mpi_comm, use_gpu=True,
+                                    use_nccl=param.nccl)
+    check_multi_node_bn(comm, param.batch_normalization_class, use_gpu=True)
+
+
