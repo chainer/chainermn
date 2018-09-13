@@ -64,7 +64,6 @@ cpu_params = [Param(p) for p in [
         'communicator_class': NaiveCommunicator,
         'batch_normalization_class': \
             chainermn.links.MultiNodeBatchNormalization,
-        'supported_backend': ['mpi'],
     }]]
 gpu_params = [Param(p) for p in [
     {
