@@ -12,8 +12,6 @@ from chainermn.functions.batch_normalization import \
 from chainermn.functions.batch_normalization import \
     MultiNodeBatchNormalizationFunction
 from chainermn.functions.batch_normalization import \
-    MultiNodeBatchNormalizationFunctionWithPureNccl
-from chainermn.functions.batch_normalization import \
     MultiNodeBatchNormalizationFunctionWithPureNcclWorkspace
 
 

@@ -116,6 +116,7 @@ class _NcclMultiNodeBatchNormalizationCommunicator(object):
         sqmean = gpu_buffer_b_array[gamma.size:]
         var = sqmean - xp.square(mean)
         # ChainerMN diff (1/2) ends
+        return mean, var
 
     def communicate_backward(self, axis, gamma, gy, x_hat, x, xp):
         # ChainerMN diff (2/2) begins
@@ -353,7 +354,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
 
         # Note: If length of inputs is not 5, we must be in train mode.
         assert chainer.configuration.config.train
-        gbeta, ggamma = self._mnbn_comm.communicate_backward(axis, gamma, gy, x,
+        gbeta, ggamma = self._mnbn_comm.communicate_backward(axis, gamma, gy, self.x_hat, x,
                                                            xp)
 
         if xp is numpy:
