@@ -277,6 +277,8 @@ class MultiNodeBatchNormalizationFunctionWithPureNccl(function.Function):
         # We need to delay importing MPI4py (and momdules that import MPI4py)
         import chainermn.communicators._memory_utility as memory_utility_module
         from chainermn.communicators.pure_nccl_communicator import _get_nccl_type_id
+        from chainermn import nccl
+        
         if workspace is not None:
             self.workspace = workspace
         else:
@@ -284,6 +286,7 @@ class MultiNodeBatchNormalizationFunctionWithPureNccl(function.Function):
         from mpi4py import MPI as mpi4py_module
         self.memory_utility_module = memory_utility_module
         self.mpi4py_module = mpi4py_module
+        self.nccl = nccl
         self.get_nccl_type_id = _get_nccl_type_id
 
     def check_type_forward(self, in_types):
@@ -360,7 +363,7 @@ class MultiNodeBatchNormalizationFunctionWithPureNccl(function.Function):
             self.comm.nccl_comm.allReduce(self.workspace.gpu_buffer_a.ptr(),
                                           self.workspace.gpu_buffer_b.ptr(), gpu_buffer_n_elems,
                                           self.get_nccl_type_id(x.dtype),
-                                     nccl.NCCL_SUM,
+                                     self.nccl.NCCL_SUM,
                                      stream.ptr)
             gpu_buffer_b_array = self.workspace.gpu_buffer_b.array(gpu_buffer_n_elems,
                                                          dtype=x.dtype)
@@ -463,7 +466,7 @@ class MultiNodeBatchNormalizationFunctionWithPureNccl(function.Function):
                                       self.workspace.gpu_buffer_b.ptr(),
                                       gpu_buffer_n_elems,
                                       self.get_nccl_type_id(x.dtype),
-                                      nccl.NCCL_SUM,
+                                      self.nccl.NCCL_SUM,
                                       stream.ptr)
         gpu_buffer_b_array = self.workspace.gpu_buffer_b.array(gpu_buffer_n_elems,
                                                      dtype=x.dtype)

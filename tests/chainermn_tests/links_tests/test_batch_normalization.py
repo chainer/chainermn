@@ -124,6 +124,12 @@ def check_multi_node_bn(comm, batch_normalization_cls, use_gpu=False):
     y_local = comm.mpi_comm.scatter(
         y.reshape(comm.size, local_batchsize))
 
+    if use_gpu:
+        x = chainer.cuda.to_gpu(x)
+        y = chainer.cuda.to_gpu(y)
+        x_local = chainer.cuda.to_gpu(x_local)
+        y_local = chainer.cuda.to_gpu(y_local)
+
     cls = chainer.links.Classifier
     # Single worker
     m1 = cls(ModelNormalBN())
@@ -225,8 +231,8 @@ def test_multi_node_bn_cpu(param):
 
 @pytest.mark.parametrize('param', gpu_params)
 @chainer.testing.attr.gpu
-def test_multi_node_bn_gpu(self, param):
-    comm = self.create_communicator(param.communicator_class,
+def test_multi_node_bn_gpu(param):
+    comm = create_communicator(param.communicator_class,
                                     mpi_comm, use_gpu=True,
                                     use_nccl=param.nccl)
     check_multi_node_bn(comm, param.batch_normalization_class, use_gpu=True)
