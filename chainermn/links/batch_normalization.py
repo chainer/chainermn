@@ -114,17 +114,11 @@ class MultiNodeBatchNormalization(link.Link):
             else:
                 decay = self.decay
 
-            if self._communication_backend == 'mpi':
-                func = MultiNodeBatchNormalizationFunction(
-                    self.comm, self.eps, self.avg_mean, self.avg_var, decay)
-            elif self._communication_backend == 'nccl':
-                func = MultiNodeBatchNormalizationFunctionWithPureNccl(
-                    self.comm, self.eps, self.avg_mean, self.avg_var, decay,
-                    self._func_workspace)
-            else:
-                raise RuntimeError(
-                    'MultiNodeBatchNormalization does not support '
-                    '{}.'.format(self._communication_backend))
+            func = MultiNodeBatchNormalizationFunction(
+                self.comm, self.eps, self.avg_mean, self.avg_var, decay,
+                workspace=self._func_workspace,
+                communication_backend=self._communication_backend)
+
             ret = func(x, gamma, beta)
 
             self.avg_mean[:] = func.running_mean
