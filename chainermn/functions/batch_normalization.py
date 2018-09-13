@@ -57,7 +57,7 @@ class MultiNodeBatchNormalizationFunctionWithPureNcclWorkspace(object):
 class MultiNodeBatchNormalizationFunction(function.Function):
 
     def __init__(self, comm, eps=2e-5, mean=None, var=None, decay=0.9,
-                 communication_backend='auto'):
+                 workspace=None, communication_backend='auto'):
         chainer.utils.experimental(
             'chainermn.functions.MultiNodeBatchNormalizationFunction')
 
@@ -77,8 +77,13 @@ class MultiNodeBatchNormalizationFunction(function.Function):
         self.mean_cache = None
         self.decay = decay
 
-        self.communication_backend = \
+        self._communication_backend = \
             get_communication_backend(comm, communication_backend)
+
+        if workspace is not None:
+            self.workspace = workspace
+        else:
+            self.workspace = MultiNodeBatchNormalizationFunctionWithPureNcclWorkspace()
 
         # We need to delay importing MPI4py (and momdules that import MPI4py)
         import chainermn.communicators._memory_utility as memory_utility_module
@@ -146,7 +151,10 @@ class MultiNodeBatchNormalizationFunction(function.Function):
 
         if chainer.configuration.config.train:
             axis = (0,) + tuple(range(head_ndim, x.ndim))
-            mean, var = self._communicate_foward_mpi(axis, gamma, x, xp)
+            if self._communication_backend == 'nccl':
+                mean, var = self._communicate_foward_nccl(axis, gamma, x, xp)
+            else:
+                mean, var = self._communicate_foward_mpi(axis, gamma, x, xp)
             var += self.eps
         else:
             mean = self.fixed_mean
@@ -224,7 +232,11 @@ class MultiNodeBatchNormalizationFunction(function.Function):
         # Note: If length of inputs is not 5, we must be in train mode.
         assert chainer.configuration.config.train
 
-        gbeta, ggamma = self._communicate_backward_mpi(axis, gamma, gy, x, xp)
+        if self._communication_backend == 'nccl':
+            gbeta, ggamma = self._communicate_backward_nccl(axis, gamma, gy, x,
+                                                           xp)
+        else:
+            gbeta, ggamma = self._communicate_backward_mpi(axis, gamma, gy, x, xp)
 
         if xp is numpy:
             gx = (gamma / self.std)[expander] * (
