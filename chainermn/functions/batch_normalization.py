@@ -24,9 +24,40 @@ def _xhat(x, mean, std, expander):
     return x_mu
 
 
+def get_communication_backend(comm, communication_backend='auto'):
+    if communication_backend not in ['mpi', 'nccl', 'auto']:
+        raise ValueError('MultiNodeBatchNormalization does not support '
+                         '{}.'.format(communication_backend))
+    from chainermn.communicators.pure_nccl_communicator \
+        import PureNcclCommunicator
+    if communication_backend != 'auto':
+        if 'nccl' == communication_backend:
+            if not isinstance(comm, PureNcclCommunicator):
+                raise ValueError('{} is not supported in '
+                                 'MultiNodeBatchNormalization when using '
+                                 '{}.'.format(communication_backend,
+                                              type(comm)))
+        selected_communication_backend = communication_backend
+    else:
+        if isinstance(comm, PureNcclCommunicator):
+            selected_communication_backend = 'nccl'
+        else:
+            selected_communication_backend = 'mpi'
+    return selected_communication_backend
+
+
+class MultiNodeBatchNormalizationFunctionWithPureNcclWorkspace(object):
+
+    def __init__(self):
+        import chainermn.communicators._memory_utility as memory_utility_module
+        self.gpu_buffer_a = memory_utility_module.DeviceMemory()
+        self.gpu_buffer_b = memory_utility_module.DeviceMemory()
+
+
 class MultiNodeBatchNormalizationFunction(function.Function):
 
-    def __init__(self, comm, eps=2e-5, mean=None, var=None, decay=0.9):
+    def __init__(self, comm, eps=2e-5, mean=None, var=None, decay=0.9,
+                 communication_backend='auto'):
         chainer.utils.experimental(
             'chainermn.functions.MultiNodeBatchNormalizationFunction')
 
@@ -45,6 +76,9 @@ class MultiNodeBatchNormalizationFunction(function.Function):
                 raise RuntimeError(msg)
         self.mean_cache = None
         self.decay = decay
+
+        self.communication_backend = \
+            get_communication_backend(comm, communication_backend)
 
         # We need to delay importing MPI4py (and momdules that import MPI4py)
         import chainermn.communicators._memory_utility as memory_utility_module
@@ -112,27 +146,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
 
         if chainer.configuration.config.train:
             axis = (0,) + tuple(range(head_ndim, x.ndim))
-
-            # ChainerMN diff (1/2) begins
-            # This was intentionally left as MPI's allreduce because
-            # MPI was optimized for small messages, while earlier
-            # NCCL2 was optmized for larger messages.
-            mpi_comm = self.comm.mpi_comm
-            tmp = xp.empty(gamma.size * 2, dtype=x.dtype)
-            x.mean(axis=axis, out=tmp[:gamma.size])
-            xp.square(x).mean(axis=axis, out=tmp[gamma.size:])
-            if xp is not numpy:
-                chainer.cuda.Stream.null.synchronize()
-            mpi_comm.Allreduce(
-                self.mpi4py_module.IN_PLACE,
-                self.memory_utility_module.array_to_buffer_object(tmp))
-            tmp *= 1.0 / mpi_comm.size
-
-            mean = tmp[:gamma.size]
-            sqmean = tmp[gamma.size:]
-            var = sqmean - xp.square(mean)
-            # ChainerMN diff (1/2) ends
-
+            mean, var = self._communicate_foward_mpi(axis, gamma, x, xp)
             var += self.eps
         else:
             mean = self.fixed_mean
@@ -210,22 +224,7 @@ class MultiNodeBatchNormalizationFunction(function.Function):
         # Note: If length of inputs is not 5, we must be in train mode.
         assert chainer.configuration.config.train
 
-        # ChainerMN diff (2/2) begins
-        # Note: It is wrong to multiply m by mpi_comm.size
-        # (instead of multiplying 1/size to gbeta, ggamma)
-        mpi_comm = self.comm.mpi_comm
-        tmp = xp.empty(gamma.size * 2, dtype=x.dtype)
-        gy.sum(axis=axis, out=tmp[:gamma.size])
-        (gy * self.x_hat).sum(axis=axis, out=tmp[gamma.size:])
-        if xp is not numpy:
-            chainer.cuda.Stream.null.synchronize()
-        mpi_comm.Allreduce(
-            self.mpi4py_module.IN_PLACE,
-            self.memory_utility_module.array_to_buffer_object(tmp))
-        tmp *= 1.0 / mpi_comm.size
-        gbeta = tmp[:gamma.size]
-        ggamma = tmp[gamma.size:]
-        # ChainerMN diff (2/2) ends
+        gbeta, ggamma = self._communicate_backward_mpi(axis, gamma, gy, x, xp)
 
         if xp is numpy:
             gx = (gamma / self.std)[expander] * (
@@ -244,20 +243,111 @@ class MultiNodeBatchNormalizationFunction(function.Function):
 
         return gx, ggamma, gbeta
 
+    def _communicate_foward_mpi(self, axis, gamma, x, xp):
+        # ChainerMN diff (1/2) begins
+        # This was intentionally left as MPI's allreduce because
+        # MPI was optimized for small messages, while earlier
+        # NCCL2 was optmized for larger messages.
+        mpi_comm = self.comm.mpi_comm
+        tmp = xp.empty(gamma.size * 2, dtype=x.dtype)
+        x.mean(axis=axis, out=tmp[:gamma.size])
+        xp.square(x).mean(axis=axis, out=tmp[gamma.size:])
+        if xp is not numpy:
+            chainer.cuda.Stream.null.synchronize()
+        mpi_comm.Allreduce(
+            self.mpi4py_module.IN_PLACE,
+            self.memory_utility_module.array_to_buffer_object(tmp))
+        tmp *= 1.0 / mpi_comm.size
+        mean = tmp[:gamma.size]
+        sqmean = tmp[gamma.size:]
+        var = sqmean - xp.square(mean)
+        # ChainerMN diff (1/2) ends
+        return mean, var
 
-class MultiNodeBatchNormalizationFunctionWithPureNcclWorkspace(object):
+    def _communicate_foward_nccl(self, axis, gamma, x, xp):
+        # ChainerMN diff (1/2) begins
+        gpu_buffer_n_elems = gamma.size * 2
+        gpu_buffer_size = x.dtype.itemsize * gpu_buffer_n_elems
+        self.workspace.gpu_buffer_a.assign(gpu_buffer_size)
+        self.workspace.gpu_buffer_b.assign(gpu_buffer_size)
+        gpu_buffer_a_array = self.workspace.gpu_buffer_a.array(
+            gpu_buffer_n_elems, dtype=x.dtype)
+        x.mean(axis=axis, out=gpu_buffer_a_array[:gamma.size])
+        xp.square(x).mean(axis=axis, out=gpu_buffer_a_array[gamma.size:])
+        stream = chainer.cuda.Stream.null
+        self.comm._init_comms()
+        self.comm.nccl_comm.allReduce(self.workspace.gpu_buffer_a.ptr(),
+                                      self.workspace.gpu_buffer_b.ptr(),
+                                      gpu_buffer_n_elems,
+                                      self.get_nccl_type_id(x.dtype),
+                                      self.nccl.NCCL_SUM,
+                                      stream.ptr)
+        gpu_buffer_b_array = self.workspace.gpu_buffer_b.array(
+            gpu_buffer_n_elems,
+            dtype=x.dtype)
+        gpu_buffer_b_array *= 1.0 / self.comm.size
+        mean = gpu_buffer_b_array[:gamma.size]
+        sqmean = gpu_buffer_b_array[gamma.size:]
+        var = sqmean - xp.square(mean)
+        # ChainerMN diff (1/2) ends
 
-    def __init__(self):
-        import chainermn.communicators._memory_utility as memory_utility_module
-        self.gpu_buffer_a = memory_utility_module.DeviceMemory()
-        self.gpu_buffer_b = memory_utility_module.DeviceMemory()
+    def _communicate_backward_mpi(self, axis, gamma, gy, x, xp):
+        # ChainerMN diff (2/2) begins
+        # Note: It is wrong to multiply m by mpi_comm.size
+        # (instead of multiplying 1/size to gbeta, ggamma)
+        mpi_comm = self.comm.mpi_comm
+        tmp = xp.empty(gamma.size * 2, dtype=x.dtype)
+        gy.sum(axis=axis, out=tmp[:gamma.size])
+        (gy * self.x_hat).sum(axis=axis, out=tmp[gamma.size:])
+        if xp is not numpy:
+            chainer.cuda.Stream.null.synchronize()
+        mpi_comm.Allreduce(
+            self.mpi4py_module.IN_PLACE,
+            self.memory_utility_module.array_to_buffer_object(tmp))
+        tmp *= 1.0 / mpi_comm.size
+        gbeta = tmp[:gamma.size]
+        ggamma = tmp[gamma.size:]
+        # ChainerMN diff (2/2) ends
+        return gbeta, ggamma
+
+    def _communicate_backward_nccl(self, axis, gamma, gy, x, xp):
+        # ChainerMN diff (2/2) begins
+        # Note: It is wrong to multiply m by mpi_comm.size
+        # (instead of multiplying 1/size to gbeta, ggamma)
+        gpu_buffer_n_elems = gamma.size * 2
+        gpu_buffer_size = x.dtype.itemsize * gpu_buffer_n_elems
+        self.workspace.gpu_buffer_a.assign(gpu_buffer_size)
+        self.workspace.gpu_buffer_b.assign(gpu_buffer_size)
+        gpu_buffer_a_array = self.workspace.gpu_buffer_a.array(
+            gpu_buffer_n_elems,
+            dtype=x.dtype)
+        gy.sum(axis=axis, out=gpu_buffer_a_array[:gamma.size])
+        (gy * self.x_hat).sum(axis=axis, out=gpu_buffer_a_array[gamma.size:])
+        stream = chainer.cuda.Stream.null
+        self.comm._init_comms()
+        self.comm.nccl_comm.allReduce(self.workspace.gpu_buffer_a.ptr(),
+                                      self.workspace.gpu_buffer_b.ptr(),
+                                      gpu_buffer_n_elems,
+                                      self.get_nccl_type_id(x.dtype),
+                                      self.nccl.NCCL_SUM,
+                                      stream.ptr)
+        gpu_buffer_b_array = self.workspace.gpu_buffer_b.array(
+            gpu_buffer_n_elems,
+            dtype=x.dtype)
+        gpu_buffer_b_array *= 1.0 / self.comm.size
+        gbeta = gpu_buffer_b_array[:gamma.size]
+        ggamma = gpu_buffer_b_array[gamma.size:]
+        # ChainerMN diff (2/2) ends
+
+        return gbeta, ggamma
 
 
 class MultiNodeBatchNormalizationFunctionWithPureNccl(function.Function):
-
-    def __init__(self, comm, eps=2e-5, mean=None, var=None, decay=0.9, workspace=None):
-        from chainermn.communicators.pure_nccl_communicator import PureNcclCommunicator
-        assert(isinstance(comm, PureNcclCommunicator))
+    def __init__(self, comm, eps=2e-5, mean=None, var=None, decay=0.9,
+                 workspace=None):
+        from chainermn.communicators.pure_nccl_communicator import \
+            PureNcclCommunicator
+        assert (isinstance(comm, PureNcclCommunicator))
         self.comm = comm
         self.running_mean = mean
         self.running_var = var
@@ -276,9 +366,10 @@ class MultiNodeBatchNormalizationFunctionWithPureNccl(function.Function):
 
         # We need to delay importing MPI4py (and momdules that import MPI4py)
         import chainermn.communicators._memory_utility as memory_utility_module
-        from chainermn.communicators.pure_nccl_communicator import _get_nccl_type_id
+        from chainermn.communicators.pure_nccl_communicator import \
+            _get_nccl_type_id
         from chainermn import nccl
-        
+
         if workspace is not None:
             self.workspace = workspace
         else:
@@ -351,22 +442,25 @@ class MultiNodeBatchNormalizationFunctionWithPureNccl(function.Function):
             axis = (0,) + tuple(range(head_ndim, x.ndim))
 
             # ChainerMN diff (1/2) begins
-            gpu_buffer_n_elems = gamma.size*2
-            gpu_buffer_size = x.dtype.itemsize*gpu_buffer_n_elems
+            gpu_buffer_n_elems = gamma.size * 2
+            gpu_buffer_size = x.dtype.itemsize * gpu_buffer_n_elems
             self.workspace.gpu_buffer_a.assign(gpu_buffer_size)
             self.workspace.gpu_buffer_b.assign(gpu_buffer_size)
-            gpu_buffer_a_array = self.workspace.gpu_buffer_a.array(gpu_buffer_n_elems, dtype=x.dtype)
+            gpu_buffer_a_array = self.workspace.gpu_buffer_a.array(
+                gpu_buffer_n_elems, dtype=x.dtype)
             x.mean(axis=axis, out=gpu_buffer_a_array[:gamma.size])
             xp.square(x).mean(axis=axis, out=gpu_buffer_a_array[gamma.size:])
             stream = chainer.cuda.Stream.null
             self.comm._init_comms()
             self.comm.nccl_comm.allReduce(self.workspace.gpu_buffer_a.ptr(),
-                                          self.workspace.gpu_buffer_b.ptr(), gpu_buffer_n_elems,
+                                          self.workspace.gpu_buffer_b.ptr(),
+                                          gpu_buffer_n_elems,
                                           self.get_nccl_type_id(x.dtype),
-                                     self.nccl.NCCL_SUM,
-                                     stream.ptr)
-            gpu_buffer_b_array = self.workspace.gpu_buffer_b.array(gpu_buffer_n_elems,
-                                                         dtype=x.dtype)
+                                          self.nccl.NCCL_SUM,
+                                          stream.ptr)
+            gpu_buffer_b_array = self.workspace.gpu_buffer_b.array(
+                gpu_buffer_n_elems,
+                dtype=x.dtype)
             gpu_buffer_b_array *= 1.0 / self.comm.size
             mean = gpu_buffer_b_array[:gamma.size]
             sqmean = gpu_buffer_b_array[gamma.size:]
@@ -456,8 +550,9 @@ class MultiNodeBatchNormalizationFunctionWithPureNccl(function.Function):
         gpu_buffer_size = x.dtype.itemsize * gpu_buffer_n_elems
         self.workspace.gpu_buffer_a.assign(gpu_buffer_size)
         self.workspace.gpu_buffer_b.assign(gpu_buffer_size)
-        gpu_buffer_a_array = self.workspace.gpu_buffer_a.array(gpu_buffer_n_elems,
-                                                     dtype=x.dtype)
+        gpu_buffer_a_array = self.workspace.gpu_buffer_a.array(
+            gpu_buffer_n_elems,
+            dtype=x.dtype)
         gy.sum(axis=axis, out=gpu_buffer_a_array[:gamma.size])
         (gy * self.x_hat).sum(axis=axis, out=gpu_buffer_a_array[gamma.size:])
         stream = chainer.cuda.Stream.null
@@ -468,8 +563,9 @@ class MultiNodeBatchNormalizationFunctionWithPureNccl(function.Function):
                                       self.get_nccl_type_id(x.dtype),
                                       self.nccl.NCCL_SUM,
                                       stream.ptr)
-        gpu_buffer_b_array = self.workspace.gpu_buffer_b.array(gpu_buffer_n_elems,
-                                                     dtype=x.dtype)
+        gpu_buffer_b_array = self.workspace.gpu_buffer_b.array(
+            gpu_buffer_n_elems,
+            dtype=x.dtype)
         gpu_buffer_b_array *= 1.0 / self.comm.size
         gbeta = gpu_buffer_b_array[:gamma.size]
         ggamma = gpu_buffer_b_array[gamma.size:]

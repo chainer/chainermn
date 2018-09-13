@@ -8,12 +8,13 @@ from chainer import variable
 import numpy
 
 from chainermn.functions.batch_normalization import \
+    get_communication_backend
+from chainermn.functions.batch_normalization import \
     MultiNodeBatchNormalizationFunction
 from chainermn.functions.batch_normalization import \
     MultiNodeBatchNormalizationFunctionWithPureNccl
 from chainermn.functions.batch_normalization import \
     MultiNodeBatchNormalizationFunctionWithPureNcclWorkspace
-
 
 
 class MultiNodeBatchNormalization(link.Link):
@@ -70,24 +71,8 @@ class MultiNodeBatchNormalization(link.Link):
         self.decay = decay
         self.eps = eps
 
-        if communication_backend not in ['mpi', 'nccl', 'auto']:
-            raise ValueError('MultiNodeBatchNormalization does not support '
-                             '{}.'.format(communication_backend))
-        from chainermn.communicators.pure_nccl_communicator \
-            import PureNcclCommunicator
-        if communication_backend != 'auto':
-            if 'nccl' == communication_backend:
-                if not isinstance(self.comm, PureNcclCommunicator):
-                    raise ValueError('{} is not supported in '
-                                     'MultiNodeBatchNormalization when using '
-                                     '{}.'.format(communication_backend,
-                                                  type(self.comm)))
-            self.communication_backend = communication_backend
-        else:
-            if isinstance(self.comm, PureNcclCommunicator):
-                self.communication_backend = 'nccl'
-            else:
-                self.communication_backend = 'mpi'
+        self.communication_backend = \
+            get_communication_backend(comm, communication_backend)
 
         self._func_workspace = None
         if self.communication_backend:
