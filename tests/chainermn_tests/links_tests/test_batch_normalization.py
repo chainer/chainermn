@@ -55,7 +55,7 @@ class Param(object):
             chainermn.links.MultiNodeBatchNormalization
         self.gpu = False
         self.nccl = False
-        self.supported_backend: ['mpi', 'auto']
+        self.supported_backend = ['mpi', 'auto']
         self.__dict__.update(param)
 
 
@@ -242,11 +242,11 @@ def test_multi_node_bn_cpu(param):
     comm = create_communicator(param.communicator_class,
                                     mpi_comm, use_gpu=False,
                                     use_nccl=param.nccl)
-    for backend in cpu_params.supported_backend:
+    for backend in param.supported_backend:
         check_support_communication_backend(comm, backend)
 
     for backend in ['mpi', 'nccl', 'auto', 'dummy']:
-        if backend in cpu_params.supported_backend:
+        if backend in param.supported_backend:
             continue
         check_unsupport_communication_backend(comm, backend)
     check_multi_node_bn(comm, param.batch_normalization_class)
@@ -258,11 +258,11 @@ def test_multi_node_bn_gpu(param):
     comm = create_communicator(param.communicator_class,
                                     mpi_comm, use_gpu=True,
                                     use_nccl=param.nccl)
-    for backend in gpu_params.supported_backend:
+    for backend in param.supported_backend:
         check_support_communication_backend(comm, backend)
 
     for backend in ['mpi', 'nccl', 'auto', 'dummy']:
-        if backend in gpu_params.supported_backend:
+        if backend in param.supported_backend:
             continue
         check_unsupport_communication_backend(comm, backend)
     check_multi_node_bn(comm, param.batch_normalization_class, use_gpu=True)
