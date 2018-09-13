@@ -43,11 +43,14 @@ class MultiNodeBatchNormalization(link.Link):
             unit(1) which makes no effect.
         use_beta (bool): If ``True``, use shifting parameter. Otherwise, use
             unit(0) which makes no effect.
+        communication_backend (str): ``mpi``, ``nccl`` or ``auto``. It is used
+            to determine communication backend. If ``auto``, use the best
+            communication backend for each communicator.
     """
 
     def __init__(self, size, comm, decay=0.9, eps=2e-5, dtype=numpy.float32,
                  use_gamma=True, use_beta=True,
-                 initial_gamma=None, initial_beta=None):
+                 initial_gamma=None, initial_beta=None, communication_backend='auto'):
         chainer.utils.experimental(
             'chainermn.links.MultiNodeBatchNormalization')
 
@@ -66,6 +69,12 @@ class MultiNodeBatchNormalization(link.Link):
         self.register_persistent('N')
         self.decay = decay
         self.eps = eps
+
+        if communication_backend not in ['mpi', 'nccl', 'auto']:
+            raise ValueError('MultiNodeBatchNormalization does not support '
+                             '{}.'.format(communication_backend))
+        if communication_backend != 'auto':
+            self.communication_backend = communication_backend
 
         with self.init_scope():
             if use_gamma:
