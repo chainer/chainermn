@@ -73,8 +73,21 @@ class MultiNodeBatchNormalization(link.Link):
         if communication_backend not in ['mpi', 'nccl', 'auto']:
             raise ValueError('MultiNodeBatchNormalization does not support '
                              '{}.'.format(communication_backend))
+        from chainermn.communicators.pure_nccl_communicator \
+            import PureNcclCommunicator
         if communication_backend != 'auto':
+            if 'nccl' == communication_backend:
+                if not isinstance(self.comm, PureNcclCommunicator):
+                    raise ValueError('{} is not supported in '
+                                     'MultiNodeBatchNormalization when using '
+                                     '{}.'.format(communication_backend,
+                                                  type(self.comm)))
             self.communication_backend = communication_backend
+        else:
+            if isinstance(self.comm, PureNcclCommunicator):
+                self.communication_backend = 'nccl'
+            else:
+                self.communication_backend = 'mpi'
 
         with self.init_scope():
             if use_gamma:
