@@ -75,7 +75,7 @@ gpu_params = [Param(p) for p in [
     }, {
         'communicator_class': PureNcclCommunicator,
         'batch_normalization_class': \
-            chainermn.links.MultiNodeBatchNormalizationWithPureNccl,
+            chainermn.links.MultiNodeBatchNormalization,
         'gpu': True,
         'nccl': True,
         'supported_backend': ['mpi', 'nccl', 'auto'],
