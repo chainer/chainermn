@@ -82,14 +82,14 @@ class _NcclMultiNodeBatchNormalizationCommunicator(object):
         self.comm = comm
 
         # We need to delay importing MPI4py (and momdules that import MPI4py)
+        import chainermn.communicators._memory_utility as memory_utility_module
         from chainermn.communicators.pure_nccl_communicator import \
             _get_nccl_type_id
         from chainermn import nccl
-        import chainermn.communicators._memory_utility as memory_utility_module
-        self.memory_utility_module = memory_utility_module
 
-        self.nccl = nccl
+        self.memory_utility_module = memory_utility_module
         self.get_nccl_type_id = _get_nccl_type_id
+        self.nccl = nccl
 
     def communicate_foward(self, axis, gamma, x, xp):
         # ChainerMN diff (1/2) begins
@@ -346,8 +346,8 @@ class MultiNodeBatchNormalizationFunction(function.Function):
 
         # Note: If length of inputs is not 5, we must be in train mode.
         assert chainer.configuration.config.train
-        gbeta, ggamma = self._mnbn_comm.communicate_backward(axis, gamma, gy, self.x_hat, x,
-                                                           xp)
+        gbeta, ggamma = self._mnbn_comm.communicate_backward(axis, gamma, gy,
+                                                             self.x_hat, x, xp)
 
         if xp is numpy:
             gx = (gamma / self.std)[expander] * (

@@ -47,7 +47,8 @@ class MultiNodeBatchNormalization(link.Link):
 
     def __init__(self, size, comm, decay=0.9, eps=2e-5, dtype=numpy.float32,
                  use_gamma=True, use_beta=True,
-                 initial_gamma=None, initial_beta=None, communication_backend='auto'):
+                 initial_gamma=None, initial_beta=None,
+                 communication_backend='auto'):
         chainer.utils.experimental(
             'chainermn.links.MultiNodeBatchNormalization')
 

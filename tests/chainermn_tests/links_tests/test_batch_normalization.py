@@ -4,12 +4,10 @@ import chainer.utils
 import mpi4py.MPI
 import numpy
 import pytest
-import unittest
 
-import chainermn
 from chainermn.communicators.naive_communicator import NaiveCommunicator
 from chainermn.communicators.pure_nccl_communicator import PureNcclCommunicator
-import chainermn.links
+from chainermn.links import MultiNodeBatchNormalization
 from chainermn import nccl
 
 
@@ -35,9 +33,9 @@ class ModelDistributedBN(chainer.Chain):
                  n_out=2):
         super(ModelDistributedBN, self).__init__(
             l1=chainer.links.Linear(n_in, n_units, nobias=True),
-            bn1=chainermn.links.MultiNodeBatchNormalization(n_units, comm),
+            bn1=MultiNodeBatchNormalization(n_units, comm),
             l2=chainer.links.Linear(n_in, n_units, nobias=True),
-            bn2=chainermn.links.MultiNodeBatchNormalization(n_units, comm),
+            bn2=MultiNodeBatchNormalization(n_units, comm),
             l3=chainer.links.Linear(n_in, n_out),
         )
         self.train = True
@@ -71,6 +69,7 @@ gpu_params = [Param(p) for p in [
         'communicator_class': PureNcclCommunicator,
         'gpu': True,
     }]]
+
 
 def check_multi_node_bn(comm, use_gpu=False):
     """Tests correctness of MultiNodeBatchNormalization.
@@ -203,30 +202,27 @@ def create_communicator(communicator_class, mpi_comm, use_gpu):
 
 
 def test_version_check():
-    comm = create_communicator(NaiveCommunicator, mpi_comm,
-                                    use_gpu=False)
+    comm = create_communicator(NaiveCommunicator, mpi_comm, use_gpu=False)
     if chainer.__version__.startswith('1.'):
         with pytest.raises(RuntimeError):
-            chainermn.links.MultiNodeBatchNormalization(
-                3, comm)
+            MultiNodeBatchNormalization(3, comm)
     else:
         # Expecting no exceptions
-        chainermn.links.MultiNodeBatchNormalization(
-            3, comm)
+        MultiNodeBatchNormalization(3, comm)
 
 
 @pytest.mark.parametrize('param', cpu_params)
 def test_multi_node_bn_cpu(param):
-    comm = create_communicator(param.communicator_class,
-                                    mpi_comm, use_gpu=False)
+    comm = create_communicator(param.communicator_class, mpi_comm,
+                               use_gpu=False)
     check_multi_node_bn(comm)
 
 
 @pytest.mark.parametrize('param', gpu_params)
 @chainer.testing.attr.gpu
 def test_multi_node_bn_gpu(param):
-    comm = create_communicator(param.communicator_class,
-                                    mpi_comm, use_gpu=True)
+    comm = create_communicator(param.communicator_class, mpi_comm,
+                               use_gpu=True)
     check_multi_node_bn(comm, use_gpu=True)
 
 
@@ -238,8 +234,8 @@ def test_support_communication_backend_cpu(communicator_class, backend):
     n_units = 1
     comm = create_communicator(communicator_class,
                                mpi_comm, use_gpu=False)
-    chainermn.links.MultiNodeBatchNormalization(n_units, comm,
-                                                communication_backend=backend)
+    MultiNodeBatchNormalization(n_units, comm,
+                                communication_backend=backend)
 
 
 @pytest.mark.parametrize(('communicator_class', 'backend'), [
@@ -251,10 +247,10 @@ def test_unsupport_communication_backend_cpu(communicator_class, backend):
     comm = create_communicator(communicator_class,
                                mpi_comm, use_gpu=False)
     with pytest.raises(ValueError):
-        chainermn.links.MultiNodeBatchNormalization(n_units, comm,
-                                                    communication_backend=backend)
+        MultiNodeBatchNormalization(n_units, comm,
+                                    communication_backend=backend)
 
-        
+
 @pytest.mark.parametrize(('communicator_class', 'backend'), [
     (NaiveCommunicator, 'mpi'),
     (NaiveCommunicator, 'auto'),
@@ -267,8 +263,8 @@ def test_support_communication_backend_gpu(communicator_class, backend):
     n_units = 1
     comm = create_communicator(communicator_class,
                                mpi_comm, use_gpu=True)
-    chainermn.links.MultiNodeBatchNormalization(n_units, comm,
-                                                communication_backend=backend)
+    MultiNodeBatchNormalization(n_units, comm,
+                                communication_backend=backend)
 
 
 @pytest.mark.parametrize(('communicator_class', 'backend'), [
@@ -282,6 +278,5 @@ def test_unsupport_communication_backend_gpu(communicator_class, backend):
     comm = create_communicator(communicator_class,
                                mpi_comm, use_gpu=True)
     with pytest.raises(ValueError):
-        chainermn.links.MultiNodeBatchNormalization(n_units, comm,
-                                                    communication_backend=backend)
-
+        MultiNodeBatchNormalization(n_units, comm,
+                                    communication_backend=backend)
