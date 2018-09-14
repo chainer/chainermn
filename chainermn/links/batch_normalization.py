@@ -11,8 +11,6 @@ from chainermn.functions.batch_normalization import \
     get_communication_backend
 from chainermn.functions.batch_normalization import \
     MultiNodeBatchNormalizationFunction
-from chainermn.functions.batch_normalization import \
-    MultiNodeBatchNormalizationFunctionWithPureNcclWorkspace
 
 
 class MultiNodeBatchNormalization(link.Link):
@@ -72,11 +70,6 @@ class MultiNodeBatchNormalization(link.Link):
         self._communication_backend = \
             get_communication_backend(comm, communication_backend)
 
-        self._func_workspace = None
-        if self._communication_backend:
-            self._func_workspace = \
-                MultiNodeBatchNormalizationFunctionWithPureNcclWorkspace()
-
         with self.init_scope():
             if use_gamma:
                 if initial_gamma is None:
@@ -114,7 +107,6 @@ class MultiNodeBatchNormalization(link.Link):
 
             func = MultiNodeBatchNormalizationFunction(
                 self.comm, self.eps, self.avg_mean, self.avg_var, decay,
-                workspace=self._func_workspace,
                 communication_backend=self._communication_backend)
 
             ret = func(x, gamma, beta)

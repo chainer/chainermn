@@ -78,9 +78,8 @@ class _MpiMultiNodeBatchNormalizationCommunicator(object):
 
 class _NcclMultiNodeBatchNormalizationCommunicator(object):
 
-    def __init__(self, comm, workspace):
+    def __init__(self, comm):
         self.comm = comm
-        self._workspace = workspace
 
         # We need to delay importing MPI4py (and momdules that import MPI4py)
         from chainermn.communicators.pure_nccl_communicator import \
@@ -178,18 +177,10 @@ def get_communication_backend(comm, communication_backend='auto'):
     return selected_communication_backend
 
 
-class MultiNodeBatchNormalizationFunctionWithPureNcclWorkspace(object):
-
-    def __init__(self):
-        import chainermn.communicators._memory_utility as memory_utility_module
-        self.gpu_buffer_a = memory_utility_module.DeviceMemory()
-        self.gpu_buffer_b = memory_utility_module.DeviceMemory()
-
-
 class MultiNodeBatchNormalizationFunction(function.Function):
 
     def __init__(self, comm, eps=2e-5, mean=None, var=None, decay=0.9,
-                 workspace=None, communication_backend='auto'):
+                 communication_backend='auto'):
         chainer.utils.experimental(
             'chainermn.functions.MultiNodeBatchNormalizationFunction')
 
@@ -208,11 +199,6 @@ class MultiNodeBatchNormalizationFunction(function.Function):
                 raise RuntimeError(msg)
         self.mean_cache = None
         self.decay = decay
-
-        if workspace is not None:
-            self.workspace = workspace
-        else:
-            self.workspace = MultiNodeBatchNormalizationFunctionWithPureNcclWorkspace()
 
         selected_communication_backend = \
             get_communication_backend(comm, communication_backend)
