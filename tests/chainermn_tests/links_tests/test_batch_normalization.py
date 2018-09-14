@@ -228,8 +228,7 @@ def test_multi_node_bn_gpu(param):
 
 @pytest.mark.parametrize(('communicator_class', 'backend'), [
     (NaiveCommunicator, 'mpi'),
-    (NaiveCommunicator, 'auto'),
-    ])
+    (NaiveCommunicator, 'auto')])
 def test_support_communication_backend_cpu(communicator_class, backend):
     n_units = 1
     comm = create_communicator(communicator_class,
@@ -240,8 +239,7 @@ def test_support_communication_backend_cpu(communicator_class, backend):
 
 @pytest.mark.parametrize(('communicator_class', 'backend'), [
     (NaiveCommunicator, 'nccl'),
-    (NaiveCommunicator, 'dummy'),
-    ])
+    (NaiveCommunicator, 'dummy')])
 def test_unsupport_communication_backend_cpu(communicator_class, backend):
     n_units = 1
     comm = create_communicator(communicator_class,
@@ -256,8 +254,7 @@ def test_unsupport_communication_backend_cpu(communicator_class, backend):
     (NaiveCommunicator, 'auto'),
     (PureNcclCommunicator, 'mpi'),
     (PureNcclCommunicator, 'nccl'),
-    (PureNcclCommunicator, 'auto'),
-    ])
+    (PureNcclCommunicator, 'auto')])
 @chainer.testing.attr.gpu
 def test_support_communication_backend_gpu(communicator_class, backend):
     n_units = 1
@@ -270,8 +267,7 @@ def test_support_communication_backend_gpu(communicator_class, backend):
 @pytest.mark.parametrize(('communicator_class', 'backend'), [
     (NaiveCommunicator, 'nccl'),
     (NaiveCommunicator, 'dummy'),
-    (PureNcclCommunicator, 'dummy'),
-    ])
+    (PureNcclCommunicator, 'dummy')])
 @chainer.testing.attr.gpu
 def test_unsupport_communication_backend_gpu(communicator_class, backend):
     n_units = 1
