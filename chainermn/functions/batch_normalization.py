@@ -128,22 +128,24 @@ class _NcclMultiNodeBatchNormalizationCommunicator(object):
         # (instead of multiplying 1/size to gbeta, ggamma)
         gpu_buffer_n_elems = gamma.size * 2
         gpu_buffer_size = x.dtype.itemsize * gpu_buffer_n_elems
-        self._workspace.gpu_buffer_a.assign(gpu_buffer_size)
-        self._workspace.gpu_buffer_b.assign(gpu_buffer_size)
-        gpu_buffer_a_array = self._workspace.gpu_buffer_a.array(
+        gpu_buffer_a = self.memory_utility_module.DeviceMemory()
+        gpu_buffer_b = self.memory_utility_module.DeviceMemory()
+        gpu_buffer_a.assign(gpu_buffer_size)
+        gpu_buffer_b.assign(gpu_buffer_size)
+        gpu_buffer_a_array = gpu_buffer_a.array(
             gpu_buffer_n_elems,
             dtype=x.dtype)
         gy.sum(axis=axis, out=gpu_buffer_a_array[:gamma.size])
         (gy * x_hat).sum(axis=axis, out=gpu_buffer_a_array[gamma.size:])
         stream = chainer.cuda.Stream.null
         self.comm._init_comms()
-        self.comm.nccl_comm.allReduce(self._workspace.gpu_buffer_a.ptr(),
-                                      self._workspace.gpu_buffer_b.ptr(),
+        self.comm.nccl_comm.allReduce(gpu_buffer_a.ptr(),
+                                      gpu_buffer_b.ptr(),
                                       gpu_buffer_n_elems,
                                       self.get_nccl_type_id(x.dtype),
                                       self.nccl.NCCL_SUM,
                                       stream.ptr)
-        gpu_buffer_b_array = self._workspace.gpu_buffer_b.array(
+        gpu_buffer_b_array = gpu_buffer_b.array(
             gpu_buffer_n_elems,
             dtype=x.dtype)
         gpu_buffer_b_array *= 1.0 / self.comm.size
