@@ -204,8 +204,8 @@ class MultiNodeBatchNormalizationFunction(function.Function):
             get_communication_backend(comm, communication_backend)
 
         if selected_communication_backend == 'nccl':
-            self._mnbn_comm = _NcclMultiNodeBatchNormalizationCommunicator(comm,
-                                                                          workspace)
+            self._mnbn_comm = \
+                _NcclMultiNodeBatchNormalizationCommunicator(comm)
         else:
             self._mnbn_comm = _MpiMultiNodeBatchNormalizationCommunicator(comm)
 
