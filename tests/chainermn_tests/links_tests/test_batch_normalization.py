@@ -216,6 +216,7 @@ def test_multi_node_bn_cpu(param):
     comm = create_communicator(param.communicator_class, mpi_comm,
                                use_gpu=False)
     check_multi_node_bn(comm)
+    comm.mpi_comm.barrier()
 
 
 @pytest.mark.parametrize('param', gpu_params)
@@ -224,6 +225,7 @@ def test_multi_node_bn_gpu(param):
     comm = create_communicator(param.communicator_class, mpi_comm,
                                use_gpu=True)
     check_multi_node_bn(comm, use_gpu=True)
+    comm.mpi_comm.barrier()
 
 
 @pytest.mark.parametrize(('communicator_class', 'backend'), [
