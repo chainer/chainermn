@@ -33,7 +33,8 @@ class MLP(chainer.Chain):
 class TestCheckpoint(unittest.TestCase):
 
     def setUp(self):
-        self.communicator = chainermn.create_communicator('naive')
+        #self.communicator = chainermn.create_communicator('naive')
+        self.communicator = None
 
     def test_stats(self):
         stats = _CheckpointStats()
