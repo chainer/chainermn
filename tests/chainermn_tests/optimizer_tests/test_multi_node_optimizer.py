@@ -50,7 +50,8 @@ class TestMultiNodeOptimizer(unittest.TestCase):
         self.setup_cpu()
         self.optimizer = chainermn.create_multi_node_optimizer(
             self.actual_optimizer, self.comm)
-        self.optimizer.setup(self.target)
+        opt = self.optimizer.setup(self.target)
+        assert opt is self.optimizer
         self.optimizer.update()
         self.assertEqual(self.actual_optimizer.t, 0)
         self.optimizer.target.a.W.grad[:] = self.comm.rank
@@ -79,7 +80,8 @@ class TestMultiNodeOptimizer(unittest.TestCase):
         self.setup_gpu()
         self.optimizer = chainermn.create_multi_node_optimizer(
             self.actual_optimizer, self.comm)
-        self.optimizer.setup(self.target)
+        opt = self.optimizer.setup(self.target)
+        assert opt is self.optimizer
         self.optimizer.update()
         self.assertEqual(self.actual_optimizer.t, 0)
         self.optimizer.target.a.W.grad[:] = self.comm.rank
@@ -142,7 +144,8 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.setup_cpu()
         self.optimizer = chainermn.create_multi_node_optimizer(
             self.actual_optimizer, self.comm)
-        self.optimizer.setup(self.target)
+        opt = self.optimizer.setup(self.target)
+        assert opt is self.optimizer
         self.optimizer.update()
         self.assertEqual(self.actual_optimizer.t, 0)
 
@@ -184,7 +187,8 @@ class TestMultiNodeOptimizerWithDynamicModel(unittest.TestCase):
         self.setup_gpu()
         self.optimizer = chainermn.create_multi_node_optimizer(
             self.actual_optimizer, self.comm)
-        self.optimizer.setup(self.target)
+        opt = self.optimizer.setup(self.target)
+        assert opt is self.optimizer
         self.optimizer.update()
         self.assertEqual(self.actual_optimizer.t, 0)
 
