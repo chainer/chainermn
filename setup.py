@@ -5,7 +5,7 @@ import os
 
 
 install_requires = [
-    'chainer >=3.5.0, !=4.0.0b2, != 4.0.0b1, != 4.0.0a1',
+    'chainer >=3.5.0, <5.0',
     'mpi4py',
 ]
 
@@ -15,7 +15,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='chainermn',
-    version='1.3.0',
+    version='1.3.1',
     description='ChainerMN: Multi-node distributed training with Chainer',
     author='Takuya Akiba',
     author_email='akiba@preferred.jp',
